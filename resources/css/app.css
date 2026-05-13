@@ -1,0 +1,173 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+:root {
+    --color-primary: #7380ec;
+    --color-danger: #ff7782;
+    --color-success: #41f1b6;
+    --color-warning: #ffbb55;
+    --color-white: #ffffff;
+    --color-info-dark: #7d8da1;
+    --color-info-light: #dce1eb;
+    --color-dark: #363949;
+    --color-light: rgba(132, 139, 200, 0.18);
+    --color-primary-varyant: #111e88;
+    --color-dark-variant: #677483;
+    --color-background: #f6f6f9;
+
+    --cord-border-radius: 2rem;
+    --border-radius-1: 0.4em;
+    --border-radius-2: 0.8em;
+    --border-radius-3: 1.2em;
+
+    --card-padding: 1.8rem;
+    --padding-1: 1.2rem;
+
+    --box-shadow: 0 2rem 3rem var(--color-light);
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 14rem 1fr;     /* или minmax(260px, auto) 1fr */
+    min-height: 100vh;                    /* вместо min-h-screen на ребёнке */
+    max-width: 100%;                      /* важно */
+    gap: 0.3em;                               /* или сколько нужно */
+    margin: 1px;
+    padding: 0;
+    outline: 0;
+    appearance: none;
+    border: 0;
+    text-decoration: none;
+    list-style: none;
+    box-sizing: border-box;
+    width: 100vw;
+    font-family: poppins, sans-serif;
+    font-size: 0.88rem;
+    background-color: var(--color-background);
+    user-select: none;
+    overflow-x: hidden;
+}
+
+.sidebar__link{
+    color: var(--color-dark);
+}
+
+.logo__img{
+    display: block;
+    width: 100%;
+}
+
+.logo__header{
+    font-weight: 800;
+    font-size: 1.8rem;
+}
+
+.sidebar__link-title{
+    font-size: 0.87rem;
+}
+
+.profile-photo{
+    width: 2.8rem;
+    height: 2.8rem;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.text-muted{
+    color: var(--color-info-dark);
+}
+
+.dark-variant{
+    color: var(--color-dark-variant);
+}
+
+.color-dark{
+    color: var(--color-dark);
+}
+
+.primary{
+    color: var(--color-primary);
+}
+
+.danger{
+    color: var(--color-danger);
+}
+
+.success{
+    color: var(--color-success);
+}
+
+.warning{
+    color: var(--color-warning);
+}
+
+.aside{
+    height: 100vh;
+}
+
+.top{
+    background-color: var(--color-background);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.2rem;
+}
+
+.logo{
+    display: flex;
+    margin: 1px;
+    gap: 0.3rem;
+}
+
+.logo__img{
+    width: 4em;
+    height: 3em;
+}
+
+.close{
+    display: none;
+}
+
+.sidebar{
+    background: white;
+    display: flex;
+    flex-direction: column;
+    height: 86vh;
+    position: relative;
+    top: 3rem;
+}
+
+.sidebar__link{
+    display: flex;
+    color: var(--color-dark-variant);
+    margin: 1.3em;
+    gap: 1rem;
+    align-items: center;
+    position: relative;
+    height: 3.7rem;
+    transition: all 300ms ease;
+}
+
+.sidebar__link-title{
+    font-weight: 500;
+}
+
+.message-count{
+    font-size: 1.6rem;
+}
+
+.sidebar__link:last-child{
+    position: absolute;
+    bottom: 2rem;
+    width: 100%;
+}
+
