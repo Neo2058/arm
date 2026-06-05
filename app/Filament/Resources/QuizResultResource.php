@@ -11,6 +11,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\ViewEntry;
 
 class QuizResultResource extends Resource
 {
@@ -47,10 +49,24 @@ class QuizResultResource extends Resource
 
             // Результат в виде дроби (например, 8/10)
             TextColumn::make('score_display')
-                ->label('Результат')
-                ->state(fn ($record): string => "{$record->score} / {$record->total_questions}")
+                ->label('Результат (%)')
+                ->state(fn ($record): string =>
+                    // Защита от деления на ноль, если в тесте вдруг не окажется вопросов
+                $record->total_questions > 0
+                    ? round(($record->score / $record->total_questions) * 100, 1) . ' %'
+                    : '0 %'
+                )
                 ->badge()
-                ->color(fn ($record) => ($record->score / $record->total_questions) >= 0.8 ? 'success' : 'danger'),
+                // Цветовая разметка: зеленый от 80% успеха, желтый от 50%, иначе красный
+                ->color(fn ($record) => match (true) {
+                    $record->total_questions > 0 && ($record->score / $record->total_questions) >= 0.8 => 'success',
+                    $record->total_questions > 0 && ($record->score / $record->total_questions) >= 0.5 => 'warning',
+                    default => 'danger',
+                })
+                ->sortable(query: function ($query, $direction) {
+                    // Позволяет правильно сортировать по процентам в базе данных
+                    return $query->orderByRaw('(score::float / total_questions::float) ' . $direction);
+                }),
 
             // Время прохождения (переводим секунды в минуты)
             TextColumn::make('time_spent')
@@ -82,11 +98,25 @@ class QuizResultResource extends Resource
     {
         return $infolist
             ->schema([
-                \Filament\Infolists\Components\Section::make('Детальный отчет')
+                Section::make('Информация о сотруднике')
                     ->schema([
-                        \Filament\Infolists\Components\TextEntry::make('user.name')->label('Сотрудник'),
-                        \Filament\Infolists\Components\KeyValueEntry::make('answers_log')
-                            ->label('Лог ответов (ID вопроса -> ID ответа)'),
+                        \Filament\Infolists\Components\TextEntry::make('user.name')->label('ФИО'),
+                        \Filament\Infolists\Components\TextEntry::make('quiz.title')->label('Тест'),
+                        \Filament\Infolists\Components\TextEntry::make('score')
+                            ->label('Успеваемость')
+                            ->state(fn ($record): string =>
+                            $record->total_questions > 0
+                                ? round(($record->score / $record->total_questions) * 100, 1) . '% (' . $record->score . ' из ' . $record->total_questions . ')'
+                                : '0%'
+                            ),
+                    ])->columns(3),
+
+                Section::make('Детальный разбор ответов')
+                    ->schema([
+                        // Используем ViewEntry для подключения нашей кастомной таблицы
+                        ViewEntry::make('detailed_report')
+                            ->view('filament.infolists.quiz-report-table') // Путь к Blade-файлу
+                            ->label('') // Скрываем стандартную метку
                     ])
             ]);
     }

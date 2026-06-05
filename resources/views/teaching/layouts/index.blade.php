@@ -20,6 +20,88 @@
     @endif
 </head>
 <body class="bg-[#FDFDFC] dark:bg-[#0a0a0a] text-[#1b1b18] flex p-6 lg:p-8 items-center lg:justify-center min-h-screen flex-col">
-@yield('content')
+    <div class="container">
+        @include('teaching.partials.sidebar')
+        @yield('content')
+    </div>
+    <!-- Кнопка вызова баг-репорта -->
+    <div class="fixed bottom-6 left-6 z-40">
+        <button id="open-bug-modal" class="flex h-12 items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 text-xs font-bold uppercase tracking-wider text-orange-400 backdrop-blur-xl shadow-lg transition hover:bg-orange-500/20 active:scale-95">
+            <svg class="h-4 w-4 animate-pulse" xmlns="http://w3.org" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+            </svg>
+            <span>Нашли баг?</span>
+        </button>
+    </div>
+
+    <!-- Модальное окно (Изначально скрыто) -->
+    <div id="bug-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md hidden">
+        <div class="bg-[#0b1018] w-full max-w-md rounded-3xl border border-white/10 p-6 shadow-2xl relative">
+            <button id="close-bug-modal" class="absolute top-4 right-4 p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-zinc-400 hover:text-white transition">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+
+            <h3 class="text-lg font-bold text-orange-400 mb-2">Сообщить об ошибке или проблеме</h3>
+            <p class="text-xs text-zinc-400 mb-4">Ваше обращение мгновенно улетит в Telegram-канал дежурному инструктору.</p>
+
+            <form id="bug-form" class="space-y-4" enctype="multipart/form-data">
+                <input type="hidden" name="page_url" id="bug-page-url">
+
+                <div>
+                    <label class="text-[10px] uppercase font-bold text-zinc-500 block mb-1">Что пошло не так?</label>
+                    <textarea name="description" required rows="4" placeholder="Опишите ошибку или ваше предложение максимально подробно..." class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-orange-500/40 transition resize-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="text-[10px] uppercase font-bold text-zinc-500 block mb-1">Скриншот (необязательно)</label>
+                    <input type="file" name="screenshot" accept="image/*" class="w-full text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-white/5 file:text-orange-400 hover:file:bg-white/10 file:cursor-pointer">
+                </div>
+
+                <button type="submit" id="submit-bug-btn" class="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-xl transition shadow-[0_4px_20px_rgba(249,115,22,0.15)] flex items-center justify-center gap-2">
+                    <span>Отправить репорт</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const modal = document.getElementById('bug-modal');
+            const openBtn = document.getElementById('open-bug-modal');
+            const closeBtn = document.getElementById('close-bug-modal');
+            const form = document.getElementById('bug-form');
+
+            openBtn.onclick = () => {
+                document.getElementById('bug-page-url').value = window.location.href;
+                modal.classList.remove('hidden');
+            };
+            closeBtn.onclick = () => modal.classList.add('hidden');
+
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('submit-bug-btn');
+                btn.disabled = true;
+                btn.innerText = 'Отправка...';
+
+                try {
+                    const formData = new FormData(form);
+                    const response = await fetch('{{ route("bug.report.store") }}', {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                        body: formData
+                    });
+                    const data = await response.json();
+                    alert(data.message);
+                    form.reset();
+                    modal.classList.add('hidden');
+                } catch (error) {
+                    alert('Ошибка сети при отправке репорта.');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = 'Отправить репорт';
+                }
+            };
+        });
+    </script>
 </body>
 </html>

@@ -13,6 +13,10 @@ class Document extends Model
         'file_path',
         'category',
         'size',
+        'allowed_roles'];
+
+    protected $casts = [
+        'allowed_roles' => 'array', // Автоматически превращает JSON из базы в PHP-массив
     ];
 
     public function quiz(): HasOne

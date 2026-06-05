@@ -98,5 +98,49 @@
         </button>
     </form>
 </div>
+<script>
+    // 1. Быстрый синхронный алгоритм хэширования строки (аналог SHA, но работающий мгновенно)
+    function generateStringHash(str) {
+        let hash = 0;
+        if (str.length === 0) return '00000000';
+        for (let i = 0; i < str.length; i++) {
+            const chr = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + chr;
+            hash |= 0; // Превращаем в 32-битное целое число
+        }
+        // Переводим в красивую шестнадцатеричную строку (Hex)
+        return Math.abs(hash).toString(16).padStart(8, '0') +
+            Math.abs(hash ^ 0x55555555).toString(16).padStart(8, '0');
+    }
+
+    function generateDeviceFingerprint() {
+        // Если кука уже создана — мгновенно выходим
+        if (document.cookie.includes('device_key=')) return;
+
+        try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.textBaseline = "top";
+            ctx.font = "14px 'Arial'";
+            ctx.fillText("ARM-Security-Token", 2, 2);
+
+            const canvasData = canvas.toDataURL();
+            const rawString = canvasData + navigator.userAgent + screen.width + screen.height + (navigator.hardwareConcurrency || 2);
+
+            // Генерируем хэш СИНХРОННО (без await)
+            const hashHex = generateStringHash(rawString);
+
+            // Записываем куку с флагами доступности для всего сайта
+            document.cookie = `device_key=${hashHex}; path=/; max-age=157680000; SameSite=Lax`;
+
+            console.log('Устройство идентифицировано мгновенно. Хэш:', hashHex);
+        } catch (e) {
+            console.error('Ошибка генерации отпечатка устройства:', e);
+        }
+    }
+
+    // Запускаем генерацию. Теперь кука будет создана ЕЩЁ ДО того, как пользователь успеет сфокусироваться на поле ввода!
+    generateDeviceFingerprint();
+</script>
 </body>
 </html>

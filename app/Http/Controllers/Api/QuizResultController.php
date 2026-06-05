@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\QuizResult;
+use App\Services\ClickHouseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -28,8 +29,12 @@ class QuizResultController extends Controller
             'answers_log' => $data['answers_log'],
         ]);
 
-        // Здесь же можно отправить данные в ClickHouse для аналитики
-        //AnalyticsService::logQuizDone($result);
+        ClickHouseService::log('complete_quiz', $result->quiz_id, [
+            'score' => (int)$result->score,
+            'total_questions' => (int)$result->total_questions,
+            // Явно передаем процент успеха для ClickHouse
+            'percent' => (float)(($result->score / $result->total_questions) * 100)
+        ]);
 
         return response()->json(['status' => 'success', 'result_id' => $result->id]);
     }

@@ -76,7 +76,7 @@ const Carousel = ({ role }) => {
 
             {filterImages.map((image, index) => (
                 <InnerCard
-                    key={image.name}
+                    key={`${image.name}-${index}`}
                     id={`tech-${index}`}
                     src={image.src}
                     name={image.name}

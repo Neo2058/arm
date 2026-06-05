@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Services\ClickHouseService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
@@ -21,11 +22,8 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials, $request->has('remember'))) {
             $request->session()->regenerate();
-
-            // Логируем вход в ClickHouse
-            // ClickHouseService::log(Auth::user(), 'login');
-
-            return redirect()->intended('/mainMenu');
+            ClickHouseService::log('login'); // Логируем вход
+            return redirect()->intended('mainMenu');
         }
 
         return back()->withErrors([
@@ -33,10 +31,14 @@ class AuthController extends Controller
         ])->onlyInput('email');
     }
 
-    public function logout(Request $request) : Redirector {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-        return redirect('/');
-    }
+public function logout(Request $request): RedirectResponse
+{
+    \Illuminate\Support\Facades\Auth::logout();
+
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    // Перенаправляем на именованный маршрут логина
+    return redirect()->route('login');
+}
 }

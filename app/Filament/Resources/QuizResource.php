@@ -48,6 +48,26 @@ class QuizResource extends Resource
                                     ->label('Текст вопроса')
                                     ->required(),
 
+                                Forms\Components\Repeater::make('references')
+                                    ->relationship()
+                                    ->label('Ссылки на пункты инструкций (материал для подсказки)')
+                                    ->schema([
+                                        Forms\Components\Select::make('document_id')
+                                            ->label('Документ из MinIO')
+                                            ->relationship('document', 'title')
+                                            ->required()
+                                            ->searchable(),
+                                        Forms\Components\TextInput::make('page_number')
+                                            ->label('Страница PDF')
+                                            ->numeric()
+                                            ->default(1)
+                                            ->required(),
+                                        Forms\Components\TextInput::make('anchor_text')
+                                            ->label('Текст ссылки (например: п. 5.1 Инструкции ЦШ-530)')
+                                            ->required(),
+                                    ])
+                                    ->columns(3),
+
                                 Repeater::make('answers') // Связь hasMany в модели Question
                                 ->relationship()
                                     ->label('Варианты ответов')

@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\CheckDeviceBinding;
+use App\Http\Middleware\CheckDynamicBarrier;
+use App\Http\Middleware\CheckUserExistence;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -10,8 +13,15 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware): void {
-        //
+    ->withMiddleware(function (Middleware $middleware) {
+        $middleware->web(append: [
+            CheckUserExistence::class, // 1. Проверка бана/удаления
+            CheckDeviceBinding::class, // 2. Проверка железа (ПЕРВАЯ)
+            CheckDynamicBarrier::class, // 3. Динамический барьер (ВТОРАЯ)
+        ]);
+        $middleware->encryptCookies(except: [
+            'device_key',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

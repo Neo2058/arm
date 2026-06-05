@@ -38,12 +38,25 @@ class DocumentResource extends Resource
                 FileUpload::make('file_path')
                     ->label('Файл (PDF, DOCX)')
                     ->disk('s3') // Указываем, что файл летит в MinIO
-                    ->directory('uploads/documents') // Папка внутри бакета
+                    ->directory('uploads/teaching') // Папка внутри бакета
                     ->visibility('private') // Файлы недоступны по прямой ссылке (безопасность)
                     ->acceptedFileTypes(['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
                     ->required()
                     ->preserveFilenames() // Сохранять оригинальное имя файла
                     ->maxSize(10240), // Ограничение 10МБ
+
+                Select::make('allowed_roles')
+                    ->label('Доступно для ролей')
+                    ->multiple() // Позволяет выбрать несколько ролей сразу
+                    ->options([
+                        'super_admin' => 'Супер админ',
+                        'admin' => 'Админ',
+                        'instructor' => 'Инструктор',
+                        'driver' => 'Машинист',
+                        'student' => 'Обучающийся',
+                    ])
+                    ->placeholder('Если пусто — доступно ВСЕМ')
+                    ->required(false),
             ]);
     }
 

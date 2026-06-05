@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'chat_id' => env('TELEGRAM_CHAT_ID'),
+        'group_id'   => env('TELEGRAM_GROUP_ID'),    // ID закрытой группы
+        'bot_username' => env('TELEGRAM_BOT_USERNAME'),
+    ],
+
 ];

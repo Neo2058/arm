@@ -31,6 +31,9 @@ class User extends Authenticatable implements FilamentUser
             true
         );
     }
+
+    public function devices() { return $this->hasMany(UserDevice::class); }
+
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 

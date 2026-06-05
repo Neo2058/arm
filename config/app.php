@@ -123,4 +123,10 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'telegram_bot_token'   => env('TELEGRAM_BOT_TOKEN'),
+    'telegram_group_id'    => env('TELEGRAM_GROUP_ID'),
+    'telegram_bot_username'=> env('TELEGRAM_BOT_USERNAME', 'MyGroupKeyBot'),
+    'barrier_salt' => env('BARRIER_SALT'),
+
+
 ];

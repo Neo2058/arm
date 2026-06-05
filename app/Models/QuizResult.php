@@ -13,12 +13,13 @@ class QuizResult extends Model
         'score',
         'total_questions',
         'time_spent',
-        'answers_log'
+        'answers_log',
+        'is_viewed'
     ];
 
-    // Обязательно добавь это, чтобы Laravel сам конвертировал массив в JSON
     protected $casts = [
         'answers_log' => 'array',
+        'is_viewed' => 'boolean',
     ];
 
     public function user()
@@ -29,5 +30,44 @@ class QuizResult extends Model
     public function quiz()
     {
         return $this->belongsTo(Quiz::class);
+    }
+
+    /**
+     * Формирует детализированный отчет по каждому вопросу для админки
+     */
+    public function getDetailedReportAttribute(): array
+    {
+        if (!$this->answers_log || !$this->quiz) {
+            return [];
+        }
+
+        $report = [];
+        // Загружаем все вопросы и ответы этого теста для сопоставления
+        $questions = $this->quiz->questions()->with('answers')->get();
+
+        foreach ($questions as $question) {
+            $userAnswerId = $this->answers_log[$question->id] ?? null;
+
+            $userAnswerText = 'Нет ответа';
+            $correctAnswerText = 'Не указан';
+
+            foreach ($question->answers as $answer) {
+                if ($answer->is_correct) {
+                    $correctAnswerText = $answer->answer_text;
+                }
+                if ($answer->id == $userAnswerId) {
+                    $userAnswerText = $answer->answer_text;
+                }
+            }
+
+            $report[] = [
+                'question' => $question->question_text,
+                'user_answer' => $userAnswerText,
+                'correct_answer' => $correctAnswerText,
+                'is_right' => $userAnswerText === $correctAnswerText,
+            ];
+        }
+
+        return $report;
     }
 }

@@ -17,6 +17,10 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use app\Filament\Resources\ColumnActivityResource\Widgets\ColumnActivityChart;
+use app\Filament\Resources\TopDocumentsResource\Widgets\TopDocumentsChart;
+use app\Filament\Resources\MonthlyColumnAnalyticsResource\Widgets\MonthlyColumnAnalytics;
+
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -39,6 +43,10 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
+                // Сюда прописывать кастомные виджеты, если автоподгрузка не сработала
+                ColumnActivityChart::class,
+                TopDocumentsChart::class,
+                MonthlyColumnAnalytics::class,
             ])
             ->middleware([
                 EncryptCookies::class,

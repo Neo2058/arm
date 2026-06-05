@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('documents', function (Blueprint $table) {
+        Schema::create('teaching', function (Blueprint $table) {
             $table->id();
             $table->string('title');        // Название для пользователя
             $table->string('file_path');    // Путь к файлу в MinIO
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('documents');
+        Schema::dropIfExists('teaching');
     }
 };

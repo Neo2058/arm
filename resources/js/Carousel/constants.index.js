@@ -2,8 +2,8 @@ export const imagesArray = [
     {
         name: "Техническая учёба",
         src: "/images/professionalDriver.jpg",
-        role: ['super_admin', 'instructor', 'driver', 'admin'],
-        link: '/index',
+        role: ['instructor', 'driver', 'admin'],
+        link: '/timer',
         details: [
             {
                 name: "Тесты",
@@ -65,23 +65,15 @@ export const imagesArray = [
         ],
     },
     {
-        name: "Руководящие документы",
+        name: "Обратная связь",
         src: "/watch19.jpeg",
         role: ['super_admin', 'student', 'instructor', 'driver', 'admin'],
         logo: "/assets/features.svg",
+        link: '/backstage',
         details: [
             {
-                name: "Инструктажи по депо",
-            },
-            {
-                name: "Инструктажи по метрополитену",
-            },
-            {
-                name: "Приказы по депо",
-            },
-            {
-                name: "Приказы по метрополитену",
-            },
+                name: "Напишите разработчику в случае возникновения ошибок"
+            }
         ],
     },
     {
@@ -102,9 +94,9 @@ export const imagesArray = [
         ],
     },
     {
-        name: "Подстройка смен",
+        name: "Подстройки ТЧМ",
         src: "/watch16.jpeg",
-        role: ['super_admin', 'driver', 'admin'],
+        role: ['super_admin', 'instructor', 'admin'],
         logo: "/assets/warranty.svg",
         details: [
             {
@@ -113,13 +105,25 @@ export const imagesArray = [
         ],
     },
     {
-        name: "Подстройка смен",
+        name: "Подстройки машинисты",
         src: "/watch16.jpeg",
-        role: ['super_admin', 'student', 'instructor', 'admin'],
+        role: ['super_admin', 'student', 'instructor', 'driver', 'admin'],
         logo: "/assets/warranty.svg",
         details: [
             {
                //
+            },
+        ],
+    },
+    {
+        name: "Учёт рабочих смен",
+        src: "/watch16.jpeg",
+        role: ['super_admin', 'driver'],
+        logo: "/assets/warranty.svg",
+        link: '/worktime',
+        details: [
+            {
+              name: "Календарь смен и калькулятор зарплаты",
             },
         ],
     },
