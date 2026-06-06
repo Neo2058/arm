@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\DeviationsCatalog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Models\WorkShift;
@@ -29,16 +30,19 @@ class WorkShiftController extends Controller
         $shifts = WorkShift::where('user_id', $user->id)
             ->whereBetween('shift_date', [$start, $end])
             ->with([
-                'route:id,route_number,start_location,end_location,default_start_time,default_end_time,default_break_duration,technological_tasks'
+                'route:id,route_number,start_location,end_location,default_start_time,default_end_time,default_break_duration,technological_tasks', 'deviation'
             ])
             ->get();
 
         // Отдаем полный каталог маршрутов для выпадающего списка
         $catalog = RoutesCatalog::all();
+        // ПОДГРУЖАЕМ СПРАВОЧНИК ОТВЛЕЧЕНИЙ ДЛЯ ФРОНТЕНДА
+        $deviationsCatalog = DeviationsCatalog::all();
 
         return response()->json([
             'shifts' => $shifts,
-            'catalog' => $catalog
+            'catalog' => $catalog,
+            'deviations_catalog' => $deviationsCatalog // <-- Улетело в React
         ]);
     }
 
@@ -51,7 +55,7 @@ class WorkShiftController extends Controller
             'shift_date' => 'required|date',
             'type' => 'required|in:work,deviation',
 
-            'deviation_type' => 'nullable|string',
+            'deviation_id' => 'nullable|exists:deviations_catalog,id', // Проверка по ID каталога
             'route_id' => 'nullable|exists:routes_catalog,id',
 
             'started_at' => 'nullable|date',
@@ -61,6 +65,7 @@ class WorkShiftController extends Controller
             'end_location' => 'nullable|string',
 
             'break_duration' => 'nullable|integer',
+            'total_minutes' => 'nullable|integer',
         ]);
 
         $calculated = $payroll->calculate($data, Auth::user());
@@ -74,7 +79,9 @@ class WorkShiftController extends Controller
         );
 
         return response()->json([
-            'shift' => $shift
+            'status' => 'success',
+            'shift' => $shift->load(['route', 'deviation'])
+
         ]);
     }
 }

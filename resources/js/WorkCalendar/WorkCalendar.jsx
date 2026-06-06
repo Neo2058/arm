@@ -37,7 +37,6 @@ export default function WorkCalendar() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [shifts, setShifts] = useState([]);
     const [catalog, setCatalog] = useState([]);
-    const [deviations, setDeviations] = useState([]);
 
     const [selectedDate, setSelectedDate] = useState(null);
     const [open, setOpen] = useState(false);
@@ -54,30 +53,35 @@ export default function WorkCalendar() {
     const [activeShift, setActiveShift] = useState(null);
 
     /* DEVIATION */
-    const [deviationId, setDeviationId] = useState('');
+    const [deviationsCatalog, setDeviationsCatalog] = useState([]);
+    const [selectedDeviationId, setSelectedDeviationId] = useState('');
+
 
     /* ================= LOAD ================= */
 
     const load = async () => {
-        const res = await axios.get('/api/work-shifts', {
-            params: {
-                month: currentDate.getMonth() + 1,
-                year: currentDate.getFullYear(),
+        try {
+            // Данные прилетают в переменную 'res'
+            const res = await axios.get('/api/work-shifts', {
+                params: {
+                    month: currentDate.getMonth() + 1,
+                    year: currentDate.getFullYear(),
+                }
+            });
+
+            // ИСПРАВЛЕНО: Читаем строго из res.data
+            if (res && res.data) {
+                setShifts(res.data.shifts || []);
+                setCatalog(res.data.catalog || []);
+                setDeviationsCatalog(res.data.deviations_catalog || []);
             }
-        });
-
-        setShifts(res.data.shifts);
-        setCatalog(res.data.catalog);
-    };
-
-    const loadDeviations = async () => {
-        const res = await axios.get('/api/deviations');
-        setDeviations(res.data);
+        } catch (e) {
+            console.error("Ошибка загрузки данных смен:", e);
+        }
     };
 
     useEffect(() => {
         load();
-        loadDeviations();
     }, [currentDate]);
 
     /* ================= ROUTE AUTOFILL ================= */
@@ -102,13 +106,11 @@ export default function WorkCalendar() {
     /* ================= SHIFT CALC ENGINE ================= */
 
     const preview = useMemo(() => {
-
         if (!selectedDate) return null;
 
         const route = activeShift?.route || null;
 
         if (mode === 'work') {
-
             if (!startAt || !endAt) return null;
 
             const start = new Date(startAt);
@@ -126,17 +128,27 @@ export default function WorkCalendar() {
             };
         }
 
-        const dev = deviations.find(d => d.id === Number(deviationId));
+        // ИСПРАВЛЕНО: Ищем выбранное отвлечение в правильном массиве по правильному ID
+        const dev = Array.isArray(deviationsCatalog)
+            ? deviationsCatalog.find(d => Number(d.id) === Number(selectedDeviationId))
+            : null;
 
         if (!dev) return null;
 
+        // Рассчитываем деньги на основе ЖИВОЙ тарифной ставки этого отвлечения из админки
+        const devHours = Number(dev.default_minutes || 480) / 60; // Обычно 8 часов
+        const devRate = parseFloat(dev.hourly_rate || 0);
+
         return {
             label: dev.name,
-            hours: 8,
-            money: 8 * HOURLY_RATE,
+            routeNumber: '—', // На отвлечении маршрута нет
+            tasks: 'Отвлечение от работы по графику депо',
+            hours: devHours,
+            money: devHours * devRate,
         };
 
-    }, [mode, startAt, endAt, breakMin, deviationId, activeShift]);
+        // ИСПРАВЛЕНО: Обновили зависимости хука, добавив selectedDeviationId
+    }, [mode, startAt, endAt, breakMin, selectedDeviationId, deviationsCatalog, activeShift]);
 
     /* ================= CALENDAR ================= */
 
@@ -191,34 +203,44 @@ export default function WorkCalendar() {
     /* ================= OPEN DAY ================= */
 
     const openDay = (d) => {
-
         setSelectedDate(d.dateStr);
         setActiveShift(d.shift || null);
         setOpen(true);
 
         if (d.shift) {
-
             setMode(d.shift.type);
 
             if (d.shift.type === 'work') {
-
                 setRouteId(d.shift.route_id || '');
                 setStartAt(d.shift.started_at?.slice(0,16) || '');
                 setEndAt(d.shift.ended_at?.slice(0,16) || '');
                 setStartLocation(d.shift.start_location || '');
                 setEndLocation(d.shift.end_location || '');
                 setBreakMin(d.shift.break_duration || 0);
-
+                setSelectedDeviationId(''); // Сбрасываем отвлечение, так как это работа
             } else {
+                // ИСПРАВЛЕНО: Записываем ID выбранного отвлечения в правильный стейт, принудительно в строку
+                setSelectedDeviationId(d.shift.deviation_id ? String(d.shift.deviation_id) : '');
 
-                setDeviationId(d.shift.deviation_id || '');
+                // Сбрасываем поля работы
+                setRouteId('');
+                setStartAt('');
+                setEndAt('');
             }
-
         } else {
-
+            // СБРОС ДЛЯ НОВОГО (ПУСТОГО) ДНЯ
             setMode('work');
             setRouteId('');
-            setDeviationId('');
+
+            // ИСПРАВЛЕНО: Сбрасываем только ID ВЫБРАННОГО отвлечения!
+            // Переменную setDeviationsCatalog БОЛЬШЕ ТУТ НЕ ТРОГАЕМ, чтобы справочник не стирался!
+            setSelectedDeviationId('');
+
+            setStartAt(`${d.dateStr}T08:00`);
+            setEndAt(`${d.dateStr}T16:00`);
+            setStartLocation('');
+            setEndLocation('');
+            setBreakMin(0);
         }
     };
 
@@ -227,25 +249,33 @@ export default function WorkCalendar() {
     const save = async (e) => {
         e.preventDefault();
 
+        // Защита: если ID пустой, передаем null, чтобы база данных Postgres не ругалась
+        const deviationIdToSend = selectedDeviationId ? Number(selectedDeviationId) : null;
+        const routeIdToSend = routeId ? Number(routeId) : null;
+
         await axios.post('/api/work-shifts', {
             shift_date: selectedDate,
             type: mode,
 
-            route_id: mode === 'work' ? routeId : null,
-            deviation_id: mode === 'deviation' ? deviationId : null,
+            // ИСПРАВЛЕНО: Передаем ID конкретного маршрута, а не каталог
+            route_id: mode === 'work' ? routeIdToSend : null,
 
-            started_at: startAt,
-            ended_at: endAt,
+            // ИСПРАВЛЕНО: Передаем ID выбранного отвлечения (selectedDeviationId), а не весь массив каталога!
+            deviation_id: mode === 'deviation' ? deviationIdToSend : null,
 
-            start_location: startLocation,
-            end_location: endLocation,
+            started_at: mode === 'work' ? startAt : null,
+            ended_at: mode === 'work' ? endAt : null,
 
-            break_duration: breakMin,
+            start_location: mode === 'work' ? startLocation : null,
+            end_location: mode === 'work' ? endLocation : null,
+
+            break_duration: mode === 'work' ? breakMin : 0,
         });
 
         setOpen(false);
-        load();
+        load(); // Перезагружаем календарь для отображения изменений
     };
+
 
     /* ================= Day Colors ================= */
 
@@ -556,7 +586,13 @@ export default function WorkCalendar() {
                 {open && (
 
                     <motion.div
-                        className="fixed inset-0 bg-black/80 flex items-center justify-center p-4"
+                        className="
+                                    fixed inset-0
+                                    z-50
+                                    bg-black/80
+                                    overflow-y-auto
+                                    p-4
+                                    "
                         onClick={() => setOpen(false)}
                     >
 
@@ -566,8 +602,18 @@ export default function WorkCalendar() {
                             initial={{ scale: 0.95 }}
                             animate={{ scale: 1 }}
                             exit={{ scale: 0.95 }}
-                            className="bg-[#0b1018] w-full max-w-xl p-6 rounded-2xl border border-white/10"
-                        >
+                            className="bg-[#0b1018]
+                                        w-full
+                                        max-w-xl
+                                        mx-auto
+                                        mt-10
+                                        mb-10
+                                        p-4
+                                        sm:p-6
+                                        rounded-2xl
+                                        border
+                                        border-white/10"
+                            >
 
                             <div className="flex justify-between mb-4">
 
@@ -583,7 +629,6 @@ export default function WorkCalendar() {
 
                             {/* MODE SWITCH */}
                             <div className="flex gap-2 mb-4">
-
                                 <button type="button"
                                         onClick={() => setMode('work')}
                                         className={`px-3 py-1 rounded ${mode==='work'?'bg-orange-500':'bg-white/10'}`}>
@@ -595,14 +640,11 @@ export default function WorkCalendar() {
                                         className={`px-3 py-1 rounded ${mode==='deviation'?'bg-cyan-500':'bg-white/10'}`}>
                                     Отвлечение
                                 </button>
-
                             </div>
 
-                            {/* WORK */}
+                            {/* WORK (Отображается только на табе "Работа") */}
                             {mode === 'work' && (
-
                                 <div className="space-y-2">
-
                                     <select
                                         value={routeId}
                                         onChange={(e)=>onRouteSelect(e.target.value)}
@@ -616,29 +658,40 @@ export default function WorkCalendar() {
                                         ))}
                                     </select>
 
-                                    <input value={startAt} onChange={e=>setStartAt(e.target.value)} className="w-full p-2 bg-white/5 rounded" />
-                                    <input value={endAt} onChange={e=>setEndAt(e.target.value)} className="w-full p-2 bg-white/5 rounded" />
-
+                                    <input type="datetime-local"
+                                           value={startAt}
+                                           onChange={e => setStartAt(e.target.value)}
+                                           className=" w-full h-12 bg-white/5 border border-white/10 rounded-xl px-3" />
+                                    <input type="datetime-local"
+                                           value={startAt}
+                                           onChange={e => setStartAt(e.target.value)}
+                                           className=" w-full h-12 bg-white/5 border border-white/10 rounded-xl px-3" />
                                 </div>
                             )}
 
                             {/* DEVIATION */}
                             {mode === 'deviation' && (
-
-                                <select
-                                    value={deviationId}
-                                    onChange={(e)=>setDeviationId(e.target.value)}
-                                    className="w-full p-2 bg-white/5 rounded"
-                                >
-                                    <option value="">Тип отвлечения</option>
-                                    {deviations.map(d=>(
-                                        <option key={d.id} value={d.id}>
-                                            {d.name}
-                                        </option>
-                                    ))}
-                                </select>
-
+                                <div>
+                                    <label className="text-[10px] uppercase font-bold text-zinc-500 block mb-1">Вид отвлечения от работы</label>
+                                    <select
+                                        value={String(selectedDeviationId || "")} // Принудительно приводим стейт селекта к строке
+                                        onChange={(e) => setSelectedDeviationId(e.target.value)}
+                                        className="w-full h-11 bg-black/30 border border-white/10 rounded-xl px-3 text-sm outline-none text-white focus:border-cyan-500/40"
+                                    >
+                                        <option value="" className="bg-[#0b1018]">-- Выберите причину из справочника --</option>
+                                        {Array.isArray(deviationsCatalog) && deviationsCatalog.map(dev => (
+                                            <option
+                                                key={dev.id}
+                                                value={String(dev.id)} // ИСПРАВЛЕНО: Приводим ID к строке для точного совпадения с e.target.value
+                                                className="bg-[#0b1018]"
+                                            >
+                                                📍 {dev.name} ({parseFloat(dev.hourly_rate).toFixed(2)} руб/ч)
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             )}
+
 
                             {/* PREVIEW */}
                             {preview && (

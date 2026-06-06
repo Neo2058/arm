@@ -12,13 +12,14 @@ class WorkShift extends Model
         'shift_date',
         'type',
         'route_id',
-        'deviation_type',
+        'deviation_id',
         'started_at',
         'ended_at',
         'start_location',
         'end_location',
         'break_duration',
         'total_minutes',
+        'estimated_earnings',
     ];
 
     protected $casts = [
@@ -28,6 +29,7 @@ class WorkShift extends Model
     ];
 
     public function route() { return $this->belongsTo(RoutesCatalog::class, 'route_id'); }
+    public function deviation() { return $this->belongsTo(DeviationsCatalog::class, 'deviation_id'); }
     public function user() { return $this->belongsTo(User::class); }
 
     /**
@@ -44,26 +46,26 @@ class WorkShift extends Model
                 'study_leave' => 300.00, // Учебный отпуск
             ];
 
-            // 1. Если это ОТВЛЕЧЕНИЕ (Больничный, учеба)
-            if ($shift->type === 'deviation') {
-                $rateKey = $shift->deviation_type;
-                $hourlyRate = $rates[$rateKey] ?? 0;
+            // 1. Если машинист выбрал ОТВЛЕЧЕНИЕ (Больничный, учеба, медкомиссия и т.д.)
+            if ($shift->type === 'deviation' && $shift->deviation_id) {
+                // Подгружаем объект отвлечения из каталога для получения ЖИВОЙ тарифной ставки
+                $deviationTemplate = DeviationsCatalog::find($shift->deviation_id);
 
-                // Для отвлечений обычно забивают фиксированное стандартное время (например, 8 часов = 480 минут)
-                $shift->total_minutes = $shift->total_minutes ?: 480;
-                $shift->estimated_earnings = ($shift->total_minutes / 60) * $hourlyRate;
+                if ($deviationTemplate) {
+                    $shift->total_minutes = $shift->total_minutes ?: $deviationTemplate->default_minutes;
+                    $shift->estimated_earnings = ($shift->total_minutes / 60) * $deviationTemplate->hourly_rate;
+                }
             }
-            // 2. Если это РЕАЛЬНАЯ СМЕНА по маршруту
-            else if ($shift->started_at && $shift->ended_at) {
+            // 2. Если это РЕАЛЬНАЯ СМЕНА по маршруту локомотива
+            else if ($shift->type === 'work' && $shift->started_at && $shift->ended_at) {
                 $start = Carbon::parse($shift->started_at);
                 $end = Carbon::parse($shift->ended_at);
 
-                // Считаем разницу, включая переход через полночь!
                 $diffInMinutes = $start->diffInMinutes($end);
                 $pureWorkMinutes = $diffInMinutes - (int)$shift->break_duration;
 
                 $shift->total_minutes = $pureWorkMinutes > 0 ? $pureWorkMinutes : 0;
-                $hourlyRate = $rates['work'];
+                $hourlyRate = 450.00; // Твой дефолтный тариф за линию
                 $shift->estimated_earnings = ($shift->total_minutes / 60) * $hourlyRate;
             }
         });

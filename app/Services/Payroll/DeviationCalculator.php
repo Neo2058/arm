@@ -6,7 +6,8 @@ class DeviationCalculator
 {
     public function calculate(array $shift): array
     {
-        $type = $shift['deviation_type'];
+        $type = $data['deviation_id'] ?? null;
+
 
         $coef = PayrollRules::DEVIATION_COEFFICIENTS[$type] ?? 1;
 
