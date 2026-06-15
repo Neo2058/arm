@@ -65,14 +65,14 @@ export const imagesArray = [
         ],
     },
     {
-        name: "Обратная связь",
+        name: "Связь с разработчиком",
         src: "/watch19.jpeg",
         role: ['super_admin', 'student', 'instructor', 'driver', 'admin'],
         logo: "/assets/features.svg",
         link: '/backstage',
         details: [
             {
-                name: "Напишите разработчику в случае возникновения ошибок"
+                name: "Напишите разработчику, сообщите о проблеме или поддержите проект"
             }
         ],
     },

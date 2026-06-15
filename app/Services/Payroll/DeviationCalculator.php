@@ -8,7 +8,6 @@ class DeviationCalculator
     {
         $type = $data['deviation_id'] ?? null;
 
-
         $coef = PayrollRules::DEVIATION_COEFFICIENTS[$type] ?? 1;
 
         $hours = PayrollRules::DEFAULT_WORK_HOURS;

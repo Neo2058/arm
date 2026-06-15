@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\QuizResultController;
 use App\Http\Controllers\Api\WorkShiftController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BackstageController;
 use App\Http\Controllers\BarrierController;
 use App\Http\Controllers\BugReportController;
 use App\Http\Controllers\DocumentController;
@@ -65,8 +66,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/telegram/webhook', [TelegramKeyBotController::class, 'webhook']);
 
     Route::get('/api/work-shifts', [WorkShiftController::class, 'index']);
-
     Route::post('/api/work-shifts', [WorkShiftController::class, 'store']);
+    Route::post('/api/work-shifts/preview', [WorkShiftController::class, 'preview']);
 
     Route::get('/worktime', function () {
         // Подсчитываем счетчик непрочитанных, чтобы сайдбар не ломался
@@ -147,6 +148,13 @@ Route::middleware(['auth'])->group(function () {
    */
     Route::post('/api/bug-report', [BugReportController::class, 'store'])->name('bug.report.store');
 
+    // Backstage — Связь с разработчиком + поддержка проекта
+    Route::get('/backstage', [BackstageController::class, 'index'])->name('backstage.index');
+    Route::post('/backstage', [BackstageController::class, 'store'])->name('backstage.store');
+    Route::post('/backstage/support', [BackstageController::class, 'support'])->name('backstage.support');
+
+    // Webhook для ЮKassa (публичный, без auth)
+    Route::post('/webhooks/yookassa', [BackstageController::class, 'yookassaWebhook'])->name('webhooks.yookassa');
 });
 
 

@@ -20,6 +20,9 @@ class QuizResultResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $navigationLabel = 'Результаты опросов';
+
+
     public static function form(Form $form): Form
     {
         return $form

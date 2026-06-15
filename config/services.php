@@ -28,6 +28,23 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Yookassa (ЮKassa)
+    |--------------------------------------------------------------------------
+    | Для донатов в Backstage.
+    | Добавьте в .env:
+    | YOOKASSA_SHOP_ID=...
+    | YOOKASSA_SECRET_KEY=...
+    |
+    | Webhook URL: https://your-domain/webhooks/yookassa
+    | В личном кабинете ЮKassa укажите этот URL и включите уведомления о статусе платежа.
+    */
+    'yookassa' => [
+        'shop_id' => env('YOOKASSA_SHOP_ID'),
+        'secret_key' => env('YOOKASSA_SECRET_KEY'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

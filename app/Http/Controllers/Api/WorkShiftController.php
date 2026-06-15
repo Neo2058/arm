@@ -84,4 +84,47 @@ class WorkShiftController extends Controller
 
         ]);
     }
+
+    /**
+     * Возвращает точный расчёт preview без сохранения (чтобы фронтенд всегда показывал то же, что сохранится).
+     * Использует тот же PayrollService, что и store.
+     */
+    public function preview(Request $request, PayrollService $payroll)
+    {
+        $data = $request->validate([
+            'shift_date' => 'required|date',
+            'type' => 'required|in:work,deviation',
+            'deviation_id' => 'nullable|exists:deviations_catalog,id',
+            'route_id' => 'nullable|exists:routes_catalog,id',
+            'started_at' => 'nullable|date',
+            'ended_at' => 'nullable|date',
+            'break_duration' => 'nullable|integer',
+        ]);
+
+        $calculated = $payroll->calculate($data, Auth::user());
+
+        // Обогащаем ответ в том же формате, который ожидает фронтендский preview
+        $response = [
+            'label'       => $calculated['type'] === 'work' ? 'Рабочая смена' : 'Отвлечение',
+            'hours'       => $calculated['hours'] ?? 0,
+            'money'       => $calculated['earnings'] ?? 0,
+            'routeNumber' => '—',
+            'tasks'       => 'Отвлечение от работы по графику депо',
+        ];
+
+        if ($calculated['type'] === 'work' && !empty($data['route_id'])) {
+            $route = RoutesCatalog::find($data['route_id']);
+            if ($route) {
+                $response['routeNumber'] = $route->route_number;
+                $response['tasks'] = $route->technological_tasks ?? 'План работ не задан';
+            }
+        } elseif ($calculated['type'] === 'deviation' && !empty($data['deviation_id'])) {
+            $dev = DeviationsCatalog::find($data['deviation_id']);
+            if ($dev) {
+                $response['label'] = $dev->name;
+            }
+        }
+
+        return response()->json($response);
+    }
 }

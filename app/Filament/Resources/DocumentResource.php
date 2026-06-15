@@ -19,6 +19,9 @@ class DocumentResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $navigationLabel = 'Документы';
+
+
     public static function form(Form $form): Form
     {
         return $form

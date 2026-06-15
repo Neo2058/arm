@@ -19,6 +19,9 @@ class DeviationsCatalogResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $navigationLabel = 'Каталог отвлечений';
+
+
     public static function form(Form $form): Form
     {
         return $form

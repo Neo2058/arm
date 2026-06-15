@@ -129,6 +129,28 @@
 
     ];
 
+    $backstageMenu = [
+
+        [
+            'title' => 'Следующее ТУ',
+            'route' => 'timer',
+            'icon' => 'dashboard',
+        ],
+
+        [
+            'title' => 'Документы',
+            'route' => 'documents.index',
+            'icon' => 'documents',
+        ],
+
+        [
+            'title' => 'Обратно в меню',
+            'route' => 'mainMenu',
+            'icon' => 'logout',
+        ],
+
+    ];
+
 
     /*
     |--------------------------------------------------------------------------
@@ -143,6 +165,8 @@
         request()->routeIs('results.*') => $documentsMenu,
         request()->routeIs('timer') => $documentsMenu,
         request()->routeIs('work.time.index') => $worktimeMenu,
+        request()->routeIs('backstage') => $backstageMenu,
+        request()->routeIs('backstage.*') => $backstageMenu,
 
         default => [],
     };
