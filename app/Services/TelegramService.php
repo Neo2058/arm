@@ -49,40 +49,112 @@ class TelegramService
     }
 
     /**
-     * Отправка фото (оставляем как было, только улучшили)
+     * Отправка фото
      */
-    public static function sendPhoto(string $message, string $filePathInMinio): void
-    {
+    public static function sendPhoto(
+        string $filePathInMinio,
+        ?int $chatId = null,
+        ?string $caption = null,
+        string $parseMode = 'HTML',
+        ?string $filename = null
+    ): void {
+        self::sendFile('sendPhoto', 'photo', $filePathInMinio, $chatId, $caption, $parseMode, $filename);
+    }
+
+    /**
+     * Отправка видео
+     */
+    public static function sendVideo(
+        string $filePathInMinio,
+        ?int $chatId = null,
+        ?string $caption = null,
+        string $parseMode = 'HTML',
+        ?string $filename = null
+    ): void {
+        self::sendFile('sendVideo', 'video', $filePathInMinio, $chatId, $caption, $parseMode, $filename);
+    }
+
+    /**
+     * Отправка аудио
+     */
+    public static function sendAudio(
+        string $filePathInMinio,
+        ?int $chatId = null,
+        ?string $caption = null,
+        string $parseMode = 'HTML',
+        ?string $filename = null
+    ): void {
+        self::sendFile('sendAudio', 'audio', $filePathInMinio, $chatId, $caption, $parseMode, $filename);
+    }
+
+    /**
+     * Отправка документа (файл любого типа)
+     */
+    public static function sendDocument(
+        string $filePathInMinio,
+        ?int $chatId = null,
+        ?string $caption = null,
+        string $parseMode = 'HTML',
+        ?string $filename = null
+    ): void {
+        self::sendFile('sendDocument', 'document', $filePathInMinio, $chatId, $caption, $parseMode, $filename);
+    }
+
+    /**
+     * Универсальный метод отправки медиафайла
+     */
+    private static function sendFile(
+        string $telegramMethod,   // sendPhoto, sendVideo, sendAudio, sendDocument
+        string $fieldName,        // photo, video, audio, document
+        string $filePathInMinio,
+        ?int $chatId = null,
+        ?string $caption = null,
+        string $parseMode = 'HTML',
+        ?string $filename = null
+    ): void {
         $botToken = config('services.telegram.bot_token');
-        $chatId = config('services.telegram.chat_id');
+        $defaultChatId = config('services.telegram.chat_id') ?? config('services.telegram.group_id');
+
+        $chatId = $chatId ?? $defaultChatId;
 
         if (empty($botToken) || empty($chatId)) {
+            Log::warning('Telegram sendFile failed: empty token or chat_id');
             return;
         }
 
         try {
             $fileStream = Storage::disk('s3')->readStream($filePathInMinio);
+
             if ($fileStream === false) {
-                Log::warning('Telegram photo stream failed', ['path' => $filePathInMinio]);
+                Log::warning('Telegram file stream failed', ['path' => $filePathInMinio]);
                 return;
             }
 
-            $response = Http::timeout(30)
-                ->attach('photo', $fileStream, basename($filePathInMinio))
-                ->post("https://api.telegram.org/bot{$botToken}/sendPhoto", [
-                    'chat_id'    => $chatId,
-                    'caption'    => $message,
-                    'parse_mode' => 'Markdown',
-                ]);
+            $attachFilename = $filename ?: basename($filePathInMinio);
+
+            $payload = [
+                'chat_id'    => $chatId,
+                'parse_mode' => $parseMode,
+            ];
+
+            if ($caption) {
+                $payload['caption'] = $caption;
+            }
+
+            $response = Http::timeout(60)
+                ->attach($fieldName, $fileStream, $attachFilename)
+                ->post("https://api.telegram.org/bot{$botToken}/{$telegramMethod}", $payload);
 
             if ($response->failed()) {
-                Log::error('Telegram Photo API error', [
+                Log::error('Telegram ' . $telegramMethod . ' API error', [
                     'status' => $response->status(),
                     'body'   => $response->json(),
+                    'chat_id'=> $chatId,
+                    'path'   => $filePathInMinio,
                 ]);
             }
         } catch (\Throwable $e) {
-            Log::error('Telegram photo send failed', [
+            Log::error('Telegram ' . $telegramMethod . ' send failed', [
                 'error' => $e->getMessage(),
                 'path'  => $filePathInMinio,
             ]);

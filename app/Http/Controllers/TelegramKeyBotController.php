@@ -154,32 +154,88 @@ class TelegramKeyBotController extends Controller
     }
 
     /**
-     * Заглушка для будущей команды /training.
-     * Здесь в будущем будет меню с разделами обучения.
+     * Обработчик команды /training — показывает список тем.
+     * В будущем будет красивым меню с inline-кнопками.
      */
     protected function handleTrainingCommand(int $chatId, string $text, bool $isPrivate): void
     {
-        $msg = "📚 <b>Раздел обучения</b>\n\n";
-        $msg .= "Этот функционал находится в разработке.\n";
-        $msg .= "Скоро здесь появятся:\n";
-        $msg .= "• Выжимки из инструкций\n";
-        $msg .= "• Видео- и аудиоматериалы\n";
-        $msg .= "• Тесты по темам\n\n";
-        $msg .= "Следи за обновлениями!";
+        $service = app(\App\Services\Training\TrainingContentService::class);
+
+        $topics = $service->getTopicsForBotMenu();
+
+        if (empty($topics)) {
+            TelegramService::send("Пока нет доступных тем обучения.", $chatId);
+            return;
+        }
+
+        $msg = "📚 <b>Выберите тему обучения:</b>\n\n";
+        foreach ($topics as $topic) {
+            $msg .= "• /topic {$topic['slug']} — {$topic['title']}\n";
+        }
 
         TelegramService::send($msg, $chatId, 'HTML');
     }
 
     /**
-     * Заглушка для команды по темам.
+     * Обработчик команды /topic {slug} — показывает материалы по теме.
      */
     protected function handleTopicCommand(int $chatId, string $text): void
     {
-        $msg = "🔍 <b>Поиск по темам</b>\n\n";
-        $msg .= "Функционал выдачи материалов по конкретным темам (инструкции, видео, аудио) будет добавлен позже.\n";
-        $msg .= "Архитектура уже заложена.";
+        $service = app(\App\Services\Training\TrainingContentService::class);
+
+        // Простой парсинг команды
+        $parts = explode(' ', $text, 2);
+        $slug = $parts[1] ?? null;
+
+        if (!$slug) {
+            $topics = $service->getTopicsForBotMenu();
+            $msg = "Укажите тему, например: /topic светофоры\n\nДоступные темы:\n";
+            foreach ($topics as $t) {
+                $msg .= "• {$t['slug']} — {$t['title']}\n";
+            }
+            TelegramService::send($msg, $chatId);
+            return;
+        }
+
+        $topic = \App\Models\TrainingTopic::where('slug', $slug)->where('is_active', true)->first();
+
+        if (!$topic) {
+            TelegramService::send("Тема «{$slug}» не найдена.", $chatId);
+            return;
+        }
+
+        $materials = $service->getMaterialsByTopic($topic->id);
+
+        if ($materials->isEmpty()) {
+            TelegramService::send("В теме «{$topic->title}» пока нет материалов.", $chatId);
+            return;
+        }
+
+        $msg = "📖 <b>{$topic->title}</b>\n\n";
+        foreach ($materials as $mat) {
+            $typeIcon = match($mat->type) {
+                'video'   => '🎥',
+                'audio'   => '🎧',
+                'text'    => '📝',
+                'document'=> '📄',
+                default   => '📄',
+            };
+            $msg .= "{$typeIcon} /material {$mat->id} — {$mat->title}\n";
+        }
 
         TelegramService::send($msg, $chatId, 'HTML');
+    }
+
+    /**
+     * Пример метода отправки конкретного материала.
+     * В будущем будет вызываться по /material {id} или callback.
+     */
+    public function sendTrainingMaterial(int $chatId, int $materialId, ?int $userId = null): void
+    {
+        $service = app(\App\Services\Training\TrainingContentService::class);
+        $user = $userId ? \App\Models\User::find($userId) : null;
+
+        $service->sendMaterialToUser($chatId, $materialId, $user);
     }
 
     /**

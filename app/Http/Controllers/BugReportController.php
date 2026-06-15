@@ -39,9 +39,9 @@ class BugReportController extends Controller
         $msg .= "📝 Описание:\n_{$request->description}_";
 
         if ($path) {
-            TelegramService::sendPhoto($msg, $path);
+            TelegramService::sendPhoto($path, null, $msg, 'Markdown');
         } else {
-            TelegramService::send($msg);
+            TelegramService::send($msg, null, 'Markdown');
         }
 
         return response()->json(['status' => 'success', 'message' => 'Спасибо! Ваш отзыв успешно отправлен разработчику.']);

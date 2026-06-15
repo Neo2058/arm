@@ -58,9 +58,9 @@ class BackstageController extends Controller
         $msg .= "📝 Сообщение:\n_{$request->message}_";
 
         if ($path) {
-            TelegramService::sendPhoto($msg, $path);
+            TelegramService::sendPhoto($path, null, $msg, 'Markdown');
         } else {
-            TelegramService::send($msg);
+            TelegramService::send($msg, null, 'Markdown');
         }
 
         return response()->json([
