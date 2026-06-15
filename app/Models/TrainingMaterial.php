@@ -35,18 +35,66 @@ class TrainingMaterial extends Model
         return $this->belongsTo(TrainingTopic::class, 'training_topic_id');
     }
 
+    public function comments()
+    {
+        return $this->hasMany(TrainingMaterialComment::class);
+    }
+
+    public function reactions()
+    {
+        return $this->hasMany(TrainingMaterialReaction::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    public function getFileUrlAttribute(): ?string
+    /**
+     * Возвращает временную (signed) ссылку на файл.
+     * Никогда не возвращает прямую публичную ссылку — это требование безопасности проекта.
+     *
+     * @param int $minutes Срок действия ссылки в минутах. По умолчанию 15 минут.
+     */
+    /**
+     * Генерирует временную подписанную ссылку (presigned URL).
+     * Это основной и единственный способ доступа к видео/аудио (по требованиям безопасности проекта).
+     *
+     * @param int $minutes Время жизни ссылки. Рекомендуется 10-20 минут для медиа.
+     */
+    public function getTemporaryUrl(int $minutes = 15): ?string
     {
         if (!$this->file_path) {
             return null;
         }
 
-        // Предполагаем использование диска 's3' (MinIO)
-        return \Storage::disk('s3')->url($this->file_path);
+        return \Storage::disk('s3')->temporaryUrl(
+            $this->file_path,
+            now()->addMinutes($minutes),
+            [
+                'ResponseContentDisposition' => 'inline',
+                'ResponseCacheControl'       => 'no-store, no-cache, must-revalidate, max-age=0',
+            ]
+        );
+    }
+
+    /**
+     * Аксессор для обратной совместимости.
+     * Всегда отдаёт временную ссылку (15 минут).
+     * Используется в Blade-шаблонах видео/аудио.
+     */
+    public function getFileUrlAttribute(): ?string
+    {
+        return $this->getTemporaryUrl(15);
+    }
+
+    public function getLikesCountAttribute(): int
+    {
+        return $this->reactions()->where('reaction_type', 'like')->count();
+    }
+
+    public function getDislikesCountAttribute(): int
+    {
+        return $this->reactions()->where('reaction_type', 'dislike')->count();
     }
 }

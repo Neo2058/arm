@@ -100,6 +100,12 @@
         ],
 
         [
+            'title' => 'Темы обучения',
+            'route' => 'training.topics',
+            'icon' => 'quiz',
+        ],
+
+        [
             'title' => 'Обратно в меню',
             'route' => 'mainMenu',
             'icon' => 'logout',
@@ -151,6 +157,34 @@
 
     ];
 
+    $trainingMenu = [
+
+        [
+            'title' => 'Темы обучения',
+            'route' => 'training.topics',
+            'icon' => 'quiz',
+        ],
+
+        [
+            'title' => 'Следующее ТУ',
+            'route' => 'timer',
+            'icon' => 'dashboard',
+        ],
+
+        [
+            'title' => 'Документы',
+            'route' => 'documents.index',
+            'icon' => 'documents',
+        ],
+
+        [
+            'title' => 'Обратно в меню',
+            'route' => 'mainMenu',
+            'icon' => 'logout',
+        ],
+
+    ];
+
 
     /*
     |--------------------------------------------------------------------------
@@ -167,6 +201,7 @@
         request()->routeIs('work.time.index') => $worktimeMenu,
         request()->routeIs('backstage') => $backstageMenu,
         request()->routeIs('backstage.*') => $backstageMenu,
+        request()->routeIs('training.*') => $trainingMenu,
 
         default => [],
     };

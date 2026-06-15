@@ -8,6 +8,7 @@ use App\Http\Controllers\BarrierController;
 use App\Http\Controllers\BugReportController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\TelegramKeyBotController;
+use App\Http\Controllers\TrainingController;
 use App\Models\QuizResult;
 use Illuminate\Support\Facades\Route;
 use App\Models\Quiz;
@@ -155,6 +156,25 @@ Route::middleware(['auth'])->group(function () {
 
     // Webhook для ЮKassa (публичный, без auth)
     Route::post('/webhooks/yookassa', [BackstageController::class, 'yookassaWebhook'])->name('webhooks.yookassa');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Training / Техническая учёба (дублирует функционал Telegram бота)
+    | Mobile-first, с возможностью комментариев и реакций
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('training')->group(function () {
+        Route::get('/', [TrainingController::class, 'index'])->name('training.topics');
+        Route::get('/{topic:slug}', [TrainingController::class, 'showTopic'])->name('training.topic');
+
+        // Шаблонные страницы для медиа (video и audio)
+        Route::get('/video/{material}', [TrainingController::class, 'showVideo'])->name('training.video');
+        Route::get('/audio/{material}', [TrainingController::class, 'showAudio'])->name('training.audio');
+
+        // Комментарии и реакции (архитектура заложена)
+        Route::post('/{material}/comment', [TrainingController::class, 'storeComment'])->name('training.comment.store');
+        Route::post('/{material}/react', [TrainingController::class, 'storeReaction'])->name('training.reaction.store');
+    });
 });
 
 
