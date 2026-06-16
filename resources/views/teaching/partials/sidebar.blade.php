@@ -166,6 +166,18 @@
         ],
 
         [
+            'title' => 'Росписи',
+            'route' => 'rosisi.index',
+            'icon' => 'results',
+        ],
+
+        [
+            'title' => 'Статистика росписей',
+            'route' => 'rosisi.statistics',
+            'icon' => 'results',
+        ],
+
+        [
             'title' => 'Следующее ТУ',
             'route' => 'timer',
             'icon' => 'dashboard',
@@ -202,6 +214,10 @@
         request()->routeIs('backstage') => $backstageMenu,
         request()->routeIs('backstage.*') => $backstageMenu,
         request()->routeIs('training.*') => $trainingMenu,
+        request()->routeIs('rosisi') => $trainingMenu,
+        request()->routeIs('rosisi.*') => $trainingMenu,
+        request()->routeIs('podstroiki') => $trainingMenu,
+        request()->routeIs('podstroiki.*') => $trainingMenu,
 
         default => [],
     };

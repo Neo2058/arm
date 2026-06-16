@@ -60,6 +60,15 @@ class DocumentResource extends Resource
                     ])
                     ->placeholder('Если пусто — доступно ВСЕМ')
                     ->required(false),
+
+                Select::make('instruction_category_id')
+                    ->label('Папка для инструктажей / росписей')
+                    ->relationship('instructionCategory', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->nullable()
+                    ->placeholder('Не для инструктажей')
+                    ->helperText('Выберите папку — документ автоматически попадёт в раздел Росписи для пользователей.'),
             ]);
     }
 
@@ -69,6 +78,7 @@ class DocumentResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('title')->label('Название')->searchable(),
                 Tables\Columns\TextColumn::make('category')->label('Категория')->badge(),
+                Tables\Columns\TextColumn::make('instructionCategory.name')->label('Папка инструктажа')->sortable(),
                 Tables\Columns\TextColumn::make('file_path')
                     ->label('Размер')
                     ->formatStateUsing(fn ($state) => round(Storage::disk('s3')->size($state) / 1024 / 1024, 2) . ' MB'),

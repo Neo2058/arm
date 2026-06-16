@@ -23,6 +23,16 @@ class AuthController extends Controller
         if (Auth::attempt($credentials, $request->has('remember'))) {
             $request->session()->regenerate();
             ClickHouseService::log('login'); // Логируем вход
+
+            $user = Auth::user();
+            $roleObj = $user->role;
+            $roleValue = is_object($roleObj) && property_exists($roleObj, 'value') ? strtolower($roleObj->value) : strtolower((string) $roleObj);
+
+            if (in_array($roleValue, ['naryadchik', 'dispatcher'])) {
+                // Нарядчик попадает сразу в новый уникальный инструмент планирования наряда (с собственным сайдбаром)
+                return redirect()->route('naryad.index');
+            }
+
             return redirect()->intended('mainMenu');
         }
 

@@ -38,29 +38,13 @@ export const imagesArray = [
         src: "/watch2.jpeg",
         role: ['super_admin', 'student', 'driver', 'admin'],
         logo: "/assets/materials.svg",
+        link: '/rosisi',
         details: [
             {
                 name: "Текущие инструктажи",
             },
             {
                 name: "Папка БД",
-            },
-        ],
-    },
-    {
-        name: "Записи в формуляр",
-        src: "/watch18.jpeg",
-        role: ['super_admin', 'student', 'instructor', 'driver', 'admin'],
-        logo: "/assets/design.svg",
-        details: [
-            {
-                name: "Проезды светофоров",
-            },
-            {
-                name: "Проезды станций",
-            },
-            {
-                name: "Прочие нарушения",
             },
         ],
     },
@@ -94,24 +78,17 @@ export const imagesArray = [
         ],
     },
     {
-        name: "Подстройки ТЧМ",
+        name: "Подстройки",
         src: "/watch16.jpeg",
-        role: ['super_admin', 'instructor', 'admin'],
+        role: ['super_admin', 'student', 'instructor', 'driver', 'admin', 'naryadchik'],
         logo: "/assets/warranty.svg",
+        link: '/podstroiki',
         details: [
             {
-                //
+                name: "Заявки на подстройку смен",
             },
-        ],
-    },
-    {
-        name: "Подстройки машинисты",
-        src: "/watch16.jpeg",
-        role: ['super_admin', 'student', 'instructor', 'driver', 'admin'],
-        logo: "/assets/warranty.svg",
-        details: [
             {
-               //
+                name: "Текущий и следующий месяц",
             },
         ],
     },
@@ -130,8 +107,9 @@ export const imagesArray = [
     {
         name: "Нарядчики",
         src: "/watch20.jpeg",
-        role: ['naryadchik'],
+        role: ['naryadchik', 'dispatcher'],
         logo: "/assets/packaging.svg",
+        link: '/naryad',
         details: [
             {
                 name: "Составление наряда",

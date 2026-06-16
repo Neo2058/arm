@@ -96,6 +96,14 @@ Route::middleware(['auth'])->group(function () {
         return view('teaching.timer');
     })->name('timer');
 
+    // Новый раздел Росписи (дублирует функционал Telegram + ведение формуляра)
+    Route::get('/rosisi', [\App\Http\Controllers\RospisiController::class, 'index'])->name('rosisi.index');
+    Route::post('/rosisi/sign/{document}', [\App\Http\Controllers\RospisiController::class, 'signDocument'])->name('rosisi.sign');
+    Route::post('/rosisi/log-formular/{task}', [\App\Http\Controllers\RospisiController::class, 'logFormular'])->name('rosisi.log-formular');
+
+    // Статистика росписей (для инструкторов, админов)
+    Route::get('/rosisi/statistics', [\App\Http\Controllers\RospisiController::class, 'statistics'])->name('rosisi.statistics');
+
     Route::get('/results-history', [DocumentController::class, 'history'])->name('quiz.results.history');
 
 
@@ -174,6 +182,66 @@ Route::middleware(['auth'])->group(function () {
         // Комментарии и реакции (архитектура заложена)
         Route::post('/{material}/comment', [TrainingController::class, 'storeComment'])->name('training.comment.store');
         Route::post('/{material}/react', [TrainingController::class, 'storeReaction'])->name('training.reaction.store');
+    });
+
+    // Подстройки смен (новый пункт в карусели "Подстройки")
+    Route::get('/podstroiki', [\App\Http\Controllers\PodstroikiController::class, 'index'])->name('podstroiki.index');
+    Route::post('/podstroiki', [\App\Http\Controllers\PodstroikiController::class, 'store'])->name('podstroiki.store');
+    Route::post('/podstroiki/{podstroika}/status', [\App\Http\Controllers\PodstroikiController::class, 'updateStatus'])->name('podstroiki.update-status');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Планирование наряда для Нарядчика (уникальный сайдбар + AJAX справочники + сетка)
+    | Только для ролей naryadchik / dispatcher. Отдельный layout без основного sidebar.
+    | Данные о маршрутах/временах — из WorkShift + RoutesCatalog.
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('naryad')->group(function () {
+        Route::get('/', [\App\Http\Controllers\NaryadPlanningController::class, 'index'])->name('naryad.index');
+
+        // AJAX-загрузка разделов (partials) — возвращают HTML без layout
+        Route::get('/partial/setka', [\App\Http\Controllers\NaryadPlanningController::class, 'partialSetka'])->name('naryad.partial.setka');
+        Route::get('/partial/crews', [\App\Http\Controllers\NaryadPlanningController::class, 'partialCrews'])->name('naryad.partial.crews');
+        Route::get('/partial/variants', [\App\Http\Controllers\NaryadPlanningController::class, 'partialVariants'])->name('naryad.partial.variants');
+        Route::get('/partial/calendar', [\App\Http\Controllers\NaryadPlanningController::class, 'partialCalendar'])->name('naryad.partial.calendar');
+        Route::get('/partial/types', [\App\Http\Controllers\NaryadPlanningController::class, 'partialTypes'])->name('naryad.partial.types');
+        Route::get('/partial/users', [\App\Http\Controllers\NaryadPlanningController::class, 'partialUsers'])->name('naryad.partial.users');
+
+        // Действия сохранения (AJAX из сетки и справочников)
+        Route::post('/assign', [\App\Http\Controllers\NaryadPlanningController::class, 'assign'])->name('naryad.assign');
+
+        // Обновление планировочных флагов пользователей (расширенный справочник)
+        Route::post('/user-profile/{profile}/flags', [\App\Http\Controllers\NaryadPlanningController::class, 'updateUserFlags'])
+            ->name('naryad.user-profile.update-flags');
+
+        // Справочник составов (т6/т5)
+        Route::post('/crews', [\App\Http\Controllers\NaryadPlanningController::class, 'storeCrew'])->name('naryad.crews.store');
+
+        // Типы графиков
+        Route::post('/types', [\App\Http\Controllers\NaryadPlanningController::class, 'storeType'])->name('naryad.types.store');
+        Route::put('/types/{type}', [\App\Http\Controllers\NaryadPlanningController::class, 'updateType'])->name('naryad.types.update');
+        Route::delete('/types/{type}', [\App\Http\Controllers\NaryadPlanningController::class, 'destroyType'])->name('naryad.types.destroy');
+
+        // Варианты маршрутов
+        Route::post('/variants', [\App\Http\Controllers\NaryadPlanningController::class, 'storeVariant'])->name('naryad.variants.store');
+        Route::put('/variants/{variant}', [\App\Http\Controllers\NaryadPlanningController::class, 'updateVariant'])->name('naryad.variants.update');
+        Route::delete('/variants/{variant}', [\App\Http\Controllers\NaryadPlanningController::class, 'destroyVariant'])->name('naryad.variants.destroy');
+
+        // Отвлечения (DeviationsCatalog)
+        Route::get('/partial/deviations', [\App\Http\Controllers\NaryadPlanningController::class, 'partialDeviations'])->name('naryad.partial.deviations');
+        Route::post('/deviations', [\App\Http\Controllers\NaryadPlanningController::class, 'storeDeviation'])->name('naryad.deviations.store');
+        Route::put('/deviations/{deviation}', [\App\Http\Controllers\NaryadPlanningController::class, 'updateDeviation'])->name('naryad.deviations.update');
+        Route::delete('/deviations/{deviation}', [\App\Http\Controllers\NaryadPlanningController::class, 'destroyDeviation'])->name('naryad.deviations.destroy');
+
+        // Календарь квот (batch save for month)
+        Route::post('/calendar', [\App\Http\Controllers\NaryadPlanningController::class, 'saveCalendar'])->name('naryad.calendar.save');
+
+        // Начальные условия (нормы и дополнительные ограничения)
+        Route::get('/partial/norms', [\App\Http\Controllers\NaryadPlanningController::class, 'partialNorms'])->name('naryad.partial.norms');
+        Route::post('/norms', [\App\Http\Controllers\NaryadPlanningController::class, 'updateNorm'])->name('naryad.norms.update');
+        Route::post('/extra-conditions', [\App\Http\Controllers\NaryadPlanningController::class, 'storeExtraCondition'])->name('naryad.extra_conditions.store');
+        Route::put('/extra-conditions/{extra}', [\App\Http\Controllers\NaryadPlanningController::class, 'updateExtraCondition'])->name('naryad.extra_conditions.update');
+        Route::delete('/extra-conditions/{extra}', [\App\Http\Controllers\NaryadPlanningController::class, 'destroyExtraCondition'])->name('naryad.extra_conditions.destroy');
     });
 });
 

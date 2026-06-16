@@ -13,7 +13,9 @@ class Document extends Model
         'file_path',
         'category',
         'size',
-        'allowed_roles'];
+        'allowed_roles',
+        'instruction_category_id', // for briefings / rospisi
+    ];
 
     protected $casts = [
         'allowed_roles' => 'array', // Автоматически превращает JSON из базы в PHP-массив
@@ -22,5 +24,10 @@ class Document extends Model
     public function quiz(): HasOne
     {
         return $this->hasOne(Quiz::class);
+    }
+
+    public function instructionCategory(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(InstructionCategory::class, 'instruction_category_id');
     }
 }
