@@ -14,6 +14,10 @@
                 <input id="dev-syskey" class="w-full border rounded-2xl px-3 py-2" placeholder="sick_leave">
             </div>
             <div>
+                <label class="block text-xs text-orange-700 dark:text-orange-200 mb-1">Код для статистики (Б, В и т.д.)</label>
+                <input id="dev-shortcode" class="w-full border rounded-2xl px-3 py-2" placeholder="Б">
+            </div>
+            <div>
                 <label class="block text-xs text-orange-700 dark:text-orange-200 mb-1">Ставка в час</label>
                 <input id="dev-rate" type="number" step="0.01" class="w-full border rounded-2xl px-3 py-2" value="250" min="0">
             </div>
@@ -37,12 +41,16 @@
                  data-id="{{ $d->id }}"
                  data-name="{{ $d->name }}"
                  data-syskey="{{ $d->sys_key ?? '' }}"
+                 data-shortcode="{{ $d->short_code ?? '' }}"
                  data-rate="{{ $d->hourly_rate }}"
                  data-minutes="{{ $d->default_minutes }}">
                 <div class="flex-1 font-medium">{{ $d->name }}</div>
                 <div class="text-xs text-orange-700 dark:text-orange-200">{{ $d->hourly_rate }} руб/ч × {{ $d->default_minutes }} мин</div>
                 @if($d->sys_key)
                     <span class="text-[10px] px-2 py-0.5 bg-gray-100 text-orange-700 dark:bg-gray-800 dark:text-orange-300 rounded">{{ $d->sys_key }}</span>
+                @endif
+                @if($d->short_code)
+                    <span class="text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 rounded">{{ $d->short_code }}</span>
                 @endif
                 <button type="button" class="edit-dev-btn text-[10px] px-2 py-0.5 border rounded hover:bg-gray-100 dark:hover:bg-white/10">Ред.</button>
                 <button type="button" class="delete-dev-btn text-[10px] px-2 py-0.5 border rounded hover:bg-red-100 text-red-600 dark:hover:bg-red-900/30">Удал.</button>
@@ -64,6 +72,7 @@
         const resetForm = () => {
             document.getElementById('dev-name').value = '';
             document.getElementById('dev-syskey').value = '';
+            document.getElementById('dev-shortcode').value = '';
             document.getElementById('dev-rate').value = '250';
             document.getElementById('dev-minutes').value = '480';
             btn.textContent = 'Добавить';
@@ -102,6 +111,7 @@
                     body: JSON.stringify({
                         name: name,
                         sys_key: sysKey,
+                        short_code: document.getElementById('dev-shortcode').value.trim() || null,
                         hourly_rate: rate,
                         default_minutes: minutes
                     })
@@ -137,6 +147,7 @@
                 editingId = row.dataset.id;
                 document.getElementById('dev-name').value = row.dataset.name || '';
                 document.getElementById('dev-syskey').value = row.dataset.syskey || '';
+                document.getElementById('dev-shortcode').value = row.dataset.shortcode || '';
                 document.getElementById('dev-rate').value = row.dataset.rate || '0';
                 document.getElementById('dev-minutes').value = row.dataset.minutes || '0';
                 btn.textContent = 'Обновить';

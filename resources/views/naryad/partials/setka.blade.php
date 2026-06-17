@@ -35,9 +35,6 @@
                             {{ $d }}<br>
                             <span class="text-[9px] text-orange-500 dark:text-orange-400">{{ $dowRu }}</span>
                             <span class="block text-[10px] font-semibold {{ $countColor }}">{{ $countText }}</span>
-                            @if($norm)
-                            <span class="block text-[8px] text-orange-500 dark:text-orange-400">W:{{ $norm->week_hours }}</span>
-                            @endif
                         </th>
                     @endfor
                 </tr>
@@ -69,13 +66,20 @@
                                     $mh = $monthHours[$u->id] ?? 0;
                                     $qh = $quarterHours[$u->id] ?? 0;
                                     $yh = $yearHours[$u->id] ?? 0;
-                                    $mLim = $norm->monthly_hours[$month] ?? $norm->month_hours;
+                                    $monthly = $norm->monthly_hours ?? [];
+                                    $mLim = $monthly[$month] ?? $norm->month_hours;
                                     $yLim = $norm->year_hours;
+                                    $devs = $userDevCounts[$u->id] ?? [];
+                                    $extra = '';
+                                    foreach ($devs as $code => $cnt) {
+                                        if ($cnt > 0) $extra .= ' ' . $code . ':' . $cnt;
+                                    }
+                                    $lastH = $userLastShiftHours[$u->id] ?? 0;
+                                    $w = ' W:' . $lastH;
                                 @endphp
-                                <div class="text-[8px] leading-tight mt-px font-mono text-orange-600 dark:text-orange-400" title="Накопительные запланированные часы (только рабочие, без отвлечений)">
+                                <div class="text-[8px] leading-tight mt-px font-mono text-orange-600 dark:text-orange-400" title="Накопительные часы за месяц/квартал/год + часы последней смены + счётчики отвлечений">
                                     М:<span class="font-semibold text-orange-700 dark:text-orange-300">{{ $mh }}</span>/{{ $mLim }}
-                                    К:{{ $qh }}
-                                    Г:<span class="font-semibold text-orange-700 dark:text-orange-300">{{ $yh }}</span>/{{ $yLim }}
+                                    К:{{ $qh }} Г:<span class="font-semibold text-orange-700 dark:text-orange-300">{{ $yh }}</span>/{{ $yLim }}{{ $w }}{{ $extra }}
                                 </div>
                             @endif
                         </td>

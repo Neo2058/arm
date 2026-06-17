@@ -25,7 +25,11 @@
                 pane.innerHTML = '<div class="p-8 text-center text-orange-300">Загрузка...</div>';
                 try {
                     const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                    if (!res.ok) throw new Error('Ошибка загрузки раздела');
+                    if (!res.ok) {
+                        const text = await res.text().catch(() => '');
+                        console.error('Partial load failed', res.status, url, text.substring(0, 500));
+                        throw new Error(`HTTP ${res.status}`);
+                    }
                     const html = await res.text();
                     pane.innerHTML = html;
 
@@ -47,7 +51,9 @@
                     // После вставки можно переинициализировать любые интерактивные элементы
                     if (window.Naryad.afterPartialLoad) window.Naryad.afterPartialLoad(pane);
                 } catch (e) {
-                    pane.innerHTML = '<div class="p-6 text-red-500">Не удалось загрузить раздел. Попробуйте ещё раз.</div>';
+                    let detail = '';
+                    if (e.message) detail = ' ' + e.message;
+                    pane.innerHTML = '<div class="p-6 text-red-500">Не удалось загрузить раздел. Попробуйте ещё раз.' + detail + '<br><small>Подробности в консоли браузера (F12)</small></div>';
                     console.error(e);
                 }
             },

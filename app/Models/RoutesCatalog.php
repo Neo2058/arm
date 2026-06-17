@@ -10,7 +10,9 @@ class RoutesCatalog extends Model
     protected $table = 'routes_catalog';
 
     protected $fillable = [
+        'schedule_type_id',
         'route_number',
+        'shift_type',
         'start_location',
         'default_start_time',
         'end_location',
@@ -18,4 +20,9 @@ class RoutesCatalog extends Model
         'default_break_duration',
         'technological_tasks'
     ];
+
+    public function scheduleType()
+    {
+        return $this->belongsTo(ScheduleType::class);
+    }
 }

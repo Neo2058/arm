@@ -12,6 +12,7 @@ use Filament\Tables\Table;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Grid;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Database\Eloquent\Builder;
 
 class RoutesCatalogResource extends Resource
 {
@@ -27,14 +28,37 @@ class RoutesCatalogResource extends Resource
     {
         return $form
             ->schema([
-                Section::make('Параметры стандартного расписания')
+                Section::make('Основные параметры')
                     ->schema([
+                        Forms\Components\Select::make('schedule_type_id')
+                            ->label('Тип графика')
+                            ->relationship('scheduleType', 'name')
+                            ->required()
+                            ->searchable()
+                            ->preload(),
+
                         Forms\Components\TextInput::make('route_number')
-                            ->label('Номер / Название маршрута')
-                            ->placeholder('Например: 104-Экспресс или Маршрут №42')
+                            ->label('Номер маршрута')
+                            ->placeholder('Например: 25')
                             ->required()
                             ->maxLength(255),
 
+                        Forms\Components\Select::make('shift_type')
+                            ->label('Тип смены')
+                            ->options([
+                                '1' => '1-с ночи',
+                                '2' => '2-ранняя',
+                                '3' => '3-вечёрка',
+                                '3+' => '3+-ранняя ночь',
+                                '4+' => '4+-ночь',
+                                '5+' => '5+-поздняя ночь',
+                            ])
+                            ->required()
+                            ->native(false),
+                    ])->columns(1),
+
+                Section::make('Параметры стандартного расписания')
+                    ->schema([
                         Grid::make(2)->schema([
                             Forms\Components\TextInput::make('start_location')
                                 ->label('Станция / Пункт явки')
@@ -74,8 +98,29 @@ class RoutesCatalogResource extends Resource
     {
         return $table
             ->columns([
+                TextColumn::make('scheduleType.name')
+                    ->label('Тип графика')
+                    ->searchable()
+                    ->sortable(),
+
                 TextColumn::make('route_number')
-                    ->label('Маршрут')
+                    ->label('Номер маршрута')
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('shift_type')
+                    ->label('Тип смены')
+                    ->formatStateUsing(function ($state) {
+                        $map = [
+                            '1' => '1-с ночи',
+                            '2' => '2-ранняя',
+                            '3' => '3-вечёрка',
+                            '3+' => '3+-ранняя ночь',
+                            '4+' => '4+-ночь',
+                            '5+' => '5+-поздняя ночь',
+                        ];
+                        return $map[$state] ?? $state;
+                    })
                     ->searchable()
                     ->sortable(),
 
@@ -100,7 +145,8 @@ class RoutesCatalogResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('scheduleType'));
     }
 
     public static function getRelations(): array
@@ -125,7 +171,7 @@ class RoutesCatalogResource extends Resource
         if (!$user) return false;
 
         $role = strtolower((string)($user->role->value ?? $user->role));
-        return in_array($role, ['super_admin', 'admin']);
+        return in_array($role, ['super_admin', 'admin', 'naryadchik', 'dispatcher']);
     }
 
 }

@@ -108,7 +108,7 @@ class NaryadPlanningController extends Controller
             }
         }
 
-        $routesCatalog = \App\Models\RoutesCatalog::orderBy('route_number')->get();
+        $routesCatalog = \App\Models\RoutesCatalog::with('scheduleType')->orderBy('route_number')->get();
 
         // Variants for route selection in grid (effective routes for different contexts)
         $variants = RouteVariant::with('catalogRoute', 'scheduleType')->where('is_active', true)->get();
@@ -152,13 +152,58 @@ class NaryadPlanningController extends Controller
             // Карта по неделям (понедельник) для показа остатка при назначении
             $wmap = [];
             foreach ($uAss as $a) {
+                if (empty($a) || empty($a->plan_date ?? null)) continue;
                 $wkey = $a->plan_date->copy()->startOfWeek(\Carbon\Carbon::MONDAY)->format('Y-m-d');
                 if (!isset($wmap[$wkey])) {
                     $wmap[$wkey] = 0;
                 }
                 $wmap[$wkey] += $this->getHoursForAssignment($a, $routesMap, $deviationNames);
             }
-            $userWeekHours[$u->id] = array_map(fn($v) => round($v, 1), $wmap);
+            $userWeekHours[$u->id] = [];
+            foreach ($wmap as $k => $v) {
+                $userWeekHours[$u->id][$k] = round($v, 1);
+            }
+        }
+
+        // Статистика по отвлечениям (Б, В и любые с short_code) + часы последней смены
+        $deviationsForStats = DeviationsCatalog::all();
+        $devShortCodeMap = [];
+        foreach ($deviationsForStats as $d) {
+            $sc = $d->getAttribute('short_code');
+            if (!empty($sc)) {
+                $devShortCodeMap[$d->name] = $sc;
+            }
+        }
+
+        $userDevCounts = [];
+        $userLastShiftHours = [];
+
+        foreach ($users as $u) {
+            $userMonthAss = $assignmentsRaw[$u->id] ?? [];
+            $devCounts = [];
+            $latestWorkDate = null;
+            $latestRoute = null;
+
+            foreach ($userMonthAss as $dateStr => $route) {
+                if (isset($devShortCodeMap[$route])) {
+                    $code = $devShortCodeMap[$route];
+                    $devCounts[$code] = ($devCounts[$code] ?? 0) + 1;
+                } else {
+                    if ($latestWorkDate === null || $dateStr > $latestWorkDate) {
+                        $latestWorkDate = $dateStr;
+                        $latestRoute = $route;
+                    }
+                }
+            }
+
+            $lastHours = 0;
+            if ($latestRoute) {
+                $fake = (object) ['route_number' => $latestRoute];
+                $lastHours = $this->getHoursForAssignment($fake, $routesMap, $deviationNames);
+            }
+
+            $userDevCounts[$u->id] = $devCounts;
+            $userLastShiftHours[$u->id] = round($lastHours, 1);
         }
 
         $userHoursJson = json_encode([
@@ -206,6 +251,8 @@ class NaryadPlanningController extends Controller
             'yearHours' => $yearHours,
             'userHoursJson' => $userHoursJson,
             'weekLimit' => $weekLimit,
+            'userDevCounts' => $userDevCounts,
+            'userLastShiftHours' => $userLastShiftHours,
         ]);
     }
 
@@ -222,7 +269,7 @@ class NaryadPlanningController extends Controller
     {
         $this->abortIfNotNaryadchik();
         $variants = RouteVariant::with('catalogRoute', 'scheduleType')->orderBy('effective_route')->get();
-        $routesCatalog = \App\Models\RoutesCatalog::orderBy('route_number')->get();
+        $routesCatalog = \App\Models\RoutesCatalog::with('scheduleType')->orderBy('route_number')->get();
         $scheduleTypes = ScheduleType::orderBy('name')->get();
         return view('naryad.partials.variants', [
             'variants' => $variants,
@@ -630,10 +677,10 @@ class NaryadPlanningController extends Controller
 
         $data = $request->validate([
             'effective_route' => 'required|string|max:50',
-            'context' => 'required|in:morning,night,any',
+            'schedule_type_id' => 'nullable|exists:schedule_types,id',
+            'shift_type' => 'nullable|string|max:10',
             'base_route_number' => 'nullable|string|max:50',
             'route_catalog_id' => 'nullable|exists:routes_catalog,id',
-            'schedule_type_id' => 'nullable|exists:schedule_types,id',
             'start_location' => 'nullable|string|max:255',
             'start_time' => 'nullable',
             'end_location' => 'nullable|string|max:255',
@@ -658,10 +705,10 @@ class NaryadPlanningController extends Controller
 
         $data = $request->validate([
             'effective_route' => 'required|string|max:50',
-            'context' => 'required|in:morning,night,any',
+            'schedule_type_id' => 'nullable|exists:schedule_types,id',
+            'shift_type' => 'nullable|string|max:10',
             'base_route_number' => 'nullable|string|max:50',
             'route_catalog_id' => 'nullable|exists:routes_catalog,id',
-            'schedule_type_id' => 'nullable|exists:schedule_types,id',
             'start_location' => 'nullable|string|max:255',
             'start_time' => 'nullable',
             'end_location' => 'nullable|string|max:255',
@@ -703,6 +750,7 @@ class NaryadPlanningController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'sys_key' => 'nullable|string|max:50',
+            'short_code' => 'nullable|string|max:10',
             'hourly_rate' => 'required|numeric|min:0',
             'default_minutes' => 'required|integer|min:0',
         ]);
@@ -721,6 +769,7 @@ class NaryadPlanningController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'sys_key' => 'nullable|string|max:50',
+            'short_code' => 'nullable|string|max:10',
             'hourly_rate' => 'required|numeric|min:0',
             'default_minutes' => 'required|integer|min:0',
         ]);
@@ -908,6 +957,9 @@ class NaryadPlanningController extends Controller
      */
     private function getHoursForAssignment($assignment, $routesMap, $deviationNames)
     {
+        if (empty($assignment) || empty($assignment->route_number ?? null)) {
+            return 0;
+        }
         if (in_array($assignment->route_number, $deviationNames)) {
             return 0;
         }
@@ -929,6 +981,7 @@ class NaryadPlanningController extends Controller
     {
         $total = 0;
         foreach ($assignments as $a) {
+            if (empty($a) || empty($a->plan_date ?? null)) continue;
             if ($from && $a->plan_date->lt($from)) continue;
             if ($to && $a->plan_date->gt($to)) continue;
             $total += $this->getHoursForAssignment($a, $routesMap, $deviationNames);

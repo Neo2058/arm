@@ -6,15 +6,28 @@
         <div class="text-sm mb-3 font-medium text-orange-600 dark:text-orange-400">Добавить / редактировать вариант</div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
             <div>
-                <label class="block text-xs text-orange-600 dark:text-orange-400 mb-1">Эффективный номер (что ставить в наряде)</label>
+                <label class="block text-xs text-orange-600 dark:text-orange-400 mb-1">Тип графика</label>
+                <select id="var-schedule" class="w-full border rounded-2xl px-3 py-2">
+                    <option value="">—</option>
+                    @foreach($scheduleTypes as $st)
+                        <option value="{{ $st->id }}">{{ $st->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-orange-600 dark:text-orange-400 mb-1">Номер маршрута</label>
                 <input id="var-effective" class="w-full border rounded-2xl px-3 py-2" placeholder="25">
             </div>
             <div>
-                <label class="block text-xs text-orange-600 dark:text-orange-400 mb-1">Контекст</label>
-                <select id="var-context" class="w-full border rounded-2xl px-3 py-2">
-                    <option value="morning">Утро</option>
-                    <option value="night">Ночь</option>
-                    <option value="any">Любой</option>
+                <label class="block text-xs text-orange-600 dark:text-orange-400 mb-1">Тип смены</label>
+                <select id="var-shift-type" class="w-full border rounded-2xl px-3 py-2">
+                    <option value="">—</option>
+                    <option value="1">1-с ночи</option>
+                    <option value="2">2-ранняя</option>
+                    <option value="3">3-вечёрка</option>
+                    <option value="3+">3+-ранняя ночь</option>
+                    <option value="4+">4+-ночь</option>
+                    <option value="5+">5+-поздняя ночь</option>
                 </select>
             </div>
             <div>
@@ -22,16 +35,7 @@
                 <select id="var-catalog" class="w-full border rounded-2xl px-3 py-2">
                     <option value="">—</option>
                     @foreach($routesCatalog as $r)
-                        <option value="{{ $r->id }}">{{ $r->route_number }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs text-orange-600 dark:text-orange-400 mb-1">Тип графика (для фильтра в сетке)</label>
-                <select id="var-schedule" class="w-full border rounded-2xl px-3 py-2">
-                    <option value="">Любой / Общий</option>
-                    @foreach($scheduleTypes as $st)
-                        <option value="{{ $st->id }}">{{ $st->name }}</option>
+                        <option value="{{ $r->id }}">{{ $r->scheduleType ? $r->scheduleType->name . ' ' : '' }}{{ $r->route_number }}{{ $r->shift_type ? ' (' . $r->shift_type . ')' : '' }}</option>
                     @endforeach
                 </select>
             </div>
@@ -62,16 +66,25 @@
             <div class="px-6 py-3 flex flex-wrap items-center gap-x-4 gap-y-1 variant-row" 
                  data-id="{{ $v->id }}"
                  data-effective="{{ $v->effective_route }}"
-                 data-context="{{ $v->context }}"
                  data-catalog-id="{{ $v->route_catalog_id ?? '' }}"
                  data-schedule-id="{{ $v->schedule_type_id ?? '' }}"
+                 data-shift-type="{{ $v->shift_type ?? '' }}"
                  data-start-time="{{ $v->start_time ?? '' }}"
                  data-end-time="{{ $v->end_time ?? '' }}"
                  data-desc="{{ $v->description ?? '' }}">
                 <div class="font-semibold">{{ $v->effective_route }}</div>
-                <span class="px-2 py-0.5 text-xs rounded {{ $v->context === 'night' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : ($v->context === 'morning' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-gray-100 text-orange-700') }}">
-                    {{ $v->context === 'night' ? 'Ночь' : ($v->context === 'morning' ? 'Утро' : 'Любой') }}
-                </span>
+                @if($v->shift_type)
+                    <span class="px-2 py-0.5 text-xs rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                        {{ 
+                            $v->shift_type === '1' ? '1-с ночи' : 
+                            ($v->shift_type === '2' ? '2-ранняя' : 
+                            ($v->shift_type === '3' ? '3-вечёрка' : 
+                            ($v->shift_type === '3+' ? '3+-ранняя ночь' : 
+                            ($v->shift_type === '4+' ? '4+-ночь' : 
+                            ($v->shift_type === '5+' ? '5+-поздняя ночь' : $v->shift_type)))))
+                        }}
+                    </span>
+                @endif
                 @if($v->catalogRoute)
                     <span class="text-xs text-orange-600 dark:text-orange-400">из {{ $v->catalogRoute->route_number }}</span>
                 @endif
@@ -105,9 +118,9 @@
 
         const resetForm = () => {
             document.getElementById('var-effective').value = '';
-            document.getElementById('var-context').value = 'morning';
             document.getElementById('var-catalog').value = '';
             document.getElementById('var-schedule').value = '';
+            document.getElementById('var-shift-type').value = '';
             document.getElementById('var-start-time').value = '';
             document.getElementById('var-end-time').value = '';
             document.getElementById('var-desc').value = '';
@@ -118,7 +131,6 @@
 
         addBtn.addEventListener('click', async () => {
             const effective = document.getElementById('var-effective').value.trim();
-            const context = document.getElementById('var-context').value;
             const catalogId = document.getElementById('var-catalog').value || null;
             const scheduleId = document.getElementById('var-schedule').value || null;
             const startTime = document.getElementById('var-start-time').value || null;
@@ -142,9 +154,9 @@
             try {
                 const payload = {
                     effective_route: effective,
-                    context: context,
-                    route_catalog_id: catalogId ? parseInt(catalogId) : null,
                     schedule_type_id: scheduleId ? parseInt(scheduleId) : null,
+                    shift_type: document.getElementById('var-shift-type').value || null,
+                    route_catalog_id: catalogId ? parseInt(catalogId) : null,
                     start_time: startTime,
                     end_time: endTime,
                     description: desc,
@@ -198,9 +210,9 @@
                 if (!row) return;
                 editingId = row.dataset.id;
                 document.getElementById('var-effective').value = row.dataset.effective || '';
-                document.getElementById('var-context').value = row.dataset.context || 'any';
                 document.getElementById('var-catalog').value = row.dataset.catalogId || '';
                 document.getElementById('var-schedule').value = row.dataset.scheduleId || '';
+                document.getElementById('var-shift-type').value = row.dataset.shiftType || '';
                 document.getElementById('var-start-time').value = row.dataset.startTime || '';
                 document.getElementById('var-end-time').value = row.dataset.endTime || '';
                 document.getElementById('var-desc').value = row.dataset.desc || '';
