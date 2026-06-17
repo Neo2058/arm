@@ -151,6 +151,56 @@
         </div>
     </div>
 
+    <!-- Modal for rich route assignment -->
+    <div id="naryad-assign-modal" class="hidden fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4" onclick="this.classList.add('hidden')">
+        <div class="bg-white dark:bg-[#0b1018] w-full max-w-3xl rounded-3xl p-6 border border-gray-200 dark:border-white/10 max-h-[85vh] overflow-auto" onclick="event.stopImmediatePropagation()">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <div id="modal-title" class="font-semibold text-5xl"></div>
+                    <div id="modal-subtitle" class="text-lg text-orange-500 dark:text-orange-400"></div>
+                </div>
+                <button onclick="document.getElementById('naryad-assign-modal').classList.add('hidden');" class="text-2xl leading-none text-orange-500 hover:text-orange-700">&times;</button>
+            </div>
+            <div id="modal-options" class="grid grid-cols-1 gap-2 text-3xl">
+                <!-- JS populated rich options -->
+            </div>
+            <!-- clear option is added dynamically in JS with proper context -->
+        </div>
+    </div>
+
+    <!-- Modal for podstroiki details and full approval (like /podstroiki) -->
+    <div id="naryad-podstroika-modal" class="hidden fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4" onclick="this.classList.add('hidden')">
+        <div class="bg-white dark:bg-[#0b1018] w-full max-w-xl rounded-3xl p-6 border border-gray-200 dark:border-white/10 max-h-[85vh] overflow-auto" onclick="event.stopImmediatePropagation()">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <div id="pod-modal-title" class="font-semibold text-3xl">Подстройка смены</div>
+                    <div id="pod-modal-subtitle" class="text-lg text-orange-500 dark:text-orange-400"></div>
+                </div>
+                <button onclick="document.getElementById('naryad-podstroika-modal').classList.add('hidden');" class="text-2xl leading-none text-orange-500 hover:text-orange-700">&times;</button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-orange-600 dark:text-orange-400 mb-1">Описание подстройки</label>
+                    <div id="pod-modal-details" class="p-4 bg-orange-50 dark:bg-white/5 rounded-2xl text-xl whitespace-pre-wrap min-h-[80px]"></div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-orange-600 dark:text-orange-400 mb-1">Статус согласования</label>
+                    <select id="pod-modal-status" class="w-full border border-gray-300 dark:border-white/20 rounded-2xl px-4 py-3 text-xl bg-white dark:bg-[#0b1018]">
+                        <option value="pending">В ожидании</option>
+                        <option value="podstroeno">Подстроено</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-6 flex gap-3">
+                <button id="pod-modal-save-btn" class="flex-1 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-xl font-medium">Сохранить статус</button>
+                <button onclick="document.getElementById('naryad-podstroika-modal').classList.add('hidden');" class="px-8 py-3 border border-gray-300 dark:border-white/20 rounded-2xl text-xl">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Лёгкий баг-репорт (как в основном layout) -->
     <div class="fixed bottom-4 right-4 z-50">
         <button onclick="document.getElementById('naryad-bug').classList.toggle('hidden')"
@@ -192,16 +242,52 @@
                     return;
                 }
 
-                // Сетка: клик по ячейке назначения маршрута (редактирование)
+                // Сетка: клик по ячейке назначения маршрута (модальное окно с деталями)
                 const assignCell = e.target.closest('td[data-user-id][data-date]');
-                if (assignCell && !assignCell.querySelector('select') && !e.target.closest('.delete-assign-btn')) {
+                if (assignCell && !e.target.closest('.delete-assign-btn')) {
                     const userId = assignCell.dataset.userId;
                     const dateStr = assignCell.dataset.date;
-                    // Берём текст из .assign-value если есть, иначе весь
                     let valEl = assignCell.querySelector('.assign-value');
-                    let currentRoute = (valEl ? valEl.textContent : assignCell.textContent).trim();
+                    let currentRoute = (valEl ? valEl.textContent.trim() : assignCell.textContent.trim());
                     if (currentRoute === '—' || currentRoute === '') currentRoute = '';
-                    showNaryadAssignSelect(assignCell, userId, dateStr, currentRoute);
+                    showNaryadAssignModal(assignCell, userId, dateStr, currentRoute);
+                }
+
+                // Подстройки: клик по строке под фамилией для открытия модалки с полным функционалом
+                const podClick = e.target.closest('.podstroiki-clickable');
+                if (podClick) {
+                    e.stopPropagation();
+                    const podId = podClick.dataset.podId;
+                    if (podId) {
+                        showPodstroikaModal(podId);
+                    }
+                }
+
+                // Сохранить лимит подстроек для пользователя
+                const limitBtn = e.target.closest('.save-pod-limit-btn');
+                if (limitBtn) {
+                    e.stopPropagation();
+                    const userId = limitBtn.dataset.userId;
+                    const input = limitBtn.parentElement.querySelector('.pod-limit-input');
+                    if (!input || !userId) return;
+                    const max = parseInt(input.value) || 0;
+                    const month = input.dataset.month || '';
+                    limitBtn.disabled = true;
+                    limitBtn.textContent = '...';
+                    fetch('{{ route('naryad.podstroika-limit.save') }}', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'X-Requested-With': 'XMLHttpRequest'},
+                        body: JSON.stringify({user_id: userId, for_month: month, max_approved: max})
+                    }).then(r => r.json()).then(data => {
+                        if (data.success) {
+                            // перезагрузить для обновления
+                            const m = document.getElementById('naryad-month')?.value || '';
+                            window.Naryad.loadPartial('{{ route('naryad.partial.setka') }}?month=' + m);
+                        }
+                    }).finally(() => {
+                        limitBtn.disabled = false;
+                        limitBtn.textContent = '✓';
+                    });
                 }
 
                 // Пользователи: клик по кнопке сохранения флагов
@@ -260,27 +346,41 @@
         };
 
         // === Интерактивная логика для Сетки и Пользователей (делегирование, чтобы работало после innerHTML) ===
-        function showNaryadAssignSelect(cellEl, userId, dateStr, currentRoute) {
+        // === Модальное окно выбора маршрута с подробностями (время, место, длительность) ===
+        function showNaryadAssignModal(cellEl, userId, dateStr, currentRoute) {
+            const modal = document.getElementById('naryad-assign-modal');
+            const titleEl = document.getElementById('modal-title');
+            const subEl = document.getElementById('modal-subtitle');
+            const optsEl = document.getElementById('modal-options');
+
+            titleEl.textContent = 'Выбор смены / маршрута';
+            subEl.textContent = dateStr;
+
+            optsEl.innerHTML = '<div class="p-4 text-center text-orange-400">Загрузка вариантов...</div>';
+
+            // Build rich options
             let routes = window.NARYAD_ROUTES || [];
             if (!routes.length) {
                 const cache = document.getElementById('naryad-routes-cache');
                 if (cache && cache.dataset.routes) {
-                    try {
-                        routes = JSON.parse(cache.dataset.routes);
-                        window.NARYAD_ROUTES = routes;
-                    } catch(e) {}
+                    try { routes = JSON.parse(cache.dataset.routes); window.NARYAD_ROUTES = routes; } catch(e){}
                 }
             }
 
-            // Include variants (effective routes for different contexts), filtered by day's graph type if set
-            let allOptions = routes.map(r => ({ value: r, label: r }));
+            let allOptions = routes.map(r => ({ 
+                value: r.value || r, 
+                label: r.label || r,
+                start_time: r.start_time || '',
+                start_location: r.start_location || '',
+                end_time: r.end_time || '',
+                end_location: r.end_location || '',
+                break_duration: r.break_duration || 0,
+            }));
+
             let dayGraph = null;
             const gCache = document.getElementById('naryad-daily-graphs-cache');
             if (gCache && gCache.dataset.graphs) {
-                try {
-                    const gs = JSON.parse(gCache.dataset.graphs);
-                    dayGraph = gs[dateStr] || null;
-                } catch(e) {}
+                try { const gs = JSON.parse(gCache.dataset.graphs); dayGraph = gs[dateStr] || null; } catch(e){}
             }
 
             const vCache = document.getElementById('naryad-variants-cache');
@@ -291,115 +391,217 @@
                         const vGraph = v.schedule_type_name || null;
                         const matches = !dayGraph || !vGraph || vGraph === dayGraph;
                         if (matches) {
-                            allOptions.push({ value: v.effective, label: v.label });
+                            const vlabel = v.label || v.effective;
+                            const vval = v.value || vlabel;
+                            allOptions.push({ 
+                                value: vval,   
+                                label: vlabel,
+                                start_time: v.start_time || '',
+                                start_location: v.start_location || '',
+                                end_time: v.end_time || '',
+                                end_location: v.end_location || '',
+                                break_duration: v.break_duration || 0,
+                            });
                         }
                     });
                 } catch(e) {}
             }
 
-            // Include deviations (отвлечения) for planning grid
             const dCache = document.getElementById('naryad-deviations-cache');
             if (dCache && dCache.dataset.deviations) {
                 try {
                     const ds = JSON.parse(dCache.dataset.deviations);
                     ds.forEach(d => {
-                        allOptions.push({ value: d.value, label: d.label });
+                        allOptions.push({ value: d.value, label: d.label, is_dev: true });
                     });
                 } catch(e) {}
             }
 
-            const originalHTML = cellEl.innerHTML;
-
-            // Показать остаток часов на неделю пользователя (для понимания при назначении смен подряд)
-            let weekInfoHtml = '';
-            try {
-                const normEl = document.getElementById('naryad-norm-cache');
-                const weekLimit = normEl && normEl.dataset.weekLimit ? parseFloat(normEl.dataset.weekLimit) : 40;
-
-                const hoursCacheEl = document.getElementById('naryad-user-hours-cache');
-                if (hoursCacheEl && hoursCacheEl.dataset.hours) {
-                    const data = JSON.parse(hoursCacheEl.dataset.hours);
-                    const weekData = (data.week || {})[userId] || {};
-
-                    // Вычисляем понедельник недели для dateStr (как в PHP startOfWeek MONDAY)
-                    const d = new Date(dateStr + 'T00:00:00');
-                    const jsDay = d.getDay(); // 0=вс ... 6=сб
-                    const diff = (jsDay === 0 ? -6 : 1 - jsDay);
-                    const monDate = new Date(d);
-                    monDate.setDate(d.getDate() + diff);
-                    const wkey = monDate.toISOString().slice(0, 10);
-
-                    const planned = weekData[wkey] || 0;
-                    const remaining = Math.max(0, Math.round((weekLimit - planned) * 10) / 10);
-                    weekInfoHtml = `<div style="font-size:7px;color:#f59e0b;margin-bottom:1px;white-space:nowrap;">н:${planned}/${weekLimit} ост:${remaining}</div>`;
+            // compute duration for rich display (gross shift length from start to end, as shown in grid)
+            allOptions.forEach(o => {
+                if (!o.is_dev && o.start_time && o.end_time) {
+                    try {
+                        const [sh, sm] = o.start_time.split(':').map(Number);
+                        const [eh, em] = o.end_time.split(':').map(Number);
+                        let mins = (eh * 60 + em) - (sh * 60 + sm);
+                        if (mins < 0) mins += 24 * 60;
+                        o.duration = (mins / 60).toFixed(1) + 'ч';
+                    } catch (e) {}
                 }
-            } catch (e) {
-                // тихо игнорируем, чтобы не ломать выбор
+            });
+
+            // Фильтр уже назначенных на этот день (кроме текущей редактируемой ячейки),
+            // чтобы было видно, какие смены/маршруты ещё свободны
+            let usedRoutes = {};
+            const usedCache = document.getElementById('naryad-daily-used-routes-cache');
+            if (usedCache && usedCache.dataset.usedRoutes) {
+                try {
+                    const allUsed = JSON.parse(usedCache.dataset.usedRoutes);
+                    usedRoutes = allUsed[dateStr] || {};
+                } catch(e){}
+            }
+            const currentRouteStr = String(currentRoute || '');
+            allOptions = allOptions.filter(opt => {
+                if (opt.is_dev) return true; // отклонения (больничный и т.п.) оставляем
+                const val = String(opt.value || '');
+                const isCurrent = val === currentRouteStr;
+                return isCurrent || !usedRoutes[val];
+            });
+
+            const originalHTML = cellEl.innerHTML;
+            optsEl.innerHTML = '';
+
+            allOptions.forEach(opt => {
+                const isCurrent = String(opt.value) === String(currentRoute);
+                const div = document.createElement('div');
+                div.className = `p-4 border rounded-2xl cursor-pointer flex justify-between items-start gap-3 hover:bg-orange-50 dark:hover:bg-orange-950/30 ${isCurrent ? 'ring-2 ring-orange-500' : ''}`;
+
+                let details = '';
+                if (!opt.is_dev) {
+                    const st = opt.start_time || '';
+                    const sl = opt.start_location || '';
+                    const et = opt.end_time || '';
+                    const el = opt.end_location || '';
+                    const dur = opt.duration || '';
+                    details = `<div class="text-[30px] text-orange-600 dark:text-orange-400 mt-1">${st} ${sl} → ${et} ${el} ${dur ? '('+dur+')' : ''}</div>`;
+                }
+
+                div.innerHTML = `
+                    <div class="flex-1">
+                        <div class="font-semibold text-3xl">${opt.label}</div>
+                        ${details}
+                    </div>
+                    <div class="text-lg ${isCurrent ? 'text-orange-600' : 'text-orange-400'} self-center">выбрать</div>
+                `;
+
+                div.onclick = () => {
+                    modal.classList.add('hidden');
+                    saveAssignment(userId, dateStr, opt.value, cellEl, originalHTML);
+                };
+                optsEl.appendChild(div);
+            });
+
+            // Clear
+            const clr = document.createElement('div');
+            clr.className = 'mt-3 p-2 text-center text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-2xl cursor-pointer text-sm';
+            clr.textContent = 'Очистить ячейку';
+            clr.onclick = () => {
+                modal.classList.add('hidden');
+                saveAssignment(userId, dateStr, '', cellEl, originalHTML);
+            };
+            optsEl.appendChild(clr);
+
+            modal.classList.remove('hidden');
+        }
+
+        function saveAssignment(userId, dateStr, val, cellEl, originalHTML) {
+            if (!val) {
+                cellEl.innerHTML = originalHTML;
+                fetch('{{ route('naryad.unassign') }}', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}','X-Requested-With':'XMLHttpRequest'},
+                    body: JSON.stringify({user_id: userId, plan_date: dateStr})
+                }).then(() => {
+                    const m = document.getElementById('naryad-month')?.value || '';
+                    window.Naryad.loadPartial('{{ route('naryad.partial.setka') }}?month=' + m);
+                });
+                return;
             }
 
-            let html = weekInfoHtml + '<select style="width:100%;font-size:11px;padding:1px 2px;border-radius:4px;border:1px solid #f59e0b;background:#fffbe6;color:#1f2937;">';
-            html += '<option value="">—</option>';
-            allOptions.forEach(opt => {
-                const sel = (opt.value == currentRoute) ? 'selected' : '';
-                html += `<option value="${opt.value}" ${sel}>${opt.label}</option>`;
-            });
-            html += '</select>';
+            cellEl.innerHTML = '<span style="color:#f59e0b;font-size:10px;">сохр...</span>';
 
-            cellEl.innerHTML = html;
-
-            const sel = cellEl.querySelector('select');
-            if (sel) sel.focus();
-
-            const save = (val) => {
-                if (!val) {
-                    // Пустое значение = удаление назначения
-                    cellEl.innerHTML = '<span style="color:#f59e0b;font-size:10px;">удал...</span>';
-                    unassignNaryadShift(userId, dateStr, cellEl, originalHTML);
-                    return;
+            fetch('{{ route('naryad.assign') }}', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}','X-Requested-With':'XMLHttpRequest'},
+                body: JSON.stringify({user_id: userId, plan_date: dateStr, route_number: val})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const m = document.getElementById('naryad-month')?.value || '';
+                    window.Naryad.loadPartial('{{ route('naryad.partial.setka') }}?month=' + m);
+                } else {
+                    alert('Ошибка: ' + (data.message || 'не удалось сохранить'));
+                    cellEl.innerHTML = originalHTML;
                 }
-                cellEl.innerHTML = '<span style="color:#f59e0b;font-size:10px;">сохр...</span>';
+            })
+            .catch(e => {
+                console.error(e);
+                alert('Сетевая ошибка');
+                cellEl.innerHTML = originalHTML;
+            });
+        }
 
-                fetch('{{ route('naryad.assign') }}', {
+        // backward compat
+        window.showNaryadAssignSelect = showNaryadAssignModal;
+
+        // === Модальное окно для подстройки (полный просмотр + согласование как в /podstroiki) ===
+        window.showPodstroikaModal = function(podId) {
+            const modal = document.getElementById('naryad-podstroika-modal');
+            if (!modal) return;
+
+            const titleEl = document.getElementById('pod-modal-title');
+            const subEl = document.getElementById('pod-modal-subtitle');
+            const detailsEl = document.getElementById('pod-modal-details');
+            const statusSel = document.getElementById('pod-modal-status');
+            const saveBtn = document.getElementById('pod-modal-save-btn');
+
+            // Получаем данные из кэша
+            let pods = {};
+            const cache = document.getElementById('naryad-podstroikas-cache');
+            if (cache && cache.dataset.pods) {
+                try { pods = JSON.parse(cache.dataset.pods); } catch(e){}
+            }
+            const pod = pods[podId];
+            if (!pod) {
+                alert('Данные подстройки не найдены');
+                return;
+            }
+
+            titleEl.textContent = 'Подстройка смены';
+            subEl.textContent = pod.for_month;
+
+            detailsEl.textContent = pod.details || '(нет описания)';
+            statusSel.value = pod.status || 'pending';
+
+            // Сохранить статус
+            saveBtn.onclick = function() {
+                const newStatus = statusSel.value;
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Сохраняем...';
+
+                fetch('/podstroiki/' + podId + '/status', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        plan_date: dateStr,
-                        route_number: val
-                    })
+                    body: JSON.stringify({ status: newStatus })
                 })
-                .then(r => r.json())
+                .then(r => r.json().catch(() => ({})))
                 .then(data => {
-                    if (data.success) {
-                        const monthEl = document.getElementById('naryad-month');
-                        const monthVal = monthEl ? monthEl.value : '';
-                        const url = '{{ route('naryad.partial.setka') }}?month=' + (monthVal || '');
-                        window.Naryad.loadPartial(url);
-                    } else {
-                        alert('Ошибка: ' + (data.message || 'не удалось сохранить'));
-                        cellEl.innerHTML = originalHTML;
+                    if (data.success === false) {
+                        alert(data.message || 'Ошибка');
+                        return;
                     }
+                    modal.classList.add('hidden');
+                    // Перезагружаем сетку чтобы обновить отображение
+                    const m = document.getElementById('naryad-month')?.value || '';
+                    window.Naryad.loadPartial('{{ route('naryad.partial.setka') }}?month=' + m);
                 })
-                .catch(e => {
+                .catch((e) => {
                     console.error(e);
-                    alert('Сетевая ошибка');
-                    cellEl.innerHTML = originalHTML;
+                    alert('Ошибка при сохранении статуса');
+                })
+                .finally(() => {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Сохранить статус';
                 });
             };
 
-            if (sel) {
-                sel.onchange = () => save(sel.value);
-                sel.onblur = () => {
-                    setTimeout(() => {
-                        if (cellEl.querySelector('select')) cellEl.innerHTML = originalHTML;
-                    }, 150);
-                };
-            }
-        }
+            modal.classList.remove('hidden');
+        };
 
         // === Удаление назначения (для кнопки × и выбора пустого в селекте) ===
         function unassignNaryadShift(userId, dateStr, cellEl, originalHTML = null) {

@@ -35,7 +35,14 @@
                 <select id="var-catalog" class="w-full border rounded-2xl px-3 py-2">
                     <option value="">—</option>
                     @foreach($routesCatalog as $r)
-                        <option value="{{ $r->id }}">{{ $r->scheduleType ? $r->scheduleType->name . ' ' : '' }}{{ $r->route_number }}{{ $r->shift_type ? ' (' . $r->shift_type . ')' : '' }}</option>
+                        @php
+                            $stypeLabel = '';
+                            if ($r->shift_type) {
+                                $map = ['1'=>'1-с ночи','2'=>'2-ранняя','3'=>'3-вечёрка','3+'=>'3+-ранняя ночь','4+'=>'4+-ночь','5+'=>'5+-поздняя ночь'];
+                                $stypeLabel = ' (' . ($map[$r->shift_type] ?? $r->shift_type) . ')';
+                            }
+                        @endphp
+                        <option value="{{ $r->id }}">{{ $r->scheduleType ? $r->scheduleType->name . ' ' : '' }}{{ $r->route_number }}{{ $stypeLabel }}</option>
                     @endforeach
                 </select>
             </div>

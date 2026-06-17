@@ -248,6 +248,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/extra-conditions', [\App\Http\Controllers\NaryadPlanningController::class, 'storeExtraCondition'])->name('naryad.extra_conditions.store');
         Route::put('/extra-conditions/{extra}', [\App\Http\Controllers\NaryadPlanningController::class, 'updateExtraCondition'])->name('naryad.extra_conditions.update');
         Route::delete('/extra-conditions/{extra}', [\App\Http\Controllers\NaryadPlanningController::class, 'destroyExtraCondition'])->name('naryad.extra_conditions.destroy');
+
+        // Лимиты на подстройки (per user per month, задаёт нарядчик)
+        Route::post('/podstroika-limit', [\App\Http\Controllers\NaryadPlanningController::class, 'savePodstroikaLimit'])->name('naryad.podstroika-limit.save');
     });
 });
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\NaryadPodstroikaLimit;
 use App\Models\Podstroika;
 use App\Models\User;
 use App\Models\UserProfile;
@@ -112,12 +113,10 @@ class PodstroikiController extends Controller
             $requestedMonth = $nextMonth;
         }
 
-        Podstroika::updateOrCreate(
+        Podstroika::create(
             [
                 'user_id' => $user->id,
                 'for_month' => $requestedMonth,
-            ],
-            [
                 'details' => $request->details,
             ]
         );
@@ -139,7 +138,41 @@ class PodstroikiController extends Controller
             'status' => 'required|in:pending,podstroeno',
         ]);
 
+        if ($request->status === 'podstroeno') {
+            $month = $podstroika->for_month;
+            $userId = $podstroika->user_id;
+
+            $currentApproved = Podstroika::where('user_id', $userId)
+                ->where('for_month', $month)
+                ->where('status', 'podstroeno')
+                ->count();
+
+            if ($podstroika->status !== 'podstroeno') {
+                $currentApproved += 1;
+            }
+
+            $limit = NaryadPodstroikaLimit::where('user_id', $userId)
+                ->where('for_month', $month)
+                ->first();
+
+            $max = $limit ? $limit->max_approved : 1; // default 1 если не задано
+
+            if ($currentApproved > $max) {
+                if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Превышен лимит подстроек для пользователя на этот месяц (макс. {$max})"
+                    ], 422);
+                }
+                return back()->with('error', "Превышен лимит подстроек для пользователя на этот месяц (макс. {$max})");
+            }
+        }
+
         $podstroika->update(['status' => $request->status]);
+
+        if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json(['success' => true, 'message' => 'Статус обновлён']);
+        }
 
         return back()->with('success', 'Статус заявки обновлён. Пользователь увидит изменения.');
     }

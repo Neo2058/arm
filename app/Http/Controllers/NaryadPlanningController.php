@@ -8,6 +8,8 @@ use App\Models\NaryadAssignment;
 use App\Models\NaryadExtraCondition;
 use App\Models\NaryadNorm;
 use App\Models\NaryadQuota;
+use App\Models\NaryadPodstroikaLimit;
+use App\Models\Podstroika;
 use App\Models\RouteVariant;
 use App\Models\ScheduleType;
 use App\Models\User;
@@ -84,6 +86,20 @@ class NaryadPlanningController extends Controller
             ->orderBy('name')
             ->get();
 
+        // Подстройки для этого месяца (для отображения рядом с сеткой)
+        // Группируем по user_id, чтобы отрисовывать напротив фамилии (поддержка нескольких)
+        $podstroikas = Podstroika::with('user.profile')
+            ->whereIn('user_id', $users->pluck('id')->toArray())
+            ->where('for_month', $start)
+            ->get()
+            ->groupBy('user_id');
+
+        // Лимиты на согласование подстроек на месяц (задаёт нарядчик)
+        $podstroikaLimits = NaryadPodstroikaLimit::whereIn('user_id', $users->pluck('id')->toArray())
+            ->where('for_month', $start)
+            ->get()
+            ->keyBy('user_id');
+
         // Реальные назначения из БД (для отображения уже проставленных маршрутов)
         // Структура: [user_id => ['2026-06-05' => '25', ... ]]
         $assignmentsRaw = NaryadAssignment::whereBetween('plan_date', [$start, $start->copy()->endOfMonth()])
@@ -108,6 +124,17 @@ class NaryadPlanningController extends Controller
             }
         }
 
+        // Для модалки: какие полные обозначения маршрутов уже назначены на каждый день (чтобы скрывать использованные)
+        $usedRoutesByDate = [];
+        foreach ($assignmentsRaw as $userAss) {
+            foreach ($userAss as $d => $r) {
+                if (!isset($usedRoutesByDate[$d])) {
+                    $usedRoutesByDate[$d] = [];
+                }
+                $usedRoutesByDate[$d][$r] = true;
+            }
+        }
+
         $routesCatalog = \App\Models\RoutesCatalog::with('scheduleType')->orderBy('route_number')->get();
 
         // Variants for route selection in grid (effective routes for different contexts)
@@ -123,13 +150,92 @@ class NaryadPlanningController extends Controller
 
         $norm = NaryadNorm::first();
 
+        // Rich details for grid display and modal (start time, loc, end, duration)
+        $routeDetails = [];
+        $routeHours = []; // numeric hours keyed by same label as assigned value, for exact match in cumulatives
+        foreach ($routesCatalog as $r) {
+            $val = $r->route_number;
+            $lbl = $r->route_number;
+            if (!empty($r->shift_type)) {
+                $map = [
+                    '1' => '1-с ночи',
+                    '2' => '2-ранняя',
+                    '3' => '3-вечёрка',
+                    '3+' => '3+-ранняя ночь',
+                    '4+' => '4+-ночь',
+                    '5+' => '5+-поздняя ночь',
+                ];
+                $stype = $map[$r->shift_type] ?? $r->shift_type;
+                $lbl .= ' (' . $stype . ')';
+                $val = $lbl;
+            }
+            $st = $r->default_start_time ? \Carbon\Carbon::parse($r->default_start_time)->format('H:i') : '';
+            $et = $r->default_end_time ? \Carbon\Carbon::parse($r->default_end_time)->format('H:i') : '';
+            $dur = '8ч';
+            $h = 8.0;
+            if ($r->default_start_time && $r->default_end_time) {
+                $s = \Carbon\Carbon::parse($r->default_start_time);
+                $e = \Carbon\Carbon::parse($r->default_end_time);
+                $mins = $s->diffInMinutes($e);
+                $h = $mins / 60;
+                // duration shown in grid cell / title is the full shift span (gross); net after break is handled elsewhere if needed
+                $dur = round($h, 1) . 'ч';
+            }
+            $routeDetails[$val] = [
+                'start_time' => $st,
+                'start_loc' => $r->start_location,
+                'end_time' => $et,
+                'end_loc' => $r->end_location,
+                'duration' => $dur,
+            ];
+            $routeHours[$val] = max(0, round($h, 1));
+        }
+        foreach ($variants as $v) {
+            $cat = $v->catalogRoute;
+            $lbl = $v->effective_route . " (" . ($v->context === "night" ? "ночь" : ($v->context === "morning" ? "утро" : "любой")) . ($v->catalogRoute ? " из " . $v->catalogRoute->route_number : "") . ")";
+            if (!empty($v->shift_type)) {
+                $map = [
+                    '1' => '1-с ночи',
+                    '2' => '2-ранняя',
+                    '3' => '3-вечёрка',
+                    '3+' => '3+-ранняя ночь',
+                    '4+' => '4+-ночь',
+                    '5+' => '5+-поздняя ночь',
+                ];
+                $stype = $map[$v->shift_type] ?? $v->shift_type;
+                $lbl .= ' [' . $stype . ']';
+            }
+            $val = $lbl;
+            $st = $v->start_time ? \Carbon\Carbon::parse($v->start_time)->format('H:i') : ($cat && $cat->default_start_time ? \Carbon\Carbon::parse($cat->default_start_time)->format('H:i') : '');
+            $et = $v->end_time ? \Carbon\Carbon::parse($v->end_time)->format('H:i') : ($cat && $cat->default_end_time ? \Carbon\Carbon::parse($cat->default_end_time)->format('H:i') : '');
+            $dur = '8ч';
+            $sTime = $v->start_time ?: ($cat ? $cat->default_start_time : null);
+            $eTime = $v->end_time ?: ($cat ? $cat->default_end_time : null);
+            $h = 8.0;
+            if ($sTime && $eTime) {
+                $s = \Carbon\Carbon::parse($sTime);
+                $e = \Carbon\Carbon::parse($eTime);
+                $mins = $s->diffInMinutes($e);
+                $h = $mins / 60;
+                // gross span for display
+                $dur = round($h, 1) . 'ч';
+            }
+            $routeDetails[$val] = [
+                'start_time' => $st,
+                'start_loc' => $v->start_location ?: ($cat ? $cat->start_location : ''),
+                'end_time' => $et,
+                'end_loc' => $v->end_location ?: ($cat ? $cat->end_location : ''),
+                'duration' => $dur,
+            ];
+            $routeHours[$val] = max(0, round($h, 1));
+        }
+
         // === Расчёт накопительных часов для пользователей (месяц/квартал/год + недели) ===
         $monthEnd = $start->copy()->endOfMonth();
         $yearStart = $start->copy()->startOfYear();
         $quarter = $start->quarter;
         $quarterStart = $start->copy()->startOfYear()->addMonths(($quarter - 1) * 3);
 
-        $routesMap = \App\Models\RoutesCatalog::all()->keyBy('route_number');
         $deviationNames = DeviationsCatalog::pluck('name')->toArray();
 
         $broaderAssignments = NaryadAssignment::whereIn('user_id', $users->pluck('id')->toArray())
@@ -145,9 +251,9 @@ class NaryadPlanningController extends Controller
         foreach ($users as $u) {
             $uAss = $broaderAssignments->get($u->id, collect());
 
-            $monthHours[$u->id] = $this->sumHoursForAssignments($uAss, $routesMap, $deviationNames, $start, $monthEnd);
-            $quarterHours[$u->id] = $this->sumHoursForAssignments($uAss, $routesMap, $deviationNames, $quarterStart, $monthEnd);
-            $yearHours[$u->id] = $this->sumHoursForAssignments($uAss, $routesMap, $deviationNames, $yearStart, $monthEnd);
+            $monthHours[$u->id] = $this->sumHoursForAssignments($uAss, $deviationNames, $start, $monthEnd, $routeHours, $routeDetails);
+            $quarterHours[$u->id] = $this->sumHoursForAssignments($uAss, $deviationNames, $quarterStart, $monthEnd, $routeHours, $routeDetails);
+            $yearHours[$u->id] = $this->sumHoursForAssignments($uAss, $deviationNames, $yearStart, $monthEnd, $routeHours, $routeDetails);
 
             // Карта по неделям (понедельник) для показа остатка при назначении
             $wmap = [];
@@ -157,7 +263,7 @@ class NaryadPlanningController extends Controller
                 if (!isset($wmap[$wkey])) {
                     $wmap[$wkey] = 0;
                 }
-                $wmap[$wkey] += $this->getHoursForAssignment($a, $routesMap, $deviationNames);
+                $wmap[$wkey] += $this->getHoursFromRouteKey($a->route_number ?? '', $deviationNames, $routeHours, $routeDetails);
             }
             $userWeekHours[$u->id] = [];
             foreach ($wmap as $k => $v) {
@@ -198,8 +304,7 @@ class NaryadPlanningController extends Controller
 
             $lastHours = 0;
             if ($latestRoute) {
-                $fake = (object) ['route_number' => $latestRoute];
-                $lastHours = $this->getHoursForAssignment($fake, $routesMap, $deviationNames);
+                $lastHours = $this->getHoursFromRouteKey($latestRoute, $deviationNames, $routeHours, $routeDetails);
             }
 
             $userDevCounts[$u->id] = $devCounts;
@@ -215,19 +320,83 @@ class NaryadPlanningController extends Controller
         $weekLimit = $norm ? $norm->week_hours : 40;
 
         // Precompute JSON for data attributes to avoid Blade parsing issues with complex @json in attributes
-        $routesJson = json_encode($routesCatalog->pluck('route_number')->toArray());
+        $routesJson = json_encode($routesCatalog->map(function($r) {
+            $val = $r->route_number;
+            $lbl = $r->route_number;
+            if (!empty($r->shift_type)) {
+                $map = [
+                    '1' => '1-с ночи',
+                    '2' => '2-ранняя',
+                    '3' => '3-вечёрка',
+                    '3+' => '3+-ранняя ночь',
+                    '4+' => '4+-ночь',
+                    '5+' => '5+-поздняя ночь',
+                ];
+                $stype = $map[$r->shift_type] ?? $r->shift_type;
+                $lbl .= ' (' . $stype . ')';
+                $val = $lbl;
+            }
+            return [
+                'value' => $val,
+                'label' => $lbl,
+                'start_location' => $r->start_location,
+                'start_time' => $r->default_start_time,
+                'end_location' => $r->end_location,
+                'end_time' => $r->default_end_time,
+                'break_duration' => $r->default_break_duration ?? 0,
+            ];
+        })->toArray());
         $variantsJson = json_encode($variants->map(function($v) {
+            $cat = $v->catalogRoute;
+            $lbl = $v->effective_route . " (" . ($v->context === "night" ? "ночь" : ($v->context === "morning" ? "утро" : "любой")) . ($v->catalogRoute ? " из " . $v->catalogRoute->route_number : "") . ")";
+            if (!empty($v->shift_type)) {
+                $map = [
+                    '1' => '1-с ночи',
+                    '2' => '2-ранняя',
+                    '3' => '3-вечёрка',
+                    '3+' => '3+-ранняя ночь',
+                    '4+' => '4+-ночь',
+                    '5+' => '5+-поздняя ночь',
+                ];
+                $stype = $map[$v->shift_type] ?? $v->shift_type;
+                $lbl .= ' [' . $stype . ']';
+            }
+            $vval = $v->effective_route;
+            if (!empty($v->shift_type)) {
+                $vval = $lbl;
+            }
             return [
                 "effective" => $v->effective_route,
                 "context" => $v->context,
-                "label" => $v->effective_route . " (" . ($v->context === "night" ? "ночь" : ($v->context === "morning" ? "утро" : "любой")) . ($v->catalogRoute ? " из " . $v->catalogRoute->route_number : "") . ")",
-                "schedule_type_name" => $v->scheduleType ? $v->scheduleType->name : null
+                "label" => $lbl,
+                "value" => $vval,
+                "schedule_type_name" => $v->scheduleType ? $v->scheduleType->name : null,
+                'start_location' => $v->start_location ?: ($cat ? $cat->start_location : ''),
+                'start_time' => $v->start_time ?: ($cat ? $cat->default_start_time : ''),
+                'end_location' => $v->end_location ?: ($cat ? $cat->end_location : ''),
+                'end_time' => $v->end_time ?: ($cat ? $cat->default_end_time : ''),
+                'shift_type' => $v->shift_type,
+                'break_duration' => ($v->default_break_duration ?? null) ?: ($cat ? $cat->default_break_duration : 0),
             ];
         })->toArray());
         $deviationsJson = json_encode($deviations->map(function($d) {
             return ["value" => $d->name, "label" => "Отвлечение: " . $d->name];
         })->toArray());
         $dailyGraphsJson = json_encode($dailyGraphs);
+        $dailyUsedRoutesJson = json_encode($usedRoutesByDate);
+
+        // Подготовка кэша подстроек для модалки (по id) - поддержка нескольких
+        $podstroikasJson = json_encode(
+            $podstroikas->flatten()->map(function($p) {
+                return [
+                    'id' => $p->id,
+                    'user_id' => $p->user_id,
+                    'for_month' => $p->for_month->format('Y-m'),
+                    'details' => $p->details,
+                    'status' => $p->status,
+                ];
+            })->keyBy('id')->toArray()
+        );
 
         return view('naryad.partials.setka', [
             'month' => $month,
@@ -245,7 +414,9 @@ class NaryadPlanningController extends Controller
             'variantsJson' => $variantsJson,
             'deviationsJson' => $deviationsJson,
             'dailyGraphsJson' => $dailyGraphsJson,
+            'dailyUsedRoutesJson' => $dailyUsedRoutesJson,
             'norm' => $norm,
+            'routeDetails' => $routeDetails,
             'monthHours' => $monthHours,
             'quarterHours' => $quarterHours,
             'yearHours' => $yearHours,
@@ -253,6 +424,9 @@ class NaryadPlanningController extends Controller
             'weekLimit' => $weekLimit,
             'userDevCounts' => $userDevCounts,
             'userLastShiftHours' => $userLastShiftHours,
+            'podstroikas' => $podstroikas,
+            'podstroikasJson' => $podstroikasJson,
+            'podstroikaLimits' => $podstroikaLimits,
         ]);
     }
 
@@ -375,23 +549,8 @@ class NaryadPlanningController extends Controller
             $deviationNames = DeviationsCatalog::pluck('name')->toArray();
             $isDeviation = in_array($data['route_number'], $deviationNames);
 
-            // Estimate work hours for this assignment
-            $estimatedHours = 0;
-            if (!$isDeviation) {
-                $route = \App\Models\RoutesCatalog::where('route_number', $data['route_number'])->first();
-                if ($route && $route->default_start_time && $route->default_end_time) {
-                    $start = \Carbon\Carbon::parse($route->default_start_time);
-                    $end = \Carbon\Carbon::parse($route->default_end_time);
-                    $minutes = $start->diffInMinutes($end);
-                    $hours = $minutes / 60;
-                    if ($route->default_break_duration) {
-                        $hours -= $route->default_break_duration / 60;
-                    }
-                    $estimatedHours = max(0, round($hours, 1));
-                } else {
-                    $estimatedHours = 8; // fallback
-                }
-            }
+            // Estimate work hours for this assignment (shift-aware to pick correct duration e.g. 3.8 not 7.2)
+            $estimatedHours = $this->getHoursFromRouteKey($data['route_number'], $deviationNames);
 
             // Week (Mon-Sun)
             $weekStart = $planDate->copy()->startOfWeek(\Carbon\Carbon::MONDAY);
@@ -905,6 +1064,32 @@ class NaryadPlanningController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function savePodstroikaLimit(Request $request)
+    {
+        $this->abortIfNotNaryadchik();
+
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'for_month' => 'required|date',
+            'max_approved' => 'required|integer|min:0',
+        ]);
+
+        NaryadPodstroikaLimit::updateOrCreate(
+            [
+                'user_id' => $validated['user_id'],
+                'for_month' => Carbon::parse($validated['for_month'])->startOfMonth(),
+            ],
+            ['max_approved' => $validated['max_approved']]
+        );
+
+        ClickHouseService::log('naryad.podstroika_limit.saved', $validated['user_id'], [
+            'for_month' => $validated['for_month'],
+            'max_approved' => $validated['max_approved'],
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
     /**
      * Helper to sum planned work hours for user in period.
      * Skips deviation assignments (they don't consume work hours quota).
@@ -925,23 +1110,8 @@ class NaryadPlanningController extends Controller
         $deviationNames = DeviationsCatalog::pluck('name')->toArray();
 
         foreach ($assignments as $a) {
-            if (in_array($a->route_number, $deviationNames)) {
-                continue; // distractions/sick do not count as work hours
-            }
-
-            $route = \App\Models\RoutesCatalog::where('route_number', $a->route_number)->first();
-            if ($route && $route->default_start_time && $route->default_end_time) {
-                $s = \Carbon\Carbon::parse($route->default_start_time);
-                $e = \Carbon\Carbon::parse($route->default_end_time);
-                $m = $s->diffInMinutes($e);
-                $h = $m / 60;
-                if ($route->default_break_duration) {
-                    $h -= $route->default_break_duration / 60;
-                }
-                $total += max(0, $h);
-            } else {
-                $total += 8; // fallback
-            }
+            $h = $this->getHoursFromRouteKey($a->route_number, $deviationNames);
+            $total += $h;
         }
 
         if (!$isDeviation) {
@@ -955,36 +1125,104 @@ class NaryadPlanningController extends Controller
      * Вспомогательные методы для подсчёта запланированных часов.
      * Используются для отображения накопительной статистики рядом с ФИО.
      */
-    private function getHoursForAssignment($assignment, $routesMap, $deviationNames)
+    /**
+     * Compute hours for a route key string like "1 (1-с ночи)" or plain "25".
+     * Prefers the exact duration shown in the grid cell ($routeDetails) so that what user sees as 8.3 is added as 8.3 to M/K/G/W.
+     * Falls back to shift-aware catalog lookup.
+     */
+    private function getHoursFromRouteKey(string $routeKey, array $deviationNames = [], array $precomputedHours = [], array $routeDetails = []): float
     {
-        if (empty($assignment) || empty($assignment->route_number ?? null)) {
+        if (empty($routeKey)) {
             return 0;
         }
-        if (in_array($assignment->route_number, $deviationNames)) {
+        if (in_array($routeKey, $deviationNames)) {
             return 0;
         }
-        $route = $routesMap->get($assignment->route_number);
+
+        // If this exact key is present in the routeDetails used for grid cells, parse its 'duration' (e.g. "8.3ч").
+        // This guarantees the hours added to M/K/G/W are *exactly* the number shown for that assignment in the cell.
+        if (!empty($routeDetails) && isset($routeDetails[$routeKey])) {
+            $d = $routeDetails[$routeKey]['duration'] ?? '';
+            if (preg_match('/([\d.]+)/', $d, $mm)) {
+                return (float) $mm[1];
+            }
+        }
+
+        // Parse num + optional shift label early
+        $routeNum = $routeKey;
+        $shiftCode = null;
+        $label = null;
+        if (preg_match('/^([0-9a-zA-Z\-+]+)/', $routeKey, $m)) {
+            $routeNum = $m[1];
+        }
+        if (preg_match('/\((.+)\)$/', $routeKey, $m)) {
+            $label = $m[1];
+            $labelToCode = array_flip([
+                '1' => '1-с ночи',
+                '2' => '2-ранняя',
+                '3' => '3-вечёрка',
+                '3+' => '3+-ранняя ночь',
+                '4+' => '4+-ночь',
+                '5+' => '5+-поздняя ночь',
+            ]);
+            $shiftCode = $labelToCode[$label] ?? null;
+        }
+
+        // Prefer precomputed hours for the label if present (ensures M/K/G/W exactly match the duration shown in grid cell for this key)
+        if (!empty($precomputedHours)) {
+            if (isset($precomputedHours[$routeKey])) {
+                return $precomputedHours[$routeKey];
+            }
+            // Tolerant match: find a precomputed entry for same route num + this shift label (handles format/storage variations)
+            if ($label) {
+                $needle = $routeNum . ' (';
+                foreach ($precomputedHours as $k => $hrs) {
+                    if (strpos($k, $needle) === 0 && stripos($k, $label) !== false) {
+                        return $hrs;
+                    }
+                }
+            }
+        }
+
+        $route = \App\Models\RoutesCatalog::where('route_number', $routeNum)
+            ->when($shiftCode, fn($q) => $q->where('shift_type', $shiftCode))
+            ->first();
+
+        if (!$route) {
+            $route = \App\Models\RoutesCatalog::where('route_number', $routeNum)->first();
+        }
+
         if ($route && $route->default_start_time && $route->default_end_time) {
             $s = \Carbon\Carbon::parse($route->default_start_time);
             $e = \Carbon\Carbon::parse($route->default_end_time);
             $minutes = $s->diffInMinutes($e);
             $h = $minutes / 60;
-            if ($route->default_break_duration) {
-                $h -= $route->default_break_duration / 60;
-            }
+            // Use gross shift duration (start to end) for naryad hours; break handled in other systems if needed
             return max(0, round($h, 1));
         }
+
         return 8;
     }
 
-    private function sumHoursForAssignments($assignments, $routesMap, $deviationNames, $from = null, $to = null)
+    private function getHoursForAssignment($assignment, $deviationNames = [], array $precomputedHours = [], array $routeDetails = [])
+    {
+        $key = $assignment->route_number ?? null;
+        if (empty($key)) {
+            return 0;
+        }
+        $d = is_array($deviationNames) ? $deviationNames : [];
+        return $this->getHoursFromRouteKey($key, $d, $precomputedHours, $routeDetails);
+    }
+
+    private function sumHoursForAssignments($assignments, $deviationNames, $from = null, $to = null, array $precomputedHours = [], array $routeDetails = [])
     {
         $total = 0;
         foreach ($assignments as $a) {
             if (empty($a) || empty($a->plan_date ?? null)) continue;
             if ($from && $a->plan_date->lt($from)) continue;
             if ($to && $a->plan_date->gt($to)) continue;
-            $total += $this->getHoursForAssignment($a, $routesMap, $deviationNames);
+            $key = $a->route_number ?? '';
+            $total += $this->getHoursFromRouteKey($key, $deviationNames, $precomputedHours, $routeDetails);
         }
         return round($total, 1);
     }
