@@ -25,18 +25,28 @@
                 <button type="button" id="norm-save-btn" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-sm font-semibold">Сохранить нормы</button>
             </div>
         </form>
+
+        <div class="mt-4">
+            <div class="text-sm mb-2 font-medium text-orange-600 dark:text-orange-400">Переопределения по месяцам (YYYY-MM: часы)</div>
+            <textarea id="monthly-json" class="w-full border rounded-2xl px-3 py-2 text-sm" rows="3" placeholder='{"2026-06":160,"2026-07":155}'>{{ json_encode($norm->monthly_hours ?? []) }}</textarea>
+            <div class="text-[10px] text-orange-600 dark:text-orange-300 mt-1">Используется для расчёта лимитов по месяцам вместо базового month_hours. Дни с отвлечениями (больничный и т.д.) не учитываются в рабочих часах.</div>
+        </div>
     </div>
 
     <div class="mt-6 bg-white dark:bg-[#0b1018] border border-gray-200 dark:border-white/10 rounded-3xl p-6">
         <div class="text-sm mb-3 font-medium text-orange-600 dark:text-orange-400">Дополнительные условия</div>
         <div class="flex gap-3 items-end text-sm mb-4">
-            <div class="flex-1">
-                <label class="block text-xs text-orange-700 dark:text-orange-200 mb-1">Название условия</label>
-                <input id="extra-name" class="w-full border rounded-2xl px-3 py-2" placeholder="Макс. дней подряд">
+            <div>
+                <label class="block text-xs text-orange-700 dark:text-orange-200 mb-1">Тип условия</label>
+                <select id="extra-type" class="border rounded-2xl px-3 py-2">
+                    <option value="max_days_in_row">Макс. дней подряд</option>
+                    <option value="max_night_shifts">Макс. ночных смен (в период)</option>
+                    <option value="max_consecutive_nights">Макс. ночных подряд</option>
+                </select>
             </div>
             <div>
                 <label class="block text-xs text-orange-700 dark:text-orange-200 mb-1">Значение</label>
-                <input id="extra-value" class="w-32 border rounded-2xl px-3 py-2" placeholder="5">
+                <input id="extra-value" class="w-24 border rounded-2xl px-3 py-2" placeholder="5">
             </div>
             <div class="flex-1">
                 <label class="block text-xs text-orange-700 dark:text-orange-200 mb-1">Описание</label>
@@ -76,6 +86,16 @@
                 const formData = new FormData(form);
                 const payload = {};
                 formData.forEach((v,k) => payload[k] = v);
+                // monthly
+                const monthlyText = document.getElementById('monthly-json').value.trim();
+                if (monthlyText) {
+                    try {
+                        payload.monthly_hours = JSON.parse(monthlyText);
+                    } catch(e) {
+                        alert('Неверный JSON для месячных норм');
+                        return;
+                    }
+                }
 
                 const original = normBtn.textContent;
                 normBtn.disabled = true;
@@ -114,13 +134,14 @@
         const extraBtn = document.getElementById('extra-add-btn');
         if (extraBtn) {
             extraBtn.addEventListener('click', async () => {
-                const name = document.getElementById('extra-name').value.trim();
+                const type = document.getElementById('extra-type').value;
                 const value = document.getElementById('extra-value').value.trim();
                 const desc = document.getElementById('extra-desc').value.trim() || null;
-                if (!name || !value) {
-                    alert('Укажите название и значение');
+                if (!type || !value) {
+                    alert('Укажите тип и значение');
                     return;
                 }
+                const name = type; // use type as name for validator
 
                 const original = extraBtn.textContent;
                 extraBtn.disabled = true;

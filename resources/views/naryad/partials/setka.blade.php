@@ -26,6 +26,9 @@
                             {{ $d }}<br>
                             <span class="text-[9px] text-orange-500 dark:text-orange-400">{{ $start->copy()->day($d)->format('D') }}</span>
                             <span class="block text-[10px] font-semibold {{ $countColor }}">{{ $ass }}/{{ $req }}</span>
+                            @if($norm)
+                            <span class="block text-[8px] text-orange-500 dark:text-orange-400">W: /{{ $norm->week_hours }}</span>
+                            @endif
                         </th>
                     @endfor
                 </tr>

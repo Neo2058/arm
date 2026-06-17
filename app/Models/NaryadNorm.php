@@ -11,6 +11,11 @@ class NaryadNorm extends Model
         'month_hours',
         'week_hours',
         'min_rest_hours',
+        'monthly_hours', // json per month e.g. {"2026-06": 160}
+    ];
+
+    protected $casts = [
+        'monthly_hours' => 'array',
     ];
 
     public function extraConditions()
