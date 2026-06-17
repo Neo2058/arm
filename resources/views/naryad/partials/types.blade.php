@@ -19,7 +19,7 @@
             </div>
             <div>
                 <label class="block text-xs text-orange-700 dark:text-orange-200 mb-1">&nbsp;</label>
-                <button id="type-add-btn" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-sm font-semibold">Добавить</button>
+                <button id="type-add-btn" type="button" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-sm font-semibold">Добавить</button>
             </div>
         </div>
         <div class="text-[10px] text-orange-600 dark:text-orange-300 mt-2">Можно добавить описание позже через админку.</div>

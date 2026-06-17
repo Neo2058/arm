@@ -172,12 +172,28 @@
 
             // Event delegation для динамического контента (после AJAX partial loads)
             pane.addEventListener('click', function(e) {
-                // Сетка: клик по ячейке назначения маршрута
+                // Сетка: удаление назначения по × (должно быть раньше, чтобы stopPropagation сработал)
+                const delBtn = e.target.closest('.delete-assign-btn');
+                if (delBtn) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const td = delBtn.closest('td[data-user-id][data-date]');
+                    if (td) {
+                        const userId = td.dataset.userId;
+                        const dateStr = td.dataset.date;
+                        unassignNaryadShift(userId, dateStr, td);
+                    }
+                    return;
+                }
+
+                // Сетка: клик по ячейке назначения маршрута (редактирование)
                 const assignCell = e.target.closest('td[data-user-id][data-date]');
-                if (assignCell && !assignCell.querySelector('select')) {
+                if (assignCell && !assignCell.querySelector('select') && !e.target.closest('.delete-assign-btn')) {
                     const userId = assignCell.dataset.userId;
                     const dateStr = assignCell.dataset.date;
-                    let currentRoute = assignCell.textContent.trim();
+                    // Берём текст из .assign-value если есть, иначе весь
+                    let valEl = assignCell.querySelector('.assign-value');
+                    let currentRoute = (valEl ? valEl.textContent : assignCell.textContent).trim();
                     if (currentRoute === '—' || currentRoute === '') currentRoute = '';
                     showNaryadAssignSelect(assignCell, userId, dateStr, currentRoute);
                 }
@@ -288,7 +304,34 @@
 
             const originalHTML = cellEl.innerHTML;
 
-            let html = '<select style="width:100%;font-size:11px;padding:1px 2px;border-radius:4px;border:1px solid #f59e0b;background:#fffbe6;color:#1f2937;">';
+            // Показать остаток часов на неделю пользователя (для понимания при назначении смен подряд)
+            let weekInfoHtml = '';
+            try {
+                const normEl = document.getElementById('naryad-norm-cache');
+                const weekLimit = normEl && normEl.dataset.weekLimit ? parseFloat(normEl.dataset.weekLimit) : 40;
+
+                const hoursCacheEl = document.getElementById('naryad-user-hours-cache');
+                if (hoursCacheEl && hoursCacheEl.dataset.hours) {
+                    const data = JSON.parse(hoursCacheEl.dataset.hours);
+                    const weekData = (data.week || {})[userId] || {};
+
+                    // Вычисляем понедельник недели для dateStr (как в PHP startOfWeek MONDAY)
+                    const d = new Date(dateStr + 'T00:00:00');
+                    const jsDay = d.getDay(); // 0=вс ... 6=сб
+                    const diff = (jsDay === 0 ? -6 : 1 - jsDay);
+                    const monDate = new Date(d);
+                    monDate.setDate(d.getDate() + diff);
+                    const wkey = monDate.toISOString().slice(0, 10);
+
+                    const planned = weekData[wkey] || 0;
+                    const remaining = Math.max(0, Math.round((weekLimit - planned) * 10) / 10);
+                    weekInfoHtml = `<div style="font-size:7px;color:#f59e0b;margin-bottom:1px;white-space:nowrap;">н:${planned}/${weekLimit} ост:${remaining}</div>`;
+                }
+            } catch (e) {
+                // тихо игнорируем, чтобы не ломать выбор
+            }
+
+            let html = weekInfoHtml + '<select style="width:100%;font-size:11px;padding:1px 2px;border-radius:4px;border:1px solid #f59e0b;background:#fffbe6;color:#1f2937;">';
             html += '<option value="">—</option>';
             allOptions.forEach(opt => {
                 const sel = (opt.value == currentRoute) ? 'selected' : '';
@@ -303,7 +346,9 @@
 
             const save = (val) => {
                 if (!val) {
-                    cellEl.innerHTML = originalHTML;
+                    // Пустое значение = удаление назначения
+                    cellEl.innerHTML = '<span style="color:#f59e0b;font-size:10px;">удал...</span>';
+                    unassignNaryadShift(userId, dateStr, cellEl, originalHTML);
                     return;
                 }
                 cellEl.innerHTML = '<span style="color:#f59e0b;font-size:10px;">сохр...</span>';
@@ -348,6 +393,39 @@
                     }, 150);
                 };
             }
+        }
+
+        // === Удаление назначения (для кнопки × и выбора пустого в селекте) ===
+        function unassignNaryadShift(userId, dateStr, cellEl, originalHTML = null) {
+            fetch('{{ route('naryad.unassign') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    user_id: userId,
+                    plan_date: dateStr
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const monthEl = document.getElementById('naryad-month');
+                    const monthVal = monthEl ? monthEl.value : '';
+                    const url = '{{ route('naryad.partial.setka') }}?month=' + (monthVal || '');
+                    window.Naryad.loadPartial(url);
+                } else {
+                    alert('Ошибка: ' + (data.message || 'не удалось удалить'));
+                    if (cellEl && originalHTML) cellEl.innerHTML = originalHTML;
+                }
+            })
+            .catch(e => {
+                console.error(e);
+                alert('Сетевая ошибка при удалении');
+                if (cellEl && originalHTML) cellEl.innerHTML = originalHTML;
+            });
         }
 
         async function handleSaveUserFlags(btn) {

@@ -11,7 +11,7 @@
                 <option value="t6">т6</option>
                 <option value="t5">т5</option>
             </select>
-            <button id="crew-add-btn" class="rounded-2xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold">Добавить</button>
+            <button id="crew-add-btn" type="button" class="rounded-2xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold">Добавить</button>
         </div>
         <div class="text-[10px] text-orange-600 dark:text-orange-300 mt-1">Метка (label) генерируется автоматически как "первый - второй".</div>
     </div>

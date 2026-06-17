@@ -23,7 +23,7 @@
             </div>
         </div>
         <div class="mt-3">
-            <button id="dev-add-btn" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-sm font-semibold">Добавить</button>
+            <button id="dev-add-btn" type="button" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-sm font-semibold">Добавить</button>
             <button id="dev-cancel-edit" class="hidden ml-2 px-3 py-2 text-sm border rounded-2xl" type="button">Отмена</button>
         </div>
     </div>

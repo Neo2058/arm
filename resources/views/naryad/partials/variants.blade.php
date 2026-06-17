@@ -49,7 +49,7 @@
             </div>
         </div>
         <div class="mt-3">
-            <button id="var-add-btn" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-sm font-semibold">Добавить вариант</button>
+            <button id="var-add-btn" type="button" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-sm font-semibold">Добавить вариант</button>
             <button id="var-cancel-edit" class="hidden ml-2 px-3 py-2 text-sm border rounded-2xl" type="button">Отмена</button>
         </div>
     </div>
@@ -137,26 +137,36 @@
             const url = editingId 
                 ? '{{ url("/naryad/variants") }}/' + editingId 
                 : '{{ route('naryad.variants.store') }}';
-            const method = editingId ? 'PUT' : 'POST';
+            let fetchMethod = editingId ? 'PUT' : 'POST';
 
             try {
+                const payload = {
+                    effective_route: effective,
+                    context: context,
+                    route_catalog_id: catalogId ? parseInt(catalogId) : null,
+                    schedule_type_id: scheduleId ? parseInt(scheduleId) : null,
+                    start_time: startTime,
+                    end_time: endTime,
+                    description: desc,
+                    is_active: true
+                };
+
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                };
+
+                // Use X-HTTP-Method-Override + POST for better compatibility with proxies/servers
+                if (editingId) {
+                    fetchMethod = 'POST';
+                    headers['X-HTTP-Method-Override'] = 'PUT';
+                }
+
                 const res = await fetch(url, {
-                    method: method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify({
-                        effective_route: effective,
-                        context: context,
-                        route_catalog_id: catalogId ? parseInt(catalogId) : null,
-                        schedule_type_id: scheduleId ? parseInt(scheduleId) : null,
-                        start_time: startTime,
-                        end_time: endTime,
-                        description: desc,
-                        is_active: true
-                    })
+                    method: fetchMethod,
+                    headers: headers,
+                    body: JSON.stringify(payload)
                 });
 
                 const data = await res.json();
@@ -210,10 +220,11 @@
 
                 try {
                     const res = await fetch('{{ url("/naryad/variants") }}/' + id, {
-                        method: 'DELETE',
+                        method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                            'X-Requested-With': 'XMLHttpRequest'
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-HTTP-Method-Override': 'DELETE'
                         }
                     });
                     const data = await res.json();

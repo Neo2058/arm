@@ -123,6 +123,52 @@ class NaryadPlanningController extends Controller
 
         $norm = NaryadNorm::first();
 
+        // === Расчёт накопительных часов для пользователей (месяц/квартал/год + недели) ===
+        $monthEnd = $start->copy()->endOfMonth();
+        $yearStart = $start->copy()->startOfYear();
+        $quarter = $start->quarter;
+        $quarterStart = $start->copy()->startOfYear()->addMonths(($quarter - 1) * 3);
+
+        $routesMap = \App\Models\RoutesCatalog::all()->keyBy('route_number');
+        $deviationNames = DeviationsCatalog::pluck('name')->toArray();
+
+        $broaderAssignments = NaryadAssignment::whereIn('user_id', $users->pluck('id')->toArray())
+            ->whereBetween('plan_date', [$yearStart, $monthEnd])
+            ->get()
+            ->groupBy('user_id');
+
+        $monthHours = [];
+        $quarterHours = [];
+        $yearHours = [];
+        $userWeekHours = [];
+
+        foreach ($users as $u) {
+            $uAss = $broaderAssignments->get($u->id, collect());
+
+            $monthHours[$u->id] = $this->sumHoursForAssignments($uAss, $routesMap, $deviationNames, $start, $monthEnd);
+            $quarterHours[$u->id] = $this->sumHoursForAssignments($uAss, $routesMap, $deviationNames, $quarterStart, $monthEnd);
+            $yearHours[$u->id] = $this->sumHoursForAssignments($uAss, $routesMap, $deviationNames, $yearStart, $monthEnd);
+
+            // Карта по неделям (понедельник) для показа остатка при назначении
+            $wmap = [];
+            foreach ($uAss as $a) {
+                $wkey = $a->plan_date->copy()->startOfWeek(\Carbon\Carbon::MONDAY)->format('Y-m-d');
+                if (!isset($wmap[$wkey])) {
+                    $wmap[$wkey] = 0;
+                }
+                $wmap[$wkey] += $this->getHoursForAssignment($a, $routesMap, $deviationNames);
+            }
+            $userWeekHours[$u->id] = array_map(fn($v) => round($v, 1), $wmap);
+        }
+
+        $userHoursJson = json_encode([
+            'month'   => $monthHours,
+            'quarter' => $quarterHours,
+            'year'    => $yearHours,
+            'week'    => $userWeekHours,
+        ]);
+        $weekLimit = $norm ? $norm->week_hours : 40;
+
         // Precompute JSON for data attributes to avoid Blade parsing issues with complex @json in attributes
         $routesJson = json_encode($routesCatalog->pluck('route_number')->toArray());
         $variantsJson = json_encode($variants->map(function($v) {
@@ -155,6 +201,11 @@ class NaryadPlanningController extends Controller
             'deviationsJson' => $deviationsJson,
             'dailyGraphsJson' => $dailyGraphsJson,
             'norm' => $norm,
+            'monthHours' => $monthHours,
+            'quarterHours' => $quarterHours,
+            'yearHours' => $yearHours,
+            'userHoursJson' => $userHoursJson,
+            'weekLimit' => $weekLimit,
         ]);
     }
 
@@ -413,6 +464,39 @@ class NaryadPlanningController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Маршрут назначен',
+        ]);
+    }
+
+    /**
+     * Удаление (сброс) назначения смены пользователю на дату.
+     * Вызывается AJAX из сетки (кнопка удаления × или выбор пустого значения в селекте).
+     */
+    public function unassign(Request $request)
+    {
+        $this->abortIfNotNaryadchik();
+
+        $data = $request->validate([
+            'user_id'   => 'required|exists:users,id',
+            'plan_date' => 'required|date',
+        ]);
+
+        $assignment = NaryadAssignment::where('user_id', $data['user_id'])
+            ->where('plan_date', $data['plan_date'])
+            ->first();
+
+        if ($assignment) {
+            $id = $assignment->id;
+            $assignment->delete();
+
+            ClickHouseService::log('naryad.unassign', $id, [
+                'user_id'   => $data['user_id'],
+                'plan_date' => $data['plan_date'],
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Назначение удалено',
         ]);
     }
 
@@ -815,6 +899,40 @@ class NaryadPlanningController extends Controller
             $total += $additionalHours;
         }
 
+        return round($total, 1);
+    }
+
+    /**
+     * Вспомогательные методы для подсчёта запланированных часов.
+     * Используются для отображения накопительной статистики рядом с ФИО.
+     */
+    private function getHoursForAssignment($assignment, $routesMap, $deviationNames)
+    {
+        if (in_array($assignment->route_number, $deviationNames)) {
+            return 0;
+        }
+        $route = $routesMap->get($assignment->route_number);
+        if ($route && $route->default_start_time && $route->default_end_time) {
+            $s = \Carbon\Carbon::parse($route->default_start_time);
+            $e = \Carbon\Carbon::parse($route->default_end_time);
+            $minutes = $s->diffInMinutes($e);
+            $h = $minutes / 60;
+            if ($route->default_break_duration) {
+                $h -= $route->default_break_duration / 60;
+            }
+            return max(0, round($h, 1));
+        }
+        return 8;
+    }
+
+    private function sumHoursForAssignments($assignments, $routesMap, $deviationNames, $from = null, $to = null)
+    {
+        $total = 0;
+        foreach ($assignments as $a) {
+            if ($from && $a->plan_date->lt($from)) continue;
+            if ($to && $a->plan_date->gt($to)) continue;
+            $total += $this->getHoursForAssignment($a, $routesMap, $deviationNames);
+        }
         return round($total, 1);
     }
 }

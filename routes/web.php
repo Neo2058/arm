@@ -209,6 +209,7 @@ Route::middleware(['auth'])->group(function () {
 
         // Действия сохранения (AJAX из сетки и справочников)
         Route::post('/assign', [\App\Http\Controllers\NaryadPlanningController::class, 'assign'])->name('naryad.assign');
+        Route::post('/unassign', [\App\Http\Controllers\NaryadPlanningController::class, 'unassign'])->name('naryad.unassign');
 
         // Обновление планировочных флагов пользователей (расширенный справочник)
         Route::post('/user-profile/{profile}/flags', [\App\Http\Controllers\NaryadPlanningController::class, 'updateUserFlags'])
@@ -216,22 +217,27 @@ Route::middleware(['auth'])->group(function () {
 
         // Справочник составов (т6/т5)
         Route::post('/crews', [\App\Http\Controllers\NaryadPlanningController::class, 'storeCrew'])->name('naryad.crews.store');
+        Route::get('/crews', fn () => redirect()->route('naryad.partial.crews'));
 
         // Типы графиков
         Route::post('/types', [\App\Http\Controllers\NaryadPlanningController::class, 'storeType'])->name('naryad.types.store');
         Route::put('/types/{type}', [\App\Http\Controllers\NaryadPlanningController::class, 'updateType'])->name('naryad.types.update');
         Route::delete('/types/{type}', [\App\Http\Controllers\NaryadPlanningController::class, 'destroyType'])->name('naryad.types.destroy');
+        Route::get('/types', fn () => redirect()->route('naryad.partial.types'));
 
         // Варианты маршрутов
         Route::post('/variants', [\App\Http\Controllers\NaryadPlanningController::class, 'storeVariant'])->name('naryad.variants.store');
         Route::put('/variants/{variant}', [\App\Http\Controllers\NaryadPlanningController::class, 'updateVariant'])->name('naryad.variants.update');
         Route::delete('/variants/{variant}', [\App\Http\Controllers\NaryadPlanningController::class, 'destroyVariant'])->name('naryad.variants.destroy');
+        // Защита от GET на POST-only эндпоинт (например, при прямом переходе или истории браузера)
+        Route::get('/variants', fn () => redirect()->route('naryad.partial.variants'));
 
         // Отвлечения (DeviationsCatalog)
         Route::get('/partial/deviations', [\App\Http\Controllers\NaryadPlanningController::class, 'partialDeviations'])->name('naryad.partial.deviations');
         Route::post('/deviations', [\App\Http\Controllers\NaryadPlanningController::class, 'storeDeviation'])->name('naryad.deviations.store');
         Route::put('/deviations/{deviation}', [\App\Http\Controllers\NaryadPlanningController::class, 'updateDeviation'])->name('naryad.deviations.update');
         Route::delete('/deviations/{deviation}', [\App\Http\Controllers\NaryadPlanningController::class, 'destroyDeviation'])->name('naryad.deviations.destroy');
+        Route::get('/deviations', fn () => redirect()->route('naryad.partial.deviations'));
 
         // Календарь квот (batch save for month)
         Route::post('/calendar', [\App\Http\Controllers\NaryadPlanningController::class, 'saveCalendar'])->name('naryad.calendar.save');

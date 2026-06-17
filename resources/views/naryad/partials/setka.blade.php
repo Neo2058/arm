@@ -16,18 +16,27 @@
                     <th class="sticky left-0 z-30 bg-white dark:bg-[#0b1018] px-4 py-3 text-left font-semibold border-r w-72">ФИО + пометки</th>
                     @for($d = 1; $d <= $daysInMonth; $d++)
                         @php
-                            $dayStr = $start->copy()->day($d)->format('Y-m-d');
+                            $dayDate = $start->copy()->day($d);
+                            $dayStr = $dayDate->format('Y-m-d');
                             $ass = $dailyAssigned[$dayStr] ?? 0;
                             $quotaModel = $quotas->get($dayStr);
                             $req = $quotaModel ? $quotaModel->required_crews : 0;
                             $countColor = $ass >= $req && $req > 0 ? 'text-emerald-600 dark:text-emerald-400' : ($ass > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-orange-500 dark:text-orange-400');
+
+                            // Русские сокращения дней недели
+                            $weekdaysRu = [1 => 'пн', 2 => 'вт', 3 => 'ср', 4 => 'чт', 5 => 'пт', 6 => 'сб', 7 => 'вс'];
+                            $dow = $dayDate->dayOfWeekIso;
+                            $dowRu = $weekdaysRu[$dow] ?? '?';
+
+                            // Показываем /req только если квота задана (чтобы не было 1/0 на днях без настройки в календаре)
+                            $countText = $req > 0 ? $ass . '/' . $req : (string) $ass;
                         @endphp
                         <th class="px-2 py-2 text-center font-mono text-[11px] border-r min-w-[42px]">
                             {{ $d }}<br>
-                            <span class="text-[9px] text-orange-500 dark:text-orange-400">{{ $start->copy()->day($d)->format('D') }}</span>
-                            <span class="block text-[10px] font-semibold {{ $countColor }}">{{ $ass }}/{{ $req }}</span>
+                            <span class="text-[9px] text-orange-500 dark:text-orange-400">{{ $dowRu }}</span>
+                            <span class="block text-[10px] font-semibold {{ $countColor }}">{{ $countText }}</span>
                             @if($norm)
-                            <span class="block text-[8px] text-orange-500 dark:text-orange-400">W: /{{ $norm->week_hours }}</span>
+                            <span class="block text-[8px] text-orange-500 dark:text-orange-400">W:{{ $norm->week_hours }}</span>
                             @endif
                         </th>
                     @endfor
@@ -54,6 +63,21 @@
                             @if($p && $p->tab_number)
                                 <span class="ml-2 text-[10px] font-mono text-orange-500 dark:text-orange-400">{{ $p->tab_number }}</span>
                             @endif
+
+                            @if($norm)
+                                @php
+                                    $mh = $monthHours[$u->id] ?? 0;
+                                    $qh = $quarterHours[$u->id] ?? 0;
+                                    $yh = $yearHours[$u->id] ?? 0;
+                                    $mLim = $norm->monthly_hours[$month] ?? $norm->month_hours;
+                                    $yLim = $norm->year_hours;
+                                @endphp
+                                <div class="text-[8px] leading-tight mt-px font-mono text-orange-600 dark:text-orange-400" title="Накопительные запланированные часы (только рабочие, без отвлечений)">
+                                    М:<span class="font-semibold text-orange-700 dark:text-orange-300">{{ $mh }}</span>/{{ $mLim }}
+                                    К:{{ $qh }}
+                                    Г:<span class="font-semibold text-orange-700 dark:text-orange-300">{{ $yh }}</span>/{{ $yLim }}
+                                </div>
+                            @endif
                         </td>
 
                         @for($d = 1; $d <= $daysInMonth; $d++)
@@ -64,9 +88,12 @@
                             <td class="px-1 py-1 text-center border-r text-xs align-middle cursor-pointer hover:bg-orange-50 dark:hover:bg-orange-950/30"
                                 data-user-id="{{ $u->id }}"
                                 data-date="{{ $dayKey }}"
-                                title="{{ $assigned ? 'Маршрут ' . $assigned . ' — клик для изменения' : 'Клик, чтобы назначить маршрут' }}">
+                                title="{{ $assigned ? 'Клик по маршруту — изменить; × — удалить назначение' : 'Клик, чтобы назначить маршрут' }}">
                                 @if($assigned)
-                                    <span class="inline-block px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 font-semibold">{{ $assigned }}</span>
+                                    <span class="inline-flex items-center gap-0.5 group">
+                                        <span class="inline-block px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 font-semibold assign-value">{{ $assigned }}</span>
+                                        <span class="delete-assign-btn text-[10px] leading-none px-0.5 text-red-400 hover:text-red-600 dark:text-red-300 dark:hover:text-red-400 cursor-pointer select-none font-bold opacity-30 group-hover:opacity-100 transition-opacity" title="Удалить назначенную смену">×</span>
+                                    </span>
                                 @else
                                     <span class="text-orange-300 dark:text-orange-600">—</span>
                                 @endif
@@ -87,7 +114,7 @@
     <div class="mt-3 flex items-center gap-4 text-[11px] text-orange-500 dark:text-orange-400">
         <div>Б = бригадир • Т6 = управление составом типа т6 • М = манёвры • П = помощник</div>
         <div class="flex-1 h-px bg-gray-100 dark:bg-white/10"></div>
-        <div>Клик по ячейке → ввести/изменить номер маршрута → сохранится мгновенно (перезагрузка сетки)</div>
+        <div>Клик по номеру маршрута → изменить • наведи и клик × → удалить (мгновенная перезагрузка сетки)</div>
     </div>
 </div>
 
@@ -95,3 +122,7 @@
 <div id="naryad-variants-cache" data-variants='{{ $variantsJson }}' style="display:none"></div>
 <div id="naryad-deviations-cache" data-deviations='{{ $deviationsJson }}' style="display:none"></div>
 <div id="naryad-daily-graphs-cache" data-graphs='{{ $dailyGraphsJson }}' style="display:none"></div>
+
+<!-- Кэш накопительных часов (месяц/квартал/год/недели) для отображения рядом с ФИО и для показа остатка при назначении -->
+<div id="naryad-user-hours-cache" data-hours='{{ $userHoursJson }}' style="display:none"></div>
+<div id="naryad-norm-cache" data-week-limit="{{ $weekLimit }}" style="display:none"></div>

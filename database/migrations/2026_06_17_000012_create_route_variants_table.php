@@ -14,6 +14,7 @@ return new class extends Migration
             $table->enum('context', ['morning', 'night', 'any'])->default('any');
             $table->string('base_route_number')->nullable();
             $table->foreignId('route_catalog_id')->nullable()->constrained('routes_catalog')->nullOnDelete();
+            $table->foreignId('schedule_type_id')->nullable()->constrained('schedule_types')->nullOnDelete();
             $table->string('start_location')->nullable();
             $table->time('start_time')->nullable();
             $table->string('end_location')->nullable();
