@@ -13,6 +13,8 @@ class RoutesCatalog extends Model
         'schedule_type_id',
         'route_number',
         'shift_type',
+        'night_parity',
+        'from_night',
         'start_location',
         'default_start_time',
         'end_location',

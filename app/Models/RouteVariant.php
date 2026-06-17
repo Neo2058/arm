@@ -10,6 +10,8 @@ class RouteVariant extends Model
         'effective_route',     // то, что увидит нарядчик и проставит (25, 36 и т.д.)
         'schedule_type_id',    // тип графика
         'shift_type',          // тип смены: 1,2,3,3+,4+,5+
+        'night_parity',        // even / odd для ночных смен (чётный / нечётный)
+        'from_night',          // номер продолжения с ночи (утренний вариант)
         'context',             // morning | night | any (legacy)
         'base_route_number',   // исходный номер (опционально)
         'route_catalog_id',    // связь с основным каталогом

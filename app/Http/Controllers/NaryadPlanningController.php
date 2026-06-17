@@ -148,6 +148,18 @@ class NaryadPlanningController extends Controller
             $dailyGraphs[$date] = $q->scheduleType ? $q->scheduleType->name : null;
         }
 
+        // Чётность ночи для каждого дня (для фильтрации ночных смен по чёт/нечёт)
+        $dailyNightParities = [];
+        $days = [];
+        $current = $start->copy();
+        for ($i = 0; $i < $daysInMonth; $i++) {
+            $dstr = $current->format('Y-m-d');
+            $dayNum = $current->day;
+            $parity = ($dayNum % 2 === 1) ? 'even' : 'odd';  // сегодня 5 (нечёт) → чётная ночь по примеру
+            $dailyNightParities[$dstr] = $parity;
+            $current->addDay();
+        }
+
         $norm = NaryadNorm::first();
 
         // Rich details for grid display and modal (start time, loc, end, duration)
@@ -177,6 +189,7 @@ class NaryadPlanningController extends Controller
                 $s = \Carbon\Carbon::parse($r->default_start_time);
                 $e = \Carbon\Carbon::parse($r->default_end_time);
                 $mins = $s->diffInMinutes($e);
+                if ($mins < 0) $mins += 24 * 60;  // overnight correction for night shifts
                 $h = $mins / 60;
                 // duration shown in grid cell / title is the full shift span (gross); net after break is handled elsewhere if needed
                 $dur = round($h, 1) . 'ч';
@@ -189,6 +202,15 @@ class NaryadPlanningController extends Controller
                 'duration' => $dur,
             ];
             $routeHours[$val] = max(0, round($h, 1));
+
+            // Also key by plain route_number so that "from night" continuations like "МЗ-1" resolve to full details in grid cells
+            $plain = $r->route_number;
+            if ($plain && !isset($routeDetails[$plain])) {
+                $routeDetails[$plain] = $routeDetails[$val];
+            }
+            if ($plain && !isset($routeHours[$plain])) {
+                $routeHours[$plain] = $routeHours[$val];
+            }
         }
         foreach ($variants as $v) {
             $cat = $v->catalogRoute;
@@ -216,6 +238,7 @@ class NaryadPlanningController extends Controller
                 $s = \Carbon\Carbon::parse($sTime);
                 $e = \Carbon\Carbon::parse($eTime);
                 $mins = $s->diffInMinutes($e);
+                if ($mins < 0) $mins += 24 * 60;  // overnight correction for night shifts
                 $h = $mins / 60;
                 // gross span for display
                 $dur = round($h, 1) . 'ч';
@@ -228,6 +251,15 @@ class NaryadPlanningController extends Controller
                 'duration' => $dur,
             ];
             $routeHours[$val] = max(0, round($h, 1));
+
+            // Also key by plain effective_route so continuations resolve to full details
+            $eff = $v->effective_route;
+            if ($eff && !isset($routeDetails[$eff])) {
+                $routeDetails[$eff] = $routeDetails[$val];
+            }
+            if ($eff && !isset($routeHours[$eff])) {
+                $routeHours[$eff] = $routeHours[$val];
+            }
         }
 
         // === Расчёт накопительных часов для пользователей (месяц/квартал/год + недели) ===
@@ -344,6 +376,9 @@ class NaryadPlanningController extends Controller
                 'end_location' => $r->end_location,
                 'end_time' => $r->default_end_time,
                 'break_duration' => $r->default_break_duration ?? 0,
+                'schedule_type_name' => $r->scheduleType ? $r->scheduleType->name : null,
+                'night_parity' => $r->night_parity,
+                'from_night' => $r->from_night,
             ];
         })->toArray());
         $variantsJson = json_encode($variants->map(function($v) {
@@ -376,6 +411,8 @@ class NaryadPlanningController extends Controller
                 'end_location' => $v->end_location ?: ($cat ? $cat->end_location : ''),
                 'end_time' => $v->end_time ?: ($cat ? $cat->default_end_time : ''),
                 'shift_type' => $v->shift_type,
+                'night_parity' => $v->night_parity,
+                'from_night' => $v->from_night,
                 'break_duration' => ($v->default_break_duration ?? null) ?: ($cat ? $cat->default_break_duration : 0),
             ];
         })->toArray());
@@ -384,6 +421,7 @@ class NaryadPlanningController extends Controller
         })->toArray());
         $dailyGraphsJson = json_encode($dailyGraphs);
         $dailyUsedRoutesJson = json_encode($usedRoutesByDate);
+        $dailyNightParitiesJson = json_encode($dailyNightParities);
 
         // Подготовка кэша подстроек для модалки (по id) - поддержка нескольких
         $podstroikasJson = json_encode(
@@ -415,6 +453,7 @@ class NaryadPlanningController extends Controller
             'deviationsJson' => $deviationsJson,
             'dailyGraphsJson' => $dailyGraphsJson,
             'dailyUsedRoutesJson' => $dailyUsedRoutesJson,
+            'dailyNightParitiesJson' => $dailyNightParitiesJson,
             'norm' => $norm,
             'routeDetails' => $routeDetails,
             'monthHours' => $monthHours,
@@ -667,10 +706,69 @@ class NaryadPlanningController extends Controller
             'route_number'=> $data['route_number'],
         ]);
 
-        return response()->json([
+        // Автоподстановка продолжения с ночи на следующий день
+        try {
+            $assignedKey = $data['route_number'];
+
+            // Парсим базовый номер (для поиска определения from_night)
+            $baseRouteNum = $assignedKey;
+            if (preg_match('/^([0-9a-zA-Z\-+]+)/', $assignedKey, $m)) {
+                $baseRouteNum = $m[1];
+            }
+
+            // Ищем from_night в catalog или в variant (поскольку может быть задано на варианте)
+            $fromNightNum = null;
+            $catRoute = \App\Models\RoutesCatalog::where('route_number', $baseRouteNum)->first();
+            if ($catRoute && $catRoute->from_night) {
+                $fromNightNum = $catRoute->from_night;
+            }
+            if (!$fromNightNum) {
+                $varRoute = \App\Models\RouteVariant::where('effective_route', $baseRouteNum)->first();
+                if ($varRoute && $varRoute->from_night) {
+                    $fromNightNum = $varRoute->from_night;
+                }
+            }
+
+            if ($fromNightNum) {
+                // Это ночная смена?
+                $isNight = stripos($assignedKey, 'ночь') !== false
+                    || ($catRoute && $catRoute->night_parity)
+                    || ($varRoute && $varRoute->night_parity);
+
+                if ($isNight) {
+                    $nextDate = \Carbon\Carbon::parse($data['plan_date'])->addDay()->format('Y-m-d');
+
+                    // Сохраняем raw from_night как route_number (то, что указано в "с ночи", напр. "МЗ-1").
+                    // Полная расшифровка (времена, места) будет взята через plain key в $routeDetails.
+                    $contKey = $fromNightNum;
+
+                    NaryadAssignment::updateOrCreate(
+                        [
+                            'user_id'   => $data['user_id'],
+                            'plan_date' => $nextDate,
+                        ],
+                        [
+                            'route_number' => $contKey,
+                            'assigned_by'  => Auth::id(),
+                        ]
+                    );
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Auto night continuation failed: ' . $e->getMessage());
+        }
+
+        $response = [
             'success' => true,
             'message' => 'Маршрут назначен',
-        ]);
+        ];
+
+        // Подсказка фронту, что мы попытались подставить продолжение (для логов/дебага)
+        if (isset($fromNightNum) && $fromNightNum) {
+            $response['auto_continuation'] = $fromNightNum;
+        }
+
+        return response()->json($response);
     }
 
     /**
@@ -838,6 +936,8 @@ class NaryadPlanningController extends Controller
             'effective_route' => 'required|string|max:50',
             'schedule_type_id' => 'nullable|exists:schedule_types,id',
             'shift_type' => 'nullable|string|max:10',
+            'night_parity' => 'nullable|in:even,odd',
+            'from_night' => 'nullable|string|max:50',
             'base_route_number' => 'nullable|string|max:50',
             'route_catalog_id' => 'nullable|exists:routes_catalog,id',
             'start_location' => 'nullable|string|max:255',
@@ -866,6 +966,8 @@ class NaryadPlanningController extends Controller
             'effective_route' => 'required|string|max:50',
             'schedule_type_id' => 'nullable|exists:schedule_types,id',
             'shift_type' => 'nullable|string|max:10',
+            'night_parity' => 'nullable|in:even,odd',
+            'from_night' => 'nullable|string|max:50',
             'base_route_number' => 'nullable|string|max:50',
             'route_catalog_id' => 'nullable|exists:routes_catalog,id',
             'start_location' => 'nullable|string|max:255',
@@ -1196,6 +1298,7 @@ class NaryadPlanningController extends Controller
             $s = \Carbon\Carbon::parse($route->default_start_time);
             $e = \Carbon\Carbon::parse($route->default_end_time);
             $minutes = $s->diffInMinutes($e);
+            if ($minutes < 0) $minutes += 24 * 60;  // overnight correction for night shifts
             $h = $minutes / 60;
             // Use gross shift duration (start to end) for naryad hours; break handled in other systems if needed
             return max(0, round($h, 1));

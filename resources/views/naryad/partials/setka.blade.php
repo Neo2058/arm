@@ -178,6 +178,7 @@
 <div id="naryad-daily-graphs-cache" data-graphs='{{ $dailyGraphsJson }}' style="display:none"></div>
 <div id="naryad-daily-used-routes-cache" data-used-routes='{{ $dailyUsedRoutesJson }}' style="display:none"></div>
 <div id="naryad-podstroikas-cache" data-pods='{{ $podstroikasJson }}' style="display:none"></div>
+<div id="naryad-night-parities-cache" data-parities='{{ $dailyNightParitiesJson }}' style="display:none"></div>
 
 <!-- Кэш накопительных часов (месяц/квартал/год/недели) для отображения рядом с ФИО и для показа остатка при назначении -->
 <div id="naryad-user-hours-cache" data-hours='{{ $userHoursJson }}' style="display:none"></div>

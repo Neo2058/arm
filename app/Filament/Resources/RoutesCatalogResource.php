@@ -55,6 +55,22 @@ class RoutesCatalogResource extends Resource
                             ])
                             ->required()
                             ->native(false),
+
+                        Forms\Components\Select::make('night_parity')
+                            ->label('Чётность ночи')
+                            ->options([
+                                'even' => 'чётный',
+                                'odd' => 'нечётный',
+                            ])
+                            ->nullable()
+                            ->native(false)
+                            ->helperText('Для ночных смен: чётный/нечётный в зависимости от даты'),
+
+                        Forms\Components\TextInput::make('from_night')
+                            ->label('С ночи (продолжение утром)')
+                            ->placeholder('20')
+                            ->maxLength(50)
+                            ->helperText('Номер маршрута, который автоматически подставится на следующий день'),
                     ])->columns(1),
 
                 Section::make('Параметры стандартного расписания')
@@ -121,6 +137,17 @@ class RoutesCatalogResource extends Resource
                         ];
                         return $map[$state] ?? $state;
                     })
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('night_parity')
+                    ->label('Чётность ночи')
+                    ->formatStateUsing(fn ($state) => $state === 'even' ? 'чётный' : ($state === 'odd' ? 'нечётный' : '—'))
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('from_night')
+                    ->label('С ночи')
                     ->searchable()
                     ->sortable(),
 

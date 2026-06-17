@@ -358,16 +358,48 @@
 
             optsEl.innerHTML = '<div class="p-4 text-center text-orange-400">Загрузка вариантов...</div>';
 
-            // Build rich options
-            let routes = window.NARYAD_ROUTES || [];
-            if (!routes.length) {
-                const cache = document.getElementById('naryad-routes-cache');
-                if (cache && cache.dataset.routes) {
-                    try { routes = JSON.parse(cache.dataset.routes); window.NARYAD_ROUTES = routes; } catch(e){}
-                }
+            // Сначала определяем тип графика дня (из квоты)
+            let dayGraph = null;
+            const gCache = document.getElementById('naryad-daily-graphs-cache');
+            if (gCache && gCache.dataset.graphs) {
+                try { const gs = JSON.parse(gCache.dataset.graphs); dayGraph = gs[dateStr] || null; } catch(e){}
             }
 
-            let allOptions = routes.map(r => ({ 
+            // Чётность ночи для этой даты
+            let nightParity = null;
+            const pCache = document.getElementById('naryad-night-parities-cache');
+            if (pCache && pCache.dataset.parities) {
+                try {
+                    const pars = JSON.parse(pCache.dataset.parities);
+                    nightParity = pars[dateStr] || null;
+                } catch(e){}
+            }
+
+            // Build rich options
+            // Всегда берём свежие данные из кэша части (чтобы учитывать schedule_type_name и актуальные маршруты)
+            let routes = [];
+            const routesCache = document.getElementById('naryad-routes-cache');
+            if (routesCache && routesCache.dataset.routes) {
+                try { 
+                    routes = JSON.parse(routesCache.dataset.routes); 
+                    window.NARYAD_ROUTES = routes; 
+                } catch(e){}
+            } else if (window.NARYAD_ROUTES && window.NARYAD_ROUTES.length) {
+                routes = window.NARYAD_ROUTES;
+            }
+
+            // Фильтруем маршруты из каталога по типу графика дня И чётности ночи
+            const filteredRoutes = routes.filter(r => {
+                const rGraph = r.schedule_type_name || null;
+                const graphMatch = !dayGraph || !rGraph || rGraph === dayGraph;
+
+                const rParity = r.night_parity || null;
+                const parityMatch = !rParity || !nightParity || rParity === nightParity;
+
+                return graphMatch && parityMatch;
+            });
+
+            let allOptions = filteredRoutes.map(r => ({ 
                 value: r.value || r, 
                 label: r.label || r,
                 start_time: r.start_time || '',
@@ -375,13 +407,8 @@
                 end_time: r.end_time || '',
                 end_location: r.end_location || '',
                 break_duration: r.break_duration || 0,
+                from_night: r.from_night || null,
             }));
-
-            let dayGraph = null;
-            const gCache = document.getElementById('naryad-daily-graphs-cache');
-            if (gCache && gCache.dataset.graphs) {
-                try { const gs = JSON.parse(gCache.dataset.graphs); dayGraph = gs[dateStr] || null; } catch(e){}
-            }
 
             const vCache = document.getElementById('naryad-variants-cache');
             if (vCache && vCache.dataset.variants) {
@@ -389,8 +416,12 @@
                     const vs = JSON.parse(vCache.dataset.variants);
                     vs.forEach(v => {
                         const vGraph = v.schedule_type_name || null;
-                        const matches = !dayGraph || !vGraph || vGraph === dayGraph;
-                        if (matches) {
+                        const graphMatch = !dayGraph || !vGraph || vGraph === dayGraph;
+
+                        const vParity = v.night_parity || null;
+                        const parityMatch = !vParity || !nightParity || vParity === nightParity;
+
+                        if (graphMatch && parityMatch) {
                             const vlabel = v.label || v.effective;
                             const vval = v.value || vlabel;
                             allOptions.push({ 
@@ -401,6 +432,7 @@
                                 end_time: v.end_time || '',
                                 end_location: v.end_location || '',
                                 break_duration: v.break_duration || 0,
+                                from_night: v.from_night || null,
                             });
                         }
                     });
@@ -464,6 +496,9 @@
                     const el = opt.end_location || '';
                     const dur = opt.duration || '';
                     details = `<div class="text-[30px] text-orange-600 dark:text-orange-400 mt-1">${st} ${sl} → ${et} ${el} ${dur ? '('+dur+')' : ''}</div>`;
+                    if (opt.from_night) {
+                        details += `<div class="text-[16px] text-teal-600 dark:text-teal-400">→ автоподстановка на след. день: ${opt.from_night}</div>`;
+                    }
                 }
 
                 div.innerHTML = `

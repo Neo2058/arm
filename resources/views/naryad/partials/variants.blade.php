@@ -31,6 +31,18 @@
                 </select>
             </div>
             <div>
+                <label class="block text-xs text-orange-600 dark:text-orange-400 mb-1">Чётность ночи (для ночных)</label>
+                <select id="var-night-parity" class="w-full border rounded-2xl px-3 py-2">
+                    <option value="">— (любая)</option>
+                    <option value="even">чётный</option>
+                    <option value="odd">нечётный</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-orange-600 dark:text-orange-400 mb-1">С ночи (продолжение на след. день)</label>
+                <input id="var-from-night" class="w-full border rounded-2xl px-3 py-2" placeholder="20">
+            </div>
+            <div>
                 <label class="block text-xs text-orange-600 dark:text-orange-400 mb-1">Базовый из каталога (опц.)</label>
                 <select id="var-catalog" class="w-full border rounded-2xl px-3 py-2">
                     <option value="">—</option>
@@ -76,6 +88,8 @@
                  data-catalog-id="{{ $v->route_catalog_id ?? '' }}"
                  data-schedule-id="{{ $v->schedule_type_id ?? '' }}"
                  data-shift-type="{{ $v->shift_type ?? '' }}"
+                  data-night-parity="{{ $v->night_parity ?? '' }}"
+                 data-from-night="{{ $v->from_night ?? '' }}"
                  data-start-time="{{ $v->start_time ?? '' }}"
                  data-end-time="{{ $v->end_time ?? '' }}"
                  data-desc="{{ $v->description ?? '' }}">
@@ -91,6 +105,14 @@
                             ($v->shift_type === '5+' ? '5+-поздняя ночь' : $v->shift_type)))))
                         }}
                     </span>
+                @endif
+                @if($v->night_parity)
+                    <span class="px-1.5 py-0.5 text-[10px] rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                        {{ $v->night_parity === 'even' ? 'чётн.' : 'нечётн.' }}
+                    </span>
+                @endif
+                @if($v->from_night)
+                    <span class="text-xs px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300">с ночи {{ $v->from_night }}</span>
                 @endif
                 @if($v->catalogRoute)
                     <span class="text-xs text-orange-600 dark:text-orange-400">из {{ $v->catalogRoute->route_number }}</span>
@@ -128,6 +150,8 @@
             document.getElementById('var-catalog').value = '';
             document.getElementById('var-schedule').value = '';
             document.getElementById('var-shift-type').value = '';
+            document.getElementById('var-night-parity').value = '';
+            document.getElementById('var-from-night').value = '';
             document.getElementById('var-start-time').value = '';
             document.getElementById('var-end-time').value = '';
             document.getElementById('var-desc').value = '';
@@ -163,6 +187,8 @@
                     effective_route: effective,
                     schedule_type_id: scheduleId ? parseInt(scheduleId) : null,
                     shift_type: document.getElementById('var-shift-type').value || null,
+                    night_parity: document.getElementById('var-night-parity').value || null,
+                    from_night: document.getElementById('var-from-night').value || null,
                     route_catalog_id: catalogId ? parseInt(catalogId) : null,
                     start_time: startTime,
                     end_time: endTime,
@@ -220,6 +246,8 @@
                 document.getElementById('var-catalog').value = row.dataset.catalogId || '';
                 document.getElementById('var-schedule').value = row.dataset.scheduleId || '';
                 document.getElementById('var-shift-type').value = row.dataset.shiftType || '';
+                document.getElementById('var-night-parity').value = row.dataset.nightParity || '';
+                document.getElementById('var-from-night').value = row.dataset.fromNight || '';
                 document.getElementById('var-start-time').value = row.dataset.startTime || '';
                 document.getElementById('var-end-time').value = row.dataset.endTime || '';
                 document.getElementById('var-desc').value = row.dataset.desc || '';
