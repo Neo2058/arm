@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, Eye, Phone, BookOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Plus, Trash2, Copy, X } from 'lucide-react';
 
-export default function NaryadViewer({ naryads = [] }) {
+export default function NaryadViewer({ naryads = [], isAdmin = false }) {
     // Read initial tab from query for sidebar deep links
     const getInitialTab = () => {
         if (typeof window !== 'undefined') {
@@ -45,6 +45,15 @@ export default function NaryadViewer({ naryads = [] }) {
     const [newPhoneFio, setNewPhoneFio] = useState('');
     const [newPhoneNum, setNewPhoneNum] = useState('');
 
+    // Log phone searches (debounced)
+    useEffect(() => {
+        if (!phoneSearch || phoneSearch.length < 2) return;
+        const t = setTimeout(() => {
+            logAction('search_phones', { query: phoneSearch });
+        }, 800);
+        return () => clearTimeout(t);
+    }, [phoneSearch]);
+
     // Shift explanations / расшифровки смен - full add + read + search
     const [explanations, setExplanations] = useState(() => {
         const saved = localStorage.getItem('naryad_explanations');
@@ -56,6 +65,40 @@ export default function NaryadViewer({ naryads = [] }) {
     const [expSearch, setExpSearch] = useState('');
     const [newExpShift, setNewExpShift] = useState('');
     const [newExpText, setNewExpText] = useState('');
+
+    // Log explanations searches (debounced)
+    useEffect(() => {
+        if (!expSearch || expSearch.length < 2) return;
+        const t = setTimeout(() => {
+            logAction('search_explanations', { query: expSearch });
+        }, 800);
+        return () => clearTimeout(t);
+    }, [expSearch]);
+
+    // Logging helper for user activity (phones / naryads / explanations)
+    const logAction = (action, details = {}) => {
+        if (typeof window === 'undefined') return;
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        fetch('/api/actions/log', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': token,
+            },
+            body: JSON.stringify({ action, details }),
+        }).catch(() => {}); // fire-and-forget
+    };
+
+    // Log when user switches between the three main blocks
+    useEffect(() => {
+        const map = {
+            naryady: 'view_naryads_tab',
+            phones: 'view_phones_tab',
+            explanations: 'view_explanations_tab',
+        };
+        const act = map[activeTab];
+        if (act) logAction(act);
+    }, [activeTab]);
 
     // Persist phones
     useEffect(() => {
@@ -111,6 +154,10 @@ export default function NaryadViewer({ naryads = [] }) {
         setCurrentPage(1);
         setPdfDoc(null);
         setScale(1.6);
+
+        // Log opening a specific naryad PDF
+        logAction('open_naryad', { id: naryad.id, title: naryad.title, date: naryad.naryad_date });
+
         try {
             const res = await fetch(`/naryady/${naryad.id}`);
             const data = await res.json();
@@ -141,6 +188,7 @@ export default function NaryadViewer({ naryads = [] }) {
 
     // Phones handlers - full featured
     const addPhone = () => {
+        if (!isAdmin) return;
         const fio = newPhoneFio.trim();
         const phone = newPhoneNum.trim();
         if (!fio || !phone) return;
@@ -152,10 +200,15 @@ export default function NaryadViewer({ naryads = [] }) {
         setPhones(prev => [newEntry, ...prev]);
         setNewPhoneFio('');
         setNewPhoneNum('');
+
+        logAction('add_phone', { fio });
     };
 
     const deletePhone = (id) => {
+        if (!isAdmin) return;
+        const entry = phones.find(p => p.id === id);
         setPhones(prev => prev.filter(p => p.id !== id));
+        if (entry) logAction('delete_phone', { fio: entry.fio });
     };
 
     const copyPhone = async (phone) => {
@@ -171,6 +224,7 @@ export default function NaryadViewer({ naryads = [] }) {
 
     // Explanations (расшифровки смен) handlers
     const addExplanation = () => {
+        if (!isAdmin) return;
         const shift = newExpShift.trim();
         const text = newExpText.trim();
         if (!shift || !text) return;
@@ -183,10 +237,15 @@ export default function NaryadViewer({ naryads = [] }) {
         setExplanations(prev => [newEntry, ...prev]);
         setNewExpShift('');
         setNewExpText('');
+
+        logAction('add_explanation', { shift });
     };
 
     const deleteExplanation = (id) => {
+        if (!isAdmin) return;
+        const entry = explanations.find(e => e.id === id);
         setExplanations(prev => prev.filter(e => e.id !== id));
+        if (entry) logAction('delete_explanation', { shift: entry.shift });
     };
 
     // Load pdf.js from CDN + PDF (mobile friendly init)
@@ -302,6 +361,9 @@ export default function NaryadViewer({ naryads = [] }) {
             setSearchMatches([]);
             return;
         }
+
+        // Log PDF text search
+        logAction('search_naryad_pdf', { term, naryad: selected?.title });
         const lower = term.toLowerCase();
         const matches = [];
         for (let p = 1; p <= numPages; p++) {
@@ -347,32 +409,32 @@ export default function NaryadViewer({ naryads = [] }) {
     // Mobile-first tab bar + 3 full blocks
     return (
         <div className="max-w-5xl mx-auto pb-16">
-            {/* Big mobile-first header */}
-            <div className="mb-3 px-1">
+            {/* Big mobile-first header — centered + offset for fixed burger on small screens */}
+            <div className="mb-3 px-1 pt-10 sm:pt-1 text-center sm:text-left">
                 <h1 className="text-2xl sm:text-3xl font-bold text-orange-400 tracking-tight">Наряды и справочники</h1>
                 <p className="text-sm text-orange-300 mt-0.5">Мобильная версия • три блока</p>
             </div>
 
-            {/* Sticky large-tab bar optimized for thumbs */}
-            <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur border-b border-white/10 mb-4 -mx-1 px-1 py-2">
-                <div className="flex gap-1.5 rounded-2xl bg-zinc-900/70 p-1">
+            {/* Sticky large-tab bar optimized for thumbs (tight for 390px screens) */}
+            <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur border-b border-white/10 mb-4 -mx-0.5 px-0.5 py-1.5">
+                <div className="flex gap-1 rounded-2xl bg-zinc-900/70 p-0.5">
                     <button
                         onClick={() => switchTab('naryady')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl text-sm font-semibold transition active:scale-[0.985] min-h-[52px] ${activeTab === 'naryady' ? 'bg-orange-500 text-white shadow' : 'bg-white/5 text-orange-300 hover:bg-white/10'}`}
+                        className={`flex-1 flex items-center justify-center gap-1 py-2 px-1.5 sm:px-3 rounded-2xl text-xs sm:text-sm font-semibold transition active:scale-[0.985] min-h-[48px] whitespace-nowrap ${activeTab === 'naryady' ? 'bg-orange-500 text-white shadow' : 'bg-white/5 text-orange-300 hover:bg-white/10'}`}
                     >
-                        <Eye size={18} /> <span className="hidden sm:inline">Наряды</span><span className="sm:hidden">Наряды</span>
+                        <Eye size={15} /> <span className="hidden sm:inline">Наряды</span><span className="sm:hidden">Нар.</span>
                     </button>
                     <button
                         onClick={() => switchTab('phones')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl text-sm font-semibold transition active:scale-[0.985] min-h-[52px] ${activeTab === 'phones' ? 'bg-orange-500 text-white shadow' : 'bg-white/5 text-orange-300 hover:bg-white/10'}`}
+                        className={`flex-1 flex items-center justify-center gap-1 py-2 px-1.5 sm:px-3 rounded-2xl text-xs sm:text-sm font-semibold transition active:scale-[0.985] min-h-[48px] whitespace-nowrap ${activeTab === 'phones' ? 'bg-orange-500 text-white shadow' : 'bg-white/5 text-orange-300 hover:bg-white/10'}`}
                     >
-                        <Phone size={18} /> <span>Телефоны</span>
+                        <Phone size={15} /> <span className="hidden sm:inline">Телефоны</span><span className="sm:hidden">Тел.</span>
                     </button>
                     <button
                         onClick={() => switchTab('explanations')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl text-sm font-semibold transition active:scale-[0.985] min-h-[52px] ${activeTab === 'explanations' ? 'bg-orange-500 text-white shadow' : 'bg-white/5 text-orange-300 hover:bg-white/10'}`}
+                        className={`flex-1 flex items-center justify-center gap-1 py-2 px-1.5 sm:px-3 rounded-2xl text-xs sm:text-sm font-semibold transition active:scale-[0.985] min-h-[48px] whitespace-nowrap ${activeTab === 'explanations' ? 'bg-orange-500 text-white shadow' : 'bg-white/5 text-orange-300 hover:bg-white/10'}`}
                     >
-                        <BookOpen size={18} /> <span className="hidden sm:inline">Расшифровки</span><span className="sm:hidden">Смены</span>
+                        <BookOpen size={15} /> <span className="hidden sm:inline">Расшифровки</span><span className="sm:hidden">Смены</span>
                     </button>
                 </div>
             </div>
@@ -389,17 +451,17 @@ export default function NaryadViewer({ naryads = [] }) {
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 placeholder="Поиск по названию наряда или ФИО"
-                                className="w-full rounded-3xl border border-white/10 bg-white/5 pl-12 py-3.5 text-[15px] focus:outline-none focus:border-orange-400 placeholder:text-orange-300/50"
+                                className="w-full rounded-3xl border border-white/10 bg-white/5 pl-12 py-3.5 text-[15px] text-orange-400 focus:outline-none focus:border-orange-400 placeholder:text-orange-300/50"
                             />
                         </div>
                         <div className="flex flex-col sm:flex-row gap-3">
                             <div className="flex-1">
                                 <div className="text-[11px] uppercase tracking-widest text-orange-400 ml-1 mb-1">С даты</div>
-                                <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} className="w-full rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-base" />
+                                <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} className="w-full rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-base text-orange-400" />
                             </div>
                             <div className="flex-1">
                                 <div className="text-[11px] uppercase tracking-widest text-orange-400 ml-1 mb-1">По дату</div>
-                                <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} className="w-full rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-base" />
+                                <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} className="w-full rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-base text-orange-400" />
                             </div>
                             <button
                                 onClick={() => { setSearch(''); setDateFrom(''); setDateTo(''); }}
@@ -436,8 +498,9 @@ export default function NaryadViewer({ naryads = [] }) {
             {activeTab === 'phones' && (
                 <div className="space-y-4">
                     <div className="bg-white/5 border border-white/10 rounded-3xl p-4">
-                        <div className="flex items-center gap-2 text-orange-400 text-sm font-semibold mb-3">
+                        <div className="flex items-center gap-2 text-orange-400 text-sm font-semibold mb-1">
                             <Phone size={18} /> Справочник телефонов
+                            {!isAdmin && <span className="text-[10px] text-orange-300/60">(только просмотр)</span>}
                         </div>
 
                         {/* Search by FIO — large */}
@@ -448,38 +511,43 @@ export default function NaryadViewer({ naryads = [] }) {
                                 value={phoneSearch}
                                 onChange={e => setPhoneSearch(e.target.value)}
                                 placeholder="Поиск по ФИО (начните вводить фамилию или имя)"
-                                className="w-full rounded-3xl border border-white/10 bg-[#0b1018] pl-12 py-3.5 text-lg focus:outline-none focus:border-orange-400"
+                                className="w-full rounded-3xl border border-white/10 bg-[#0b1018] pl-12 py-3.5 text-lg text-orange-400 focus:outline-none focus:border-orange-400 placeholder:text-orange-300/50"
                             />
                         </div>
 
-                        {/* Add form — big targets for mobile */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                            <input
-                                type="text"
-                                value={newPhoneFio}
-                                onChange={e => setNewPhoneFio(e.target.value)}
-                                placeholder="ФИО полностью"
-                                className="rounded-3xl bg-[#0b1018] border border-white/10 px-4 py-3 text-base placeholder:text-orange-300/60 focus:border-orange-400"
-                                onKeyDown={e => e.key === 'Enter' && addPhone()}
-                            />
-                            <input
-                                type="tel"
-                                value={newPhoneNum}
-                                onChange={e => setNewPhoneNum(e.target.value)}
-                                placeholder="+7 (___) ___-__-__"
-                                className="rounded-3xl bg-[#0b1018] border border-white/10 px-4 py-3 text-base placeholder:text-orange-300/60 focus:border-orange-400"
-                                onKeyDown={e => e.key === 'Enter' && addPhone()}
-                            />
-                        </div>
-                        <button
-                            onClick={addPhone}
-                            className="w-full flex items-center justify-center gap-2 h-14 rounded-3xl bg-orange-500 active:bg-orange-600 text-white font-bold text-base shadow active:scale-[0.985]"
-                        >
-                            <Plus size={20} /> ДОБАВИТЬ ТЕЛЕФОН
-                        </button>
-                        {phones.length > 0 && (
-                            <button onClick={() => { if (confirm('Очистить весь справочник телефонов?')) setPhones([]); }} className="mt-1 w-full text-xs text-red-400/70 underline py-1 active:text-red-400">Очистить справочник</button>
+                        {/* Add form — only for admins */}
+                        {isAdmin && (
+                            <>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                    <input
+                                        type="text"
+                                        value={newPhoneFio}
+                                        onChange={e => setNewPhoneFio(e.target.value)}
+                                        placeholder="ФИО полностью"
+                                        className="rounded-3xl bg-[#0b1018] border border-white/10 px-4 py-3 text-base text-orange-400 placeholder:text-orange-300/60 focus:border-orange-400"
+                                        onKeyDown={e => e.key === 'Enter' && addPhone()}
+                                    />
+                                    <input
+                                        type="tel"
+                                        value={newPhoneNum}
+                                        onChange={e => setNewPhoneNum(e.target.value)}
+                                        placeholder="+7 (___) ___-__-__"
+                                        className="rounded-3xl bg-[#0b1018] border border-white/10 px-4 py-3 text-base text-orange-400 placeholder:text-orange-300/60 focus:border-orange-400"
+                                        onKeyDown={e => e.key === 'Enter' && addPhone()}
+                                    />
+                                </div>
+                                <button
+                                    onClick={addPhone}
+                                    className="w-full flex items-center justify-center gap-2 h-14 rounded-3xl bg-orange-500 active:bg-orange-600 text-white font-bold text-base shadow active:scale-[0.985]"
+                                >
+                                    <Plus size={20} /> ДОБАВИТЬ ТЕЛЕФОН
+                                </button>
+                                {phones.length > 0 && (
+                                    <button onClick={() => { if (confirm('Очистить весь справочник телефонов?')) setPhones([]); }} className="mt-1 w-full text-xs text-red-400/70 underline py-1 active:text-red-400">Очистить справочник</button>
+                                )}
+                            </>
                         )}
+
                     </div>
 
                     {/* Phones list — big tappable rows */}
@@ -494,9 +562,11 @@ export default function NaryadViewer({ naryads = [] }) {
                                 <button onClick={() => copyPhone(p.phone)} className="p-3 rounded-2xl bg-white/5 active:bg-white/10" title="Скопировать">
                                     <Copy size={19} />
                                 </button>
-                                <button onClick={() => deletePhone(p.id)} className="p-3 rounded-2xl bg-white/5 text-red-400 active:bg-white/10" title="Удалить">
-                                    <Trash2 size={19} />
-                                </button>
+                                {isAdmin && (
+                                    <button onClick={() => deletePhone(p.id)} className="p-3 rounded-2xl bg-white/5 text-red-400 active:bg-white/10" title="Удалить">
+                                        <Trash2 size={19} />
+                                    </button>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -509,8 +579,9 @@ export default function NaryadViewer({ naryads = [] }) {
             {activeTab === 'explanations' && (
                 <div className="space-y-4">
                     <div className="bg-white/5 border border-white/10 rounded-3xl p-4">
-                        <div className="flex items-center gap-2 text-orange-400 text-sm font-semibold mb-3">
+                        <div className="flex items-center gap-2 text-orange-400 text-sm font-semibold mb-1">
                             <BookOpen size={18} /> Расшифровка смен (справочник)
+                            {!isAdmin && <span className="text-[10px] text-orange-300/60">(только просмотр)</span>}
                         </div>
 
                         {/* Search */}
@@ -521,37 +592,40 @@ export default function NaryadViewer({ naryads = [] }) {
                                 value={expSearch}
                                 onChange={e => setExpSearch(e.target.value)}
                                 placeholder="Поиск по коду смены или тексту расшифровки"
-                                className="w-full rounded-3xl border border-white/10 bg-[#0b1018] pl-12 py-3.5 text-lg focus:outline-none focus:border-orange-400"
+                                className="w-full rounded-3xl border border-white/10 bg-[#0b1018] pl-12 py-3.5 text-lg text-orange-400 focus:outline-none focus:border-orange-400 placeholder:text-orange-300/50"
                             />
                         </div>
 
-                        {/* Add form */}
-                        <div className="space-y-3 mb-2">
-                            <input
-                                type="text"
-                                value={newExpShift}
-                                onChange={e => setNewExpShift(e.target.value)}
-                                placeholder="Код смены, напр: 12 (любой) или 5 (чётная) [ночь]"
-                                className="w-full rounded-3xl bg-[#0b1018] border border-white/10 px-4 py-3 text-base"
-                                onKeyDown={e => e.key === 'Enter' && newExpText.trim() && addExplanation()}
-                            />
-                            <textarea
-                                value={newExpText}
-                                onChange={e => setNewExpText(e.target.value)}
-                                placeholder="Полная расшифровка: время выхода, особенности, перерывы, подмены, «с ночи» и т.д."
-                                rows={3}
-                                className="w-full rounded-3xl bg-[#0b1018] border border-white/10 px-4 py-3 text-[15px] resize-y"
-                            />
-                            <button
-                                onClick={addExplanation}
-                                className="w-full flex items-center justify-center gap-2 h-14 rounded-3xl bg-orange-500 active:bg-orange-600 text-white font-bold text-base shadow active:scale-[0.985]"
-                            >
-                                <Plus size={20} /> ДОБАВИТЬ РАСШИФРОВКУ
-                            </button>
-                            {explanations.length > 0 && (
-                                <button onClick={() => { if (confirm('Очистить все расшифровки?')) setExplanations([]); }} className="mt-1 w-full text-xs text-red-400/70 underline py-1 active:text-red-400">Очистить все расшифровки</button>
-                            )}
-                        </div>
+                        {/* Add form — only for admins */}
+                        {isAdmin && (
+                            <div className="space-y-3 mb-2">
+                                <input
+                                    type="text"
+                                    value={newExpShift}
+                                    onChange={e => setNewExpShift(e.target.value)}
+                                    placeholder="Код смены, напр: 12 (любой) или 5 (чётная) [ночь]"
+                                    className="w-full rounded-3xl bg-[#0b1018] border border-white/10 px-4 py-3 text-base text-orange-400"
+                                    onKeyDown={e => e.key === 'Enter' && newExpText.trim() && addExplanation()}
+                                />
+                                <textarea
+                                    value={newExpText}
+                                    onChange={e => setNewExpText(e.target.value)}
+                                    placeholder="Полная расшифровка: время выхода, особенности, перерывы, подмены, «с ночи» и т.д."
+                                    rows={3}
+                                    className="w-full rounded-3xl bg-[#0b1018] border border-white/10 px-4 py-3 text-[15px] text-orange-400 resize-y"
+                                />
+                                <button
+                                    onClick={addExplanation}
+                                    className="w-full flex items-center justify-center gap-2 h-14 rounded-3xl bg-orange-500 active:bg-orange-600 text-white font-bold text-base shadow active:scale-[0.985]"
+                                >
+                                    <Plus size={20} /> ДОБАВИТЬ РАСШИФРОВКУ
+                                </button>
+                                {explanations.length > 0 && (
+                                    <button onClick={() => { if (confirm('Очистить все расшифровки?')) setExplanations([]); }} className="mt-1 w-full text-xs text-red-400/70 underline py-1 active:text-red-400">Очистить все расшифровки</button>
+                                )}
+                            </div>
+                        )}
+
                     </div>
 
                     {/* List of explanations — readable cards */}
@@ -563,9 +637,11 @@ export default function NaryadViewer({ naryads = [] }) {
                             <div key={e.id} className="bg-white/5 border border-white/10 rounded-3xl p-4">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="font-mono text-orange-300 text-sm tracking-wider">{e.shift}</div>
-                                    <button onClick={() => deleteExplanation(e.id)} className="text-red-400/80 p-1 active:scale-95">
-                                        <Trash2 size={18} />
-                                    </button>
+                                    {isAdmin && (
+                                        <button onClick={() => deleteExplanation(e.id)} className="text-red-400/80 p-1 active:scale-95">
+                                            <Trash2 size={18} />
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="mt-1.5 text-[15px] leading-snug text-orange-100 whitespace-pre-line">{e.text}</div>
                                 {e.date && <div className="mt-2 text-[10px] text-orange-400/50">Добавлено: {e.date}</div>}
@@ -615,7 +691,7 @@ export default function NaryadViewer({ naryads = [] }) {
                                     onChange={e => setPdfSearchTerm(e.target.value)}
                                     onKeyDown={e => e.key === 'Enter' && performAdvancedSearch(pdfSearchTerm)}
                                     placeholder="Фамилия в PDF..."
-                                    className="flex-1 sm:w-48 bg-white/10 border border-white/20 rounded-2xl px-4 py-2 text-sm"
+                                    className="flex-1 sm:w-48 bg-white/10 border border-white/20 rounded-2xl px-4 py-2 text-sm text-orange-400 placeholder:text-orange-300/50"
                                 />
                                 <button
                                     onClick={() => performAdvancedSearch(pdfSearchTerm)}

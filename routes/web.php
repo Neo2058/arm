@@ -162,6 +162,10 @@ Route::middleware(['auth'])->group(function () {
    */
     Route::post('/api/bug-report', [BugReportController::class, 'store'])->name('bug.report.store');
 
+    // User action logging (for phones, naryads, explanations, and other activities)
+    Route::post('/api/actions/log', [\App\Http\Controllers\ActionLogController::class, 'store'])
+        ->name('actions.log');
+
     // Backstage — Связь с разработчиком + поддержка проекта
     Route::get('/backstage', [BackstageController::class, 'index'])->name('backstage.index');
     Route::post('/backstage', [BackstageController::class, 'store'])->name('backstage.store');

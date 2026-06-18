@@ -6,6 +6,7 @@
 
     <script defer>
         window.__NARYADS__ = @js($naryads);
+        window.__IS_ADMIN__ = @js($isAdmin ?? false);
     </script>
 </div>
 @endsection

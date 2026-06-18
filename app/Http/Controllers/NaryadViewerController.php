@@ -34,8 +34,15 @@ class NaryadViewerController extends Controller
                 ];
             });
 
+        $isAdmin = in_array($userRole, ['super_admin', 'admin']);
+
+        // Log viewing the naryads list page (the three blocks viewer)
+        // Hybrid: goes to relational DB + ClickHouse
+        \App\Models\ActionLog::log('view_naryads_page');
+
         return view('naryady.index', [
             'naryads' => $naryads,
+            'isAdmin' => $isAdmin,
         ]);
     }
 
@@ -56,6 +63,14 @@ class NaryadViewerController extends Controller
             now()->addMinutes(30),
             ['ResponseContentDisposition' => 'inline']
         );
+
+        // Log the PDF view action
+        // Hybrid: goes to relational DB + ClickHouse via ActionLog::log()
+        \App\Models\ActionLog::log('view_naryad', [
+            'naryad_id' => $naryad->id,
+            'title' => $naryad->title,
+            'date' => $naryad->naryad_date?->format('Y-m-d'),
+        ]);
 
         return response()->json([
             'url' => $url,

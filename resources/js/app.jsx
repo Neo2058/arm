@@ -49,7 +49,10 @@ mountComponent(
 mountComponent(
     'naryad-viewer',
     NaryadViewer,
-    { naryads: window.__NARYADS__ || [] }
+    { 
+        naryads: window.__NARYADS__ || [],
+        isAdmin: window.__IS_ADMIN__ ?? false
+    }
 );
 // Монтируем личный кабинет календаря смен машиниста
 mountComponent(
