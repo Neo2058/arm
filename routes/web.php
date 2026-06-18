@@ -13,6 +13,8 @@ use App\Models\QuizResult;
 use Illuminate\Support\Facades\Route;
 use App\Models\Quiz;
 use App\Http\Controllers\DeviceController;
+use App\Http\Controllers\TCHMJournalController;
+use App\Http\Controllers\AccessRequestController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,6 +25,12 @@ use App\Http\Controllers\DeviceController;
 Route::get('/', function () {
     return view('main.welcome');
 });
+
+// Публичная страница описания сервиса и форма заявки на учётную запись
+Route::get('/about', [AccessRequestController::class, 'show'])->name('about');
+Route::post('/about/request', [AccessRequestController::class, 'submit'])
+    ->name('about.request')
+    ->middleware('throttle:5,60'); // Строгая защита: не более 5 заявок в час с одного IP
 
 Route::get('/login', [AuthController::class, 'showLogin'])
     ->name('login');
@@ -197,6 +205,20 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/podstroiki', [\App\Http\Controllers\PodstroikiController::class, 'index'])->name('podstroiki.index');
     Route::post('/podstroiki', [\App\Http\Controllers\PodstroikiController::class, 'store'])->name('podstroiki.store');
     Route::post('/podstroiki/{podstroika}/status', [\App\Http\Controllers\PodstroikiController::class, 'updateStatus'])->name('podstroiki.update-status');
+
+    // Рабочий журнал ТЧМ (только для инструкторов)
+    Route::get('/journal', [TCHMJournalController::class, 'index'])->name('journal.index');
+    Route::post('/journal/todo', [TCHMJournalController::class, 'addTodo'])->name('journal.todo.add');
+    Route::post('/journal/todo/{id}/complete', [TCHMJournalController::class, 'completeTodo'])->name('journal.todo.complete');
+    Route::post('/journal/document', [TCHMJournalController::class, 'uploadDocument'])->name('journal.document.upload');
+    Route::post('/journal/ask', [TCHMJournalController::class, 'askDocument'])->name('journal.ask');
+
+    // Журнал ТЧМ - новые разделы
+    Route::get('/journal/settings', [TCHMJournalController::class, 'settings'])->name('journal.settings');
+    Route::post('/journal/settings', [TCHMJournalController::class, 'updateSettings'])->name('journal.settings.update');
+    Route::get('/journal/standards', [TCHMJournalController::class, 'standards'])->name('journal.standards');
+    Route::post('/journal/standards', [TCHMJournalController::class, 'updateStandards'])->name('journal.standards.update');
+    Route::get('/journal/history', [TCHMJournalController::class, 'history'])->name('journal.history');
 
     /*
     |--------------------------------------------------------------------------

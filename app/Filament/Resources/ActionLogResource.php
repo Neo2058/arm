@@ -83,8 +83,7 @@ class ActionLogResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Время')
                     ->dateTime('d.m.Y H:i:s')
-                    ->sortable()
-                    ->defaultSort('desc'),
+                    ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([

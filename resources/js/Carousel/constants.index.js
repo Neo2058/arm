@@ -123,6 +123,24 @@ export const imagesArray = [
             },
         ],
     },
+    {
+        name: "Рабочий журнал ТЧМ",
+        src: "/watch16.jpeg",
+        role: ['instructor'],
+        logo: "/assets/features.svg",
+        link: '/journal',
+        details: [
+            {
+                name: "Статистика колонны",
+            },
+            {
+                name: "TODO и нормативы",
+            },
+            {
+                name: "Работа с документами + ИИ-вопросы",
+            },
+        ],
+    },
 ];
 
 

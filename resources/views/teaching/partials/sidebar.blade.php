@@ -157,6 +157,11 @@
 
     ];
 
+    // Определяем роль пользователя для скрытия пунктов меню
+    $user = auth()->user();
+    $userRole = $user ? strtolower( (string) ($user->role->value ?? $user->role) ) : '';
+    $canSeeRospisiStats = in_array($userRole, ['super_admin', 'admin', 'instructor']);
+
     $trainingMenu = [
 
         [
@@ -171,11 +176,17 @@
             'icon' => 'results',
         ],
 
-        [
+    ];
+
+    if ($canSeeRospisiStats) {
+        $trainingMenu[] = [
             'title' => 'Статистика росписей',
             'route' => 'rosisi.statistics',
             'icon' => 'results',
-        ],
+        ];
+    }
+
+    $trainingMenu = array_merge($trainingMenu, [
 
         [
             'title' => 'Следующее ТУ',
@@ -195,6 +206,40 @@
             'icon' => 'logout',
         ],
 
+    ]);
+
+    $journalMenu = [
+
+        [
+            'title' => 'Настройка нормативов',
+            'route' => 'journal.settings',
+            'icon' => 'results',
+        ],
+        [
+            'title' => 'Нормативы',
+            'route' => 'journal.standards',
+            'icon' => 'quiz',
+        ],
+        [
+            'title' => 'История нормативов',
+            'route' => 'journal.history',
+            'icon' => 'results',
+        ],
+        [
+            'title' => 'Следующее ТУ',
+            'route' => 'timer',
+            'icon' => 'dashboard',
+        ],
+        [
+            'title' => 'Документы',
+            'route' => 'documents.index',
+            'icon' => 'documents',
+        ],
+        [
+            'title' => 'Обратно в меню',
+            'route' => 'mainMenu',
+            'icon' => 'logout',
+        ],
     ];
 
     $naryadyMenu = [
@@ -246,6 +291,8 @@
         request()->routeIs('rosisi.*') => $trainingMenu,
         request()->routeIs('podstroiki') => $trainingMenu,
         request()->routeIs('podstroiki.*') => $trainingMenu,
+        request()->routeIs('journal') => $journalMenu,
+        request()->routeIs('journal.*') => $journalMenu,
         request()->routeIs('naryady.*') => $naryadyMenu,
         request()->routeIs('naryady') => $naryadyMenu,
 

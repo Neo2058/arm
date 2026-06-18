@@ -22,6 +22,7 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials, $request->has('remember'))) {
             $request->session()->regenerate();
+            $request->session()->flash('show_welcome_modal', true);
             ClickHouseService::log('login'); // Логируем вход
 
             $user = Auth::user();

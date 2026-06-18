@@ -20,5 +20,120 @@
 </head>
 <body>
     <div id="carousel-menu" data-role="{{ Auth::user()->role }}"></div>
+
+    <!-- Модалка всегда в DOM, изначально скрыта. Показывается только сразу после логина -->
+    <div id="welcome-modal" 
+         class="hidden fixed inset-0 z-[999] items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="bg-white dark:bg-[#0f0f0f] w-full max-w-lg md:max-w-2xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden"
+             style="animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;">
+            
+            <!-- Top accent bar -->
+            <div class="h-[3px] bg-gradient-to-r from-orange-500 via-orange-400 to-orange-600"></div>
+
+            <!-- Header -->
+            <div class="px-6 pt-6 pb-4 flex items-start justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-2xl bg-orange-500/10 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-semibold tracking-tight text-orange-500 dark:text-orange-400">Добро пожаловать в АРМ ТЧ-15</h2>
+                        <p class="text-sm text-[#706f6c] dark:text-[#A1A09A] mt-0.5">Цифровой кабинет сотрудника локомотивного депо</p>
+                    </div>
+                </div>
+                <button onclick="closeWelcomeModal()" 
+                        class="p-2 -mr-2 -mt-2 text-[#706f6c] hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6h12v12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="px-6 pb-6 text-[13.5px] leading-[1.65] text-[#44433f] dark:text-[#C3C2B9]">
+                <p class="mb-5">
+                    <strong>АРМ ТЧ-15</strong> — современная внутренняя платформа для машинистов, инструкторов и руководства депо.
+                </p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 mb-5">
+                    <div>
+                        <div class="text-[10px] font-semibold tracking-[0.5px] text-orange-500 mb-1.5 uppercase">Основные возможности</div>
+                        <ul class="space-y-[3px] text-xs">
+                            <li class="flex gap-2"><span class="text-orange-400">•</span> Прохождение обучения и онлайн-тестов</li>
+                            <li class="flex gap-2"><span class="text-orange-400">•</span> Электронные росписи и записи в формуляр</li>
+                            <li class="flex gap-2"><span class="text-orange-400">•</span> Планирование и подстройки смен</li>
+                            <li class="flex gap-2"><span class="text-orange-400">•</span> Доступ к актуальным документам</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="text-[10px] font-semibold tracking-[0.5px] text-orange-500 mb-1.5 uppercase">Дополнительно</div>
+                        <ul class="space-y-[3px] text-xs">
+                            <li class="flex gap-2"><span class="text-orange-400">•</span> Просмотр и работа с нарядами</li>
+                            <li class="flex gap-2"><span class="text-orange-400">•</span> Справочники телефонов и расшифровки</li>
+                            <li class="flex gap-2"><span class="text-orange-400">•</span> Календарь рабочего времени</li>
+                            <li class="flex gap-2"><span class="text-orange-400">•</span> Оперативная связь и поддержка</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <p class="text-[12px] text-[#706f6c] dark:text-[#A1A09A] border-t border-white/10 pt-4">
+                    Система обеспечивает прозрачность, быстрый доступ к материалам и строгий учёт действий сотрудников.
+                </p>
+            </div>
+
+            <!-- Footer buttons -->
+            <div class="px-6 py-4 bg-[#fafaf8] dark:bg-[#0a0a0a] border-t border-white/10 flex flex-col sm:flex-row gap-3">
+                <button onclick="dontShowAgain()" 
+                        class="flex-1 px-5 py-2.5 text-sm font-medium text-[#706f6c] dark:text-[#A1A09A] hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-2xl transition-colors">
+                    Не показывать больше
+                </button>
+                <button onclick="closeWelcomeModal()" 
+                        class="flex-1 px-6 py-2.5 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white text-sm font-semibold rounded-2xl transition-all duration-200 hover:scale-[1.015] active:scale-[0.985] shadow-md">
+                    Перейти к меню
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Флаг от сервера — показывать только сразу после логина (через flash)
+        window.SHOULD_SHOW_WELCOME_MODAL = @json((bool) session('show_welcome_modal'));
+
+        function closeWelcomeModal() {
+            const modal = document.getElementById('welcome-modal');
+            if (modal) {
+                modal.style.transition = 'opacity 0.2s ease';
+                modal.style.opacity = '0';
+                setTimeout(function() {
+                    if (modal) modal.style.display = 'none';
+                }, 200);
+            }
+        }
+
+        function dontShowAgain() {
+            try {
+                localStorage.setItem('hide_welcome_modal', 'true');
+            } catch(e) {}
+            closeWelcomeModal();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('welcome-modal');
+            if (!modal) return;
+
+            // Пользователь навсегда отключил показ
+            if (localStorage.getItem('hide_welcome_modal') === 'true') {
+                return;
+            }
+
+            // Показываем только если сервер передал флаг
+            if (window.SHOULD_SHOW_WELCOME_MODAL) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        });
+    </script>
 </body>
 </html>

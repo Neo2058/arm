@@ -22,14 +22,17 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasOne(UserProfile::class);
     }
     public function canAccessPanel(Panel $panel): bool {
-        return in_array(
-            $this->role?->value,
-            [
-                UserRole::STUDENT->value,
-                UserRole::SUPER_ADMIN->value,
-            ],
-            true
-        );
+        // Support both enum and string (in case of casting issues or legacy data)
+        $roleValue = $this->role instanceof UserRole
+            ? $this->role->value
+            : strtolower((string) ($this->role ?? ''));
+
+        // Only super admins and (regular) admins are allowed to access the Filament admin panel.
+        // Previously restricted to only student + super_admin, which broke login for admin users.
+        return in_array($roleValue, [
+            UserRole::SUPER_ADMIN->value,
+            UserRole::ADMIN->value,
+        ], true);
     }
 
     public function devices() { return $this->hasMany(UserDevice::class); }
