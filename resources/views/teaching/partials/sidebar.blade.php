@@ -197,6 +197,34 @@
 
     ];
 
+    $naryadyMenu = [
+
+        [
+            'title' => 'Просмотр нарядов',
+            'route' => 'naryady.index',
+            'icon' => 'documents',
+            'tab' => 'naryady',
+        ],
+        [
+            'title' => 'Справочник телефонов',
+            'route' => 'naryady.index',
+            'icon' => 'dashboard',
+            'tab' => 'phones',
+        ],
+        [
+            'title' => 'Расшифровка смен',
+            'route' => 'naryady.index',
+            'icon' => 'results',
+            'tab' => 'explanations',
+        ],
+        [
+            'title' => 'Обратно в меню',
+            'route' => 'mainMenu',
+            'icon' => 'logout',
+        ],
+
+    ];
+
 
     /*
     |--------------------------------------------------------------------------
@@ -218,6 +246,8 @@
         request()->routeIs('rosisi.*') => $trainingMenu,
         request()->routeIs('podstroiki') => $trainingMenu,
         request()->routeIs('podstroiki.*') => $trainingMenu,
+        request()->routeIs('naryady.*') => $naryadyMenu,
+        request()->routeIs('naryady') => $naryadyMenu,
 
         default => [],
     };
@@ -238,7 +268,15 @@
     </div>
     <div class="sidebar">
         @foreach($menu as $item)
-            <a href="{{ route($item['route']) }}" class="sidebar__link {{ request()->routeIs($item['route']) ? 'sidebar__link-active' : '' }}">
+            @php
+                $linkHref = route($item['route']);
+                if (!empty($item['tab'])) {
+                    $linkHref .= '?tab=' . $item['tab'];
+                }
+                $isActive = request()->routeIs($item['route']) &&
+                    (empty($item['tab']) || request()->query('tab', 'naryady') === $item['tab']);
+            @endphp
+            <a href="{{ $linkHref }}" class="sidebar__link {{ $isActive ? 'sidebar__link-active' : '' }}">
                 <span class="material-icons-sharp">{!! $icons[$item['icon']] ?? '' !!}</span>
                 <h3 class="sidebar__link-title">{{ $item['title'] }}</h3>
                 @isset($item['count'])

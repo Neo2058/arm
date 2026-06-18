@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client';
 import Carousel from './Carousel/Carousel.jsx'; // Проверь путь к файлу
 import CountdownTimer from "./CountDownTimer/CountDownTimer.jsx";
 import SecureDocumentViewer from "./DocumentViewer/SecureDocumentViewer.jsx";
+import NaryadViewer from "./NaryadViewer/NaryadViewer.jsx";
 import QuizPlayer from './QuizPlayer/QuizPlayer';
 import GeneralQuizPlayer from './GeneralQuizPlayer/GeneralQuizPlayer';
 import WorkCalendar from './WorkCalendar/WorkCalendar';
@@ -43,6 +44,12 @@ mountComponent(
     'document-viewer',
     SecureDocumentViewer,
     { categories: window.__DOCUMENTS_TREE__ || [] }
+);
+
+mountComponent(
+    'naryad-viewer',
+    NaryadViewer,
+    { naryads: window.__NARYADS__ || [] }
 );
 // Монтируем личный кабинет календаря смен машиниста
 mountComponent(

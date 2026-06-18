@@ -65,15 +65,16 @@ export const imagesArray = [
         src: "/watch5.jpeg",
         role: ['super_admin', 'student', 'instructor', 'driver', 'admin'],
         logo: "/assets/limited.svg",
+        link: '/naryady',
         details: [
             {
-                name: "Текущие наряды",
+                name: "Просмотр текущих нарядов (PDF)",
             },
             {
-                name: "Разбивки",
+                name: "Поиск по фамилии с подсветкой",
             },
             {
-                name: "",
+                name: "Только просмотр, без скачивания",
             },
         ],
     },

@@ -49,6 +49,11 @@ Route::middleware(['auth'])->group(function () {
         return view('main.mainMenu');
     })->name('mainMenu');
 
+    // Временный просмотрщик нарядов (PDF от админов)
+    Route::get('/naryady', [\App\Http\Controllers\NaryadViewerController::class, 'index'])->name('naryady.index');
+    Route::get('/naryady/{naryad}', [\App\Http\Controllers\NaryadViewerController::class, 'show'])->name('naryady.show');
+    Route::get('/naryady/{naryad}/search', [\App\Http\Controllers\NaryadViewerController::class, 'search'])->name('naryady.search');
+
     /*
    |--------------------------------------------------------------------------
    | Barrier
