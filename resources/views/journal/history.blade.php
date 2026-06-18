@@ -16,12 +16,29 @@
                     </tr>
                 </thead>
                 <tbody>
+                    @php
+                        $typeLabels = $normativeLabels ?? [
+                            'kip_linia' => 'КИП Линия',
+                            'kip_manevry' => 'КИП Манёвры',
+                            'kip_podem' => 'КИП Подъём',
+                            'kip_kru' => 'КИП КРУ',
+                            'kip_ars_r' => 'КИП АРС-Р',
+                            'kip_pnevmatika' => 'КИП Пневматика',
+                            'kip_scep' => 'КИП Сцеп',
+                            'atz' => 'АТЗ',
+                            'atz_line' => 'АТЗ на Линии',
+                        ];
+                    @endphp
                     @foreach($history as $row)
+                        @php
+                            $details = is_string($row['details']) ? json_decode($row['details'], true) ?? $row['details'] : $row['details'];
+                            $type = $details['type'] ?? $row['action_type'];
+                        @endphp
                         <tr class="border-t">
                             <td class="p-2">{{ $row['event_time'] }}</td>
                             <td class="p-2">{{ $row['user_id'] }}</td>
-                            <td class="p-2">{{ $row['action_type'] }}</td>
-                            <td class="p-2 text-xs">{{ $row['details'] }}</td>
+                            <td class="p-2">{{ $typeLabels[$type] ?? $type }}</td>
+                            <td class="p-2 text-xs">{{ is_array($details) ? json_encode($details, JSON_UNESCAPED_UNICODE) : $details }}</td>
                         </tr>
                     @endforeach
                 </tbody>

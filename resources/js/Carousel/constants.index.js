@@ -2,7 +2,7 @@ export const imagesArray = [
     {
         name: "Техническая учёба",
         src: "/images/professionalDriver.jpg",
-        role: ['instructor', 'driver', 'admin'],
+        role: ['driver', 'admin'],
         link: '/timer',
         details: [
             {
@@ -19,7 +19,7 @@ export const imagesArray = [
     {
         name: "Тех кабинет",
         src: "/images/professionalDriver.jpg",
-        role: ['super_admin', 'student', 'instructor'],
+        role: ['super_admin', 'student'],
         link: '/admin',
         details: [
             {
@@ -51,7 +51,7 @@ export const imagesArray = [
     {
         name: "Связь с разработчиком",
         src: "/watch19.jpeg",
-        role: ['super_admin', 'student', 'instructor', 'driver', 'admin'],
+        role: ['super_admin', 'student', 'driver', 'admin'],
         logo: "/assets/features.svg",
         link: '/backstage',
         details: [
@@ -63,7 +63,7 @@ export const imagesArray = [
     {
         name: "Наряды",
         src: "/watch5.jpeg",
-        role: ['super_admin', 'student', 'instructor', 'driver', 'admin'],
+        role: ['super_admin', 'student', 'driver', 'admin'],
         logo: "/assets/limited.svg",
         link: '/naryady',
         details: [
@@ -81,7 +81,7 @@ export const imagesArray = [
     {
         name: "Подстройки",
         src: "/watch16.jpeg",
-        role: ['super_admin', 'student', 'instructor', 'driver', 'admin', 'naryadchik'],
+        role: ['super_admin', 'student', 'driver', 'admin', 'naryadchik'],
         logo: "/assets/warranty.svg",
         link: '/podstroiki',
         details: [

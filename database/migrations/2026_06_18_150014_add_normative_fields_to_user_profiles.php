@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('normative_class')->nullable(); // bk, 3, 2, 1
             $table->boolean('is_maneuver')->default(false);
             $table->boolean('is_t6')->default(false);
-            $table->boolean('is_pomoshnik')->default(false);
+            // is_pomoshnik already exists from earlier migration
         });
     }
 
@@ -25,7 +25,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('user_profiles', function (Blueprint $table) {
-            //
+            $table->dropColumnIfExists('normative_class');
+            $table->dropColumnIfExists('is_maneuver');
+            $table->dropColumnIfExists('is_t6');
         });
     }
 };

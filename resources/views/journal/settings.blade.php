@@ -30,13 +30,6 @@
                     <label>1-й класс</label>
                     <input type="number" name="kip_linia_1_months" value="{{ $setting->kip_linia_1_months ?? 4 }}" class="w-full border p-2 rounded">
                 </div>
-                <div class="md:col-span-2">
-                    <label>Прибавлять к дате (месяцев)</label>
-                    <select name="kip_linia_add_months" class="w-full border p-2 rounded">
-                        <option value="4" {{ ($setting->kip_linia_add_months ?? 4) == 4 ? 'selected' : '' }}>4 месяца</option>
-                        <option value="1" {{ ($setting->kip_linia_add_months ?? 4) == 1 ? 'selected' : '' }}>1 месяц</option>
-                    </select>
-                </div>
             </div>
         </div>
 
@@ -72,6 +65,46 @@
                     </div>
                 @endforeach
             </div>
+        </div>
+
+        <!-- Crew marks table moved here from Нормативы -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 mb-6 overflow-x-auto">
+            <h3 class="font-semibold mb-4 text-orange-500">Пометки экипажа (М Т6 П) и Класс</h3>
+            <table class="min-w-full text-sm">
+                <thead>
+                    <tr class="border-b">
+                        <th class="p-2 text-left">ФИО</th>
+                        <th class="p-2">M</th>
+                        <th class="p-2">T6</th>
+                        <th class="p-2">П</th>
+                        <th class="p-2">Класс</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($crew ?? [] as $member)
+                        @php $p = $member->profile; @endphp
+                        <tr class="border-b">
+                            <td class="p-2">{{ $member->name }}</td>
+                            <td class="p-2 text-center">
+                                <input type="checkbox" name="crew[{{ $member->id }}][is_maneuver]" {{ $p?->is_maneuver ? 'checked' : '' }}>
+                            </td>
+                            <td class="p-2 text-center">
+                                <input type="checkbox" name="crew[{{ $member->id }}][is_t6]" {{ $p?->is_t6 ? 'checked' : '' }}>
+                            </td>
+                            <td class="p-2 text-center">
+                                <input type="checkbox" name="crew[{{ $member->id }}][is_pomoshnik]" {{ $p?->is_pomoshnik ? 'checked' : '' }}>
+                            </td>
+                            <td class="p-2">
+                                <select name="crew[{{ $member->id }}][class]" class="border p-1 text-xs">
+                                    @foreach(['bk' => 'б/к', '3' => '3-й', '2' => '2-й', '1' => '1-й'] as $val => $label)
+                                        <option value="{{ $val }}" {{ ($p?->normative_class ?? 'bk') == $val ? 'selected' : '' }}>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
 
         <button type="submit" class="bg-orange-500 text-white px-6 py-2 rounded-xl">Сохранить настройки</button>

@@ -8,6 +8,7 @@ use App\Models\JournalNormativeSetting;
 use App\Models\JournalTask;
 use App\Models\User;
 use App\Models\UserProfile;
+use App\Services\ClickHouseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -204,7 +205,16 @@ class TCHMJournalController extends Controller
             ['column' => $column]
         );
 
-        return view('journal.settings', compact('setting', 'column'));
+        // Load crew for marks table
+        $crew = [];
+        if ($column) {
+            $crew = User::where('role', 'driver')
+                ->whereHas('profile', function ($q) use ($column) {
+                    $q->where('column', $column);
+                })->with('profile')->get();
+        }
+
+        return view('journal.settings', compact('setting', 'column', 'crew'));
     }
 
     public function updateSettings(Request $request)
@@ -217,7 +227,6 @@ class TCHMJournalController extends Controller
             'kip_linia_3_months' => 'required|integer|min:1|max:24',
             'kip_linia_2_months' => 'required|integer|min:1|max:24',
             'kip_linia_1_months' => 'required|integer|min:1|max:24',
-            'kip_linia_add_months' => 'required|in:1,4',
             'kip_manevry_months' => 'required|integer|min:1|max:24',
             'kip_manevry_alternation' => 'boolean',
             'kip_podem_months' => 'required|integer|min:1|max:24',
@@ -227,12 +236,27 @@ class TCHMJournalController extends Controller
             'kip_scep_months' => 'required|integer|min:1|max:24',
             'atz_months' => 'required|integer|min:1|max:24',
             'atz_line_months' => 'required|integer|min:1|max:24',
+            // crew marks from moved table
+            'crew' => 'array',
         ]);
 
+        $settingData = $validated;
+        unset($settingData['crew']);
         JournalNormativeSetting::updateOrCreate(
             ['user_id' => $user->id],
-            array_merge($validated, ['column' => $profile?->column])
+            array_merge($settingData, ['column' => $profile?->column])
         );
+
+        // Save crew marks and class if provided (now in settings)
+        $crewData = $request->input('crew', []);
+        foreach ($crewData as $userId => $data) {
+            UserProfile::where('user_id', $userId)->update([
+                'normative_class' => $data['class'] ?? null,
+                'is_maneuver' => !empty($data['is_maneuver']),
+                'is_t6' => !empty($data['is_t6']),
+                'is_pomoshnik' => !empty($data['is_pomoshnik']),
+            ]);
+        }
 
         return redirect()->route('journal.settings')->with('success', 'Настройки сохранены.');
     }
@@ -248,10 +272,11 @@ class TCHMJournalController extends Controller
             return redirect()->route('journal.index')->with('error', 'Колонна не указана.');
         }
 
-        // Crew in the column (drivers etc with profile.column)
-        $crew = User::whereHas('profile', function ($q) use ($column) {
-            $q->where('column', $column);
-        })->with('profile')->get();
+        // Crew in the column - only drivers/machinists
+        $crew = User::where('role', 'driver')
+            ->whereHas('profile', function ($q) use ($column) {
+                $q->where('column', $column);
+            })->with('profile')->get();
 
         // Get or create normative records for each
         $setting = JournalNormativeSetting::firstOrCreate(['user_id' => $user->id], ['column' => $column]);
@@ -275,7 +300,19 @@ class TCHMJournalController extends Controller
             ->get()
             ->groupBy('user_id');
 
-        return view('journal.standards', compact('crew', 'normatives', 'setting', 'column', 'types'));
+        $normativeLabels = [
+            'kip_linia' => 'КИП Линия',
+            'kip_manevry' => 'КИП Манёвры',
+            'kip_podem' => 'КИП Подъём',
+            'kip_kru' => 'КИП КРУ',
+            'kip_ars_r' => 'КИП АРС-Р',
+            'kip_pnevmatika' => 'КИП Пневматика',
+            'kip_scep' => 'КИП Сцеп',
+            'atz' => 'АТЗ',
+            'atz_line' => 'АТЗ на Линии',
+        ];
+
+        return view('journal.standards', compact('crew', 'normatives', 'setting', 'column', 'types', 'normativeLabels'));
     }
 
     public function updateStandards(Request $request)
@@ -285,24 +322,8 @@ class TCHMJournalController extends Controller
         $column = $profile?->column;
 
         $validated = $request->validate([
-            'crew' => 'array',
-            'crew.*.class' => 'nullable|in:bk,3,2,1',
-            'crew.*.is_maneuver' => 'boolean',
-            'crew.*.is_t6' => 'boolean',
-            'crew.*.is_pomoshnik' => 'boolean',
             'normatives' => 'array',
         ]);
-
-        // Update profiles for marks and class
-        $crewData = $request->input('crew', []);
-        foreach ($crewData as $userId => $data) {
-            UserProfile::where('user_id', $userId)->update([
-                'normative_class' => $data['class'] ?? null,
-                'is_maneuver' => !empty($data['is_maneuver']),
-                'is_t6' => !empty($data['is_t6']),
-                'is_pomoshnik' => !empty($data['is_pomoshnik']),
-            ]);
-        }
 
         // Update normatives and recalc next
         if (!empty($validated['normatives'])) {
@@ -315,10 +336,21 @@ class TCHMJournalController extends Controller
                         ->first();
 
                     if ($norm) {
+                        $oldLast = $norm->last_date;
                         $norm->last_date = $dates['last_date'] ?? null;
                         $norm->class = UserProfile::where('user_id', $userId)->value('normative_class');
                         $norm->next_date = $this->calculateNextDate($norm->last_date, $type, $norm->class, $setting);
                         $norm->save();
+
+                        // Log to ClickHouse when last_date is set/updated
+                        if (!empty($dates['last_date'])) {
+                            ClickHouseService::log('normative_completed', $userId, [
+                                'type' => $type,
+                                'column' => $column,
+                                'last_date' => $dates['last_date'],
+                                'next_date' => $norm->next_date ? $norm->next_date->format('Y-m-d') : null,
+                            ]);
+                        }
                     }
                 }
             }
@@ -343,8 +375,6 @@ class TCHMJournalController extends Controller
                 '1' => $setting->kip_linia_1_months ?? 4,
             ];
             $months = $map[$class] ?? 4;
-            $add = $setting->kip_linia_add_months ?? 4;
-            // use add or the period? for demo use the months
         } elseif ($type === 'kip_manevry') {
             $months = $setting->kip_manevry_months ?? 6;
         } elseif ($type === 'kip_podem') {
@@ -400,6 +430,18 @@ class TCHMJournalController extends Controller
             // log error
         }
 
-        return view('journal.history', compact('history', 'column'));
+        $normativeLabels = [
+            'kip_linia' => 'КИП Линия',
+            'kip_manevry' => 'КИП Манёвры',
+            'kip_podem' => 'КИП Подъём',
+            'kip_kru' => 'КИП КРУ',
+            'kip_ars_r' => 'КИП АРС-Р',
+            'kip_pnevmatika' => 'КИП Пневматика',
+            'kip_scep' => 'КИП Сцеп',
+            'atz' => 'АТЗ',
+            'atz_line' => 'АТЗ на Линии',
+        ];
+
+        return view('journal.history', compact('history', 'column', 'normativeLabels'));
     }
 }

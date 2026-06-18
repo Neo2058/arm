@@ -11,51 +11,12 @@
     <form action="{{ route('journal.standards.update') }}" method="POST">
         @csrf
 
-        <!-- Crew info and marks + class -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 mb-6 overflow-x-auto">
-            <table class="min-w-full text-sm">
-                <thead>
-                    <tr class="border-b">
-                        <th class="p-2 text-left">ФИО</th>
-                        <th class="p-2">M</th>
-                        <th class="p-2">T6</th>
-                        <th class="p-2">П</th>
-                        <th class="p-2">Класс</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($crew as $member)
-                        @php $p = $member->profile; @endphp
-                        <tr class="border-b">
-                            <td class="p-2">{{ $member->name }}</td>
-                            <td class="p-2 text-center">
-                                <input type="checkbox" name="crew[{{ $member->id }}][is_maneuver]" {{ $p?->is_maneuver ? 'checked' : '' }}>
-                            </td>
-                            <td class="p-2 text-center">
-                                <input type="checkbox" name="crew[{{ $member->id }}][is_t6]" {{ $p?->is_t6 ? 'checked' : '' }}>
-                            </td>
-                            <td class="p-2 text-center">
-                                <input type="checkbox" name="crew[{{ $member->id }}][is_pomoshnik]" {{ $p?->is_pomoshnik ? 'checked' : '' }}>
-                            </td>
-                            <td class="p-2">
-                                <select name="crew[{{ $member->id }}][class]" class="border p-1 text-xs">
-                                    @foreach(['bk' => 'б/к', '3' => '3-й', '2' => '2-й', '1' => '1-й'] as $val => $label)
-                                        <option value="{{ $val }}" {{ ($p?->normative_class ?? 'bk') == $val ? 'selected' : '' }}>{{ $label }}</option>
-                                    @endforeach
-                                </select>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-
         <!-- Tabs for each normative -->
         <div class="mb-4">
             <div class="flex border-b mb-4 overflow-x-auto">
                 @foreach($types as $type)
                     <button type="button" onclick="showTab('{{ $type }}')" class="tab-button px-4 py-2 border-b-2 {{ $loop->first ? 'border-orange-500 text-orange-500' : 'border-transparent' }}" data-tab="{{ $type }}">
-                        {{ str_replace('_', ' ', ucfirst($type)) }}
+                        {{ $normativeLabels[$type] ?? str_replace('_', ' ', ucfirst($type)) }}
                     </button>
                 @endforeach
             </div>

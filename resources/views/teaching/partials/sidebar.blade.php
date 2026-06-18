@@ -211,6 +211,11 @@
     $journalMenu = [
 
         [
+            'title' => 'Журнал',
+            'route' => 'journal.index',
+            'icon' => 'results',
+        ],
+        [
             'title' => 'Настройка нормативов',
             'route' => 'journal.settings',
             'icon' => 'results',
@@ -224,16 +229,6 @@
             'title' => 'История нормативов',
             'route' => 'journal.history',
             'icon' => 'results',
-        ],
-        [
-            'title' => 'Следующее ТУ',
-            'route' => 'timer',
-            'icon' => 'dashboard',
-        ],
-        [
-            'title' => 'Документы',
-            'route' => 'documents.index',
-            'icon' => 'documents',
         ],
         [
             'title' => 'Обратно в меню',
