@@ -231,6 +231,11 @@
             'icon' => 'results',
         ],
         [
+            'title' => 'Отчёт по нормативам',
+            'route' => 'journal.report',
+            'icon' => 'results',
+        ],
+        [
             'title' => 'Обратно в меню',
             'route' => 'mainMenu',
             'icon' => 'logout',

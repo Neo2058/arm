@@ -249,3 +249,10 @@
         display: none !important; /* Наглухо прячем бургер на ПК */
     }
 }
+
+/* Mobile content clearance under fixed burger button (top only, no big left margin) */
+@media (max-width: 1023px) {
+    .page-content {
+        padding-top: 2.5rem; /* clearance under fixed top-left burger, no extra left margin */
+    }
+}

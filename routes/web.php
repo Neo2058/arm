@@ -210,6 +210,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/journal', [TCHMJournalController::class, 'index'])->name('journal.index');
     Route::post('/journal/todo', [TCHMJournalController::class, 'addTodo'])->name('journal.todo.add');
     Route::post('/journal/todo/{id}/complete', [TCHMJournalController::class, 'completeTodo'])->name('journal.todo.complete');
+    Route::post('/journal/todo/{id}/update', [TCHMJournalController::class, 'updateTodo'])->name('journal.todo.update');
+    Route::delete('/journal/todo/{id}', [TCHMJournalController::class, 'deleteTodo'])->name('journal.todo.destroy');
     Route::post('/journal/document', [TCHMJournalController::class, 'uploadDocument'])->name('journal.document.upload');
     Route::post('/journal/ask', [TCHMJournalController::class, 'askDocument'])->name('journal.ask');
 
@@ -219,6 +221,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/journal/standards', [TCHMJournalController::class, 'standards'])->name('journal.standards');
     Route::post('/journal/standards', [TCHMJournalController::class, 'updateStandards'])->name('journal.standards.update');
     Route::get('/journal/history', [TCHMJournalController::class, 'history'])->name('journal.history');
+    Route::get('/journal/report', [TCHMJournalController::class, 'report'])->name('journal.report');
+    Route::post('/journal/report/vacation', [TCHMJournalController::class, 'addVacation'])->name('journal.report.vacation.add');
+    Route::delete('/journal/report/vacation/{id}', [TCHMJournalController::class, 'deleteVacation'])->name('journal.report.vacation.delete');
 
     /*
     |--------------------------------------------------------------------------

@@ -8,11 +8,14 @@ class JournalCrewNormative extends Model
 {
     protected $fillable = [
         'user_id', 'instructor_id', 'column', 'type', 'last_date', 'next_date', 'class',
+        'start_time', 'start_station', 'end_time', 'end_station', 'remarks', 'occurrences', 'details',
     ];
 
     protected $casts = [
         'last_date' => 'date',
         'next_date' => 'date',
+        'occurrences' => 'array',
+        'details' => 'array',
     ];
 
     public function user()

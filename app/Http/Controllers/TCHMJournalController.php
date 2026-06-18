@@ -6,6 +6,7 @@ use App\Models\JournalCrewNormative;
 use App\Models\JournalDocument;
 use App\Models\JournalNormativeSetting;
 use App\Models\JournalTask;
+use App\Models\JournalVacation;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Services\ClickHouseService;
@@ -106,6 +107,35 @@ class TCHMJournalController extends Controller
         }
 
         return redirect()->route('journal.index')->with('success', 'Задача отмечена выполненной.');
+    }
+
+    public function updateTodo(Request $request, $id)
+    {
+        $user = Auth::user();
+        $task = JournalTask::where('user_id', $user->id)->findOrFail($id);
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'due_date' => 'nullable|date',
+        ]);
+
+        $task->update([
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? $task->description,
+            'due_date' => $validated['due_date'] ?? $task->due_date,
+        ]);
+
+        return redirect()->route('journal.index')->with('success', 'Задача обновлена.');
+    }
+
+    public function deleteTodo($id)
+    {
+        $task = JournalTask::where('user_id', Auth::id())->findOrFail($id);
+        $taskName = $task->title;
+        $task->delete();
+
+        return redirect()->route('journal.index')->with('success', "Задача «{$taskName}» удалена.");
     }
 
     public function uploadDocument(Request $request)
@@ -325,6 +355,16 @@ class TCHMJournalController extends Controller
             'normatives' => 'array',
         ]);
 
+        // Update class if provided in norms form
+        $crewData = $request->input('crew', []);
+        foreach ($crewData as $userId => $data) {
+            if (isset($data['class'])) {
+                UserProfile::where('user_id', $userId)->update([
+                    'normative_class' => $data['class']
+                ]);
+            }
+        }
+
         // Update normatives and recalc next
         if (!empty($validated['normatives'])) {
             $setting = JournalNormativeSetting::firstOrCreate(['user_id' => $user->id], ['column' => $column]);
@@ -340,16 +380,54 @@ class TCHMJournalController extends Controller
                         $norm->last_date = $dates['last_date'] ?? null;
                         $norm->class = UserProfile::where('user_id', $userId)->value('normative_class');
                         $norm->next_date = $this->calculateNextDate($norm->last_date, $type, $norm->class, $setting);
+                        if ($type === 'kip_linia') {
+                            $norm->start_time = $dates['start_time'] ?? null;
+                            $norm->start_station = $dates['start_station'] ?? null;
+                            $norm->end_time = $dates['end_time'] ?? null;
+                            $norm->end_station = $dates['end_station'] ?? null;
+                            $norm->remarks = $dates['remarks'] ?? null;
+                            if (isset($dates['occurrences']) && is_array($dates['occurrences'])) {
+                                $norm->occurrences = $dates['occurrences'];
+                            }
+                        } elseif ($type === 'kip_manevry') {
+                            $norm->start_time = $dates['start_time'] ?? null;
+                            $norm->end_time = $dates['end_time'] ?? null;
+                            $norm->details = ['alternation' => $dates['maneuver_alternation'] ?? ''];
+                            $norm->remarks = $dates['remarks'] ?? null;
+                        } elseif ($type === 'kip_scep') {
+                            $norm->details = ['status' => $dates['scep_status'] ?? ''];
+                            $norm->remarks = $dates['remarks'] ?? null;
+                        } elseif (isset($dates['remarks'])) {
+                            $norm->remarks = $dates['remarks'];
+                        }
                         $norm->save();
 
-                        // Log to ClickHouse when last_date is set/updated
+                        // Log directly to ClickHouse (sync to ensure appears in history; crew as user_id)
                         if (!empty($dates['last_date'])) {
-                            ClickHouseService::log('normative_completed', $userId, [
-                                'type' => $type,
-                                'column' => $column,
-                                'last_date' => $dates['last_date'],
-                                'next_date' => $norm->next_date ? $norm->next_date->format('Y-m-d') : null,
-                            ]);
+                            try {
+                                $ch = new \ClickHouseDB\Client(config('clickhouse'));
+                                $data = [
+                                    'event_date' => date('Y-m-d'),
+                                    'event_time' => now()->format('Y-m-d H:i:s'),
+                                    'user_id' => (int)$userId, // the crew member
+                                    'user_role' => 'driver',
+                                    'user_column' => $column,
+                                    'action_type' => 'normative_completed',
+                                    'resource_id' => 0,
+                                    'details' => json_encode([
+                                        'type' => $type,
+                                        'last_date' => $dates['last_date'],
+                                        'next_date' => $norm->next_date ? $norm->next_date->format('Y-m-d') : null,
+                                        'remarks' => $norm->remarks ?? null,
+                                        'start_time' => $norm->start_time ?? ($dates['start_time'] ?? null),
+                                        'end_time' => $norm->end_time ?? ($dates['end_time'] ?? null),
+                                        'recorded_by' => Auth::id(),
+                                    ], JSON_UNESCAPED_UNICODE),
+                                ];
+                                $ch->insert('user_actions', [$data], ['event_date', 'event_time', 'user_id', 'user_role', 'user_column', 'action_type', 'resource_id', 'details']);
+                            } catch (\Exception $e) {
+                                // fail silently for demo
+                            }
                         }
                     }
                 }
@@ -405,7 +483,13 @@ class TCHMJournalController extends Controller
 
         // Query ClickHouse for history
         $history = [];
+        $userMap = [];
         try {
+            if ($column) {
+                $crews = User::whereHas('profile', fn($q) => $q->where('column', $column))->pluck('name', 'id')->toArray();
+                $userMap = $crews;
+            }
+
             $ch = new \ClickHouseDB\Client(config('clickhouse'));
             $query = "
                 SELECT 
@@ -414,20 +498,27 @@ class TCHMJournalController extends Controller
                     action_type,
                     details
                 FROM default.user_actions
-                WHERE action_type LIKE 'normative_%'
+                WHERE action_type = 'normative_completed'
                 ORDER BY event_time DESC
                 LIMIT 100
             ";
 
-            if ($column) {
-                // filter by details if needed, but for demo get all
-            }
-
             $result = $ch->select($query);
             $history = $result->rows();
+
+            // Dedup to avoid duplicate records
+            $seen = [];
+            $unique = [];
+            foreach ($history as $row) {
+                $key = ($row['user_id'] ?? '') . '|' . ($row['event_time'] ?? '') . '|' . ($row['details'] ?? '');
+                if (!isset($seen[$key])) {
+                    $seen[$key] = true;
+                    $unique[] = $row;
+                }
+            }
+            $history = $unique;
         } catch (\Exception $e) {
             $history = [];
-            // log error
         }
 
         $normativeLabels = [
@@ -442,6 +533,127 @@ class TCHMJournalController extends Controller
             'atz_line' => 'АТЗ на Линии',
         ];
 
-        return view('journal.history', compact('history', 'column', 'normativeLabels'));
+        return view('journal.history', compact('history', 'column', 'normativeLabels', 'userMap'));
+    }
+
+    public function report(Request $request)
+    {
+        $user = Auth::user();
+        $profile = $user->profile;
+        $column = $profile?->column;
+
+        if (!$column) {
+            return redirect()->route('journal.index')->with('error', 'Колонна не указана.');
+        }
+
+        $crew = User::where('role', 'driver')
+            ->whereHas('profile', function ($q) use ($column) {
+                $q->where('column', $column);
+            })->with('profile')->get();
+
+        $normatives = JournalCrewNormative::where('column', $column)
+            ->get()
+            ->groupBy('user_id');
+
+        $vacations = JournalVacation::where('column', $column)
+            ->orderBy('start_date')
+            ->get()
+            ->groupBy('user_id');
+
+        $types = ['kip_linia', 'kip_manevry', 'kip_podem', 'kip_kru', 'kip_ars_r', 'kip_pnevmatika', 'kip_scep', 'atz', 'atz_line'];
+
+        $normativeLabels = [
+            'kip_linia' => 'КИП Линия',
+            'kip_manevry' => 'КИП Манёвры',
+            'kip_podem' => 'КИП Подъём',
+            'kip_kru' => 'КИП КРУ',
+            'kip_ars_r' => 'КИП АРС-Р',
+            'kip_pnevmatika' => 'КИП Пневматика',
+            'kip_scep' => 'КИП Сцеп',
+            'atz' => 'АТЗ',
+            'atz_line' => 'АТЗ на Линии',
+        ];
+
+        // Compute intersections (vacation overlaps with any next normative date)
+        $intersections = [];
+        $today = \Carbon\Carbon::today();
+
+        foreach ($crew as $member) {
+            $memberNorms = $normatives->get($member->id, collect());
+            $memberVacs = $vacations->get($member->id, collect());
+
+            foreach ($memberNorms as $norm) {
+                if (!$norm->next_date || $norm->next_date->lt($today)) {
+                    continue;
+                }
+
+                foreach ($memberVacs as $vac) {
+                    if ($norm->next_date->between($vac->start_date, $vac->end_date)) {
+                        $intersections[] = [
+                            'user_id' => $member->id,
+                            'name' => $member->name,
+                            'type' => $norm->type,
+                            'type_label' => $normativeLabels[$norm->type] ?? $norm->type,
+                            'next_date' => $norm->next_date,
+                            'vacation_start' => $vac->start_date,
+                            'vacation_end' => $vac->end_date,
+                            'vacation_type' => $vac->type ?? 'основной',
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Sort intersections by next_date
+        usort($intersections, function($a, $b) {
+            return $a['next_date']->timestamp <=> $b['next_date']->timestamp;
+        });
+
+        return view('journal.report', compact(
+            'column', 'crew', 'normatives', 'vacations', 'types', 'normativeLabels', 'intersections'
+        ));
+    }
+
+    public function addVacation(Request $request)
+    {
+        $user = Auth::user();
+        $profile = $user->profile;
+        $column = $profile?->column;
+
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'type' => 'nullable|string|max:50',
+            'notes' => 'nullable|string',
+        ]);
+
+        JournalVacation::create([
+            'user_id' => $validated['user_id'],
+            'instructor_id' => $user->id,
+            'column' => $column,
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'],
+            'type' => $validated['type'] ?? 'основной',
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        return redirect()->route('journal.report')->with('success', 'Период отпуска добавлен.');
+    }
+
+    public function deleteVacation($id)
+    {
+        $user = Auth::user();
+        $column = $user->profile?->column;
+
+        $vac = JournalVacation::where(function($q) use ($user, $column) {
+                $q->where('instructor_id', $user->id)
+                  ->orWhere('column', $column);
+            })
+            ->findOrFail($id);
+
+        $vac->delete();
+
+        return redirect()->route('journal.report')->with('success', 'Период отпуска удалён.');
     }
 }
