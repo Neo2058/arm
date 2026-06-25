@@ -26,9 +26,20 @@ $allowedIps = array_filter(array_map('trim', explode(',', getenv('ALLOWED_IPS') 
 $relaySecret = getenv('RELAY_SECRET') ?: '';
 $botToken    = getenv('TELEGRAM_BOT_TOKEN') ?: '';
 
+// === INPUT (support JSON or form) - parse early for secret check ===
+$input = $_POST;
+if (empty($input)) {
+    $raw = file_get_contents('php://input');
+    $json = json_decode($raw, true);
+    if (is_array($json)) {
+        $input = $json;
+    }
+}
+
 // === SECURITY ===
 $clientIp = $_SERVER['REMOTE_ADDR'] ?? '';
 
+// IP whitelist
 if (!empty($allowedIps) && !in_array($clientIp, $allowedIps, true)) {
     http_response_code(403);
     header('Content-Type: application/json');
@@ -36,7 +47,8 @@ if (!empty($allowedIps) && !in_array($clientIp, $allowedIps, true)) {
     exit;
 }
 
-$providedSecret = $_POST['secret'] ?? ($_SERVER['HTTP_X_SECRET'] ?? '');
+// Secret (optional but recommended)
+$providedSecret = $input['secret'] ?? ($_SERVER['HTTP_X_SECRET'] ?? '');
 if (!empty($relaySecret) && $providedSecret !== $relaySecret) {
     http_response_code(403);
     header('Content-Type: application/json');
@@ -52,9 +64,9 @@ if (empty($botToken)) {
 }
 
 // === INPUT ===
-$method     = $_POST['method'] ?? 'sendMessage';
-$chatId     = $_POST['chat_id'] ?? '';
-$parseMode  = $_POST['parse_mode'] ?? 'Markdown';
+$method     = $input['method'] ?? 'sendMessage';
+$chatId     = $input['chat_id'] ?? '';
+$parseMode  = $input['parse_mode'] ?? 'Markdown';
 
 if (empty($chatId)) {
     http_response_code(400);
@@ -62,6 +74,9 @@ if (empty($chatId)) {
     echo json_encode(['ok' => false, 'error' => 'chat_id is required']);
     exit;
 }
+
+// Debug log (remove in production)
+error_log("Relay received from $clientIp : " . json_encode($input));
 
 $telegramUrl = "https://api.telegram.org/bot{$botToken}/{$method}";
 
@@ -87,12 +102,12 @@ if (isset($_FILES['file'])) {
         $_FILES['file']['name'] ?? 'file'
     );
 
-    if (!empty($_POST['caption'])) {
-        $postFields['caption'] = $_POST['caption'];
+    if (!empty($input['caption'])) {
+        $postFields['caption'] = $input['caption'];
     }
 } else {
     // === TEXT ===
-    $postFields['text'] = $_POST['text'] ?? $_POST['message'] ?? '';
+    $postFields['text'] = $input['text'] ?? $input['message'] ?? '';
 }
 
 // === FORWARD TO TELEGRAM ===

@@ -40,7 +40,7 @@ class TelegramService
                     'method'    => 'sendMessage',
                 ];
 
-                $response = Http::timeout(15)->post($relayUrl, $payload);
+                $response = Http::asForm()->timeout(15)->post($relayUrl, $payload);
 
                 if ($response->failed()) {
                     Log::error('Telegram relay error', [
@@ -175,7 +175,7 @@ class TelegramService
                     'parse_mode' => $parseMode,
                 ];
 
-                $response = Http::timeout(60)
+                $response = Http::asMultipart()->timeout(60)
                     ->attach('file', $fileStream, $attachFilename)
                     ->post($relayUrl, $payload);
 
