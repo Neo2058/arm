@@ -5,6 +5,7 @@ namespace App\Services\Training;
 use App\Models\TrainingMaterial;
 use App\Models\TrainingTopic;
 use App\Models\User;
+use App\Services\AdminNotificationService;
 use App\Services\TelegramService;
 use App\Services\ClickHouseService;
 use Illuminate\Support\Facades\Log;
@@ -144,6 +145,14 @@ class TrainingContentService
             ]);
 
             TelegramService::send("Произошла ошибка при отправке материала. Попробуйте позже.", $chatId);
+
+            AdminNotificationService::notify(
+                'training',
+                'Ошибка отправки материала',
+                "Не удалось отправить материал ID {$materialId} для chat {$chatId}",
+                ['material_id' => $materialId, 'chat_id' => $chatId]
+            );
+
             return false;
         }
     }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\BugReport;
+use App\Services\AdminNotificationService;
 use App\Services\TelegramService;
 
 
@@ -43,6 +44,18 @@ class BugReportController extends Controller
         } else {
             TelegramService::send($msg, null, 'Markdown');
         }
+
+        // Параллельное уведомление в админку
+        AdminNotificationService::notify(
+            'bug_report',
+            'Новый баг-репорт',
+            "От: {$user->name}\nСтраница: {$request->page_url}\nОписание: {$request->description}",
+            [
+                'user_id' => $user->id,
+                'page_url' => $request->page_url,
+                'has_screenshot' => (bool) $path,
+            ]
+        );
 
         return response()->json(['status' => 'success', 'message' => 'Спасибо! Ваш отзыв успешно отправлен разработчику.']);
     }

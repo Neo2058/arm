@@ -54,11 +54,12 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-      # - "443:443"  # временно отключено, пока нет сертификата
+      - "443:443"
     volumes:
       - .:/var/www
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      # - /etc/letsencrypt:/etc/letsencrypt:ro   # не нужно без SSL, закомментировано чтобы избежать проблем с отсутствующими сертификатами
+      - ./ssl:/etc/nginx/ssl:ro   # сюда положить fullchain.pem и privkey.pem от купленного сертификата
+      # - /etc/letsencrypt:/etc/letsencrypt:ro   # для Let's Encrypt (если решите использовать бесплатный)
     depends_on:
       - app
     networks:

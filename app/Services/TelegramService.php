@@ -18,6 +18,7 @@ class TelegramService
     ): void {
         $botToken = config('services.telegram.bot_token');
         $defaultChatId = config('services.telegram.chat_id') ?? config('services.telegram.group_id');
+        $apiBase = config('services.telegram.api_url', 'https://api.telegram.org');
 
         $chatId = $chatId ?? $defaultChatId;
 
@@ -28,7 +29,7 @@ class TelegramService
 
         try {
             $response = Http::timeout(10)
-                ->post("https://api.telegram.org/bot{$botToken}/sendMessage", [
+                ->post("{$apiBase}/bot{$botToken}/sendMessage", [
                     'chat_id'    => $chatId,
                     'text'       => $message,
                     'parse_mode' => $parseMode,
@@ -114,6 +115,7 @@ class TelegramService
     ): void {
         $botToken = config('services.telegram.bot_token');
         $defaultChatId = config('services.telegram.chat_id') ?? config('services.telegram.group_id');
+        $apiBase = config('services.telegram.api_url', 'https://api.telegram.org');
 
         $chatId = $chatId ?? $defaultChatId;
 
@@ -143,7 +145,7 @@ class TelegramService
 
             $response = Http::timeout(60)
                 ->attach($fieldName, $fileStream, $attachFilename)
-                ->post("https://api.telegram.org/bot{$botToken}/{$telegramMethod}", $payload);
+                ->post("{$apiBase}/bot{$botToken}/{$telegramMethod}", $payload);
 
             if ($response->failed()) {
                 Log::error('Telegram ' . $telegramMethod . ' API error', [

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\UserDevice;
+use App\Services\AdminNotificationService;
 use App\Services\TelegramService;
 use App\Services\ClickHouseService;
 use Illuminate\Support\Facades\Auth;
@@ -63,6 +64,19 @@ class DeviceController extends Controller
 
         TelegramService::send($msg);
         ClickHouseService::log('device_request', 0, "Заявка на устройство: {$deviceName}");
+
+        // Параллельное уведомление в админку
+        AdminNotificationService::notify(
+            'device_request',
+            'Новая заявка на привязку устройства',
+            "Сотрудник: {$user->name}\nУстройство: {$deviceName}\nКлюч: {$deviceKey}\nIP: {$request->ip()}",
+            [
+                'user_id' => $user->id,
+                'device_name' => $deviceName,
+                'device_key' => $deviceKey,
+                'ip' => $request->ip(),
+            ]
+        );
 
         return back()->with('success', 'Заявка успешно отправлена инструктору. Ожидайте подтверждения доступа.');
     }

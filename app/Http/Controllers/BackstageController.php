@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\BackstageMessage;
+use App\Services\AdminNotificationService;
 use App\Services\TelegramService;
 use App\Services\YookassaService;
 use Illuminate\Support\Facades\Auth;
@@ -63,6 +64,16 @@ class BackstageController extends Controller
             TelegramService::send($msg, null, 'Markdown');
         }
 
+        AdminNotificationService::notify(
+            'backstage',
+            'Новое сообщение из Backstage',
+            "От: {$name}\n" . ($request->support_amount ? "Поддержка: {$request->support_amount} ₽\n" : '') . "Сообщение: {$request->message}",
+            [
+                'user_id' => $user->id,
+                'support_amount' => $request->support_amount,
+            ]
+        );
+
         return response()->json([
             'status' => 'success',
             'message' => $request->support_amount
@@ -119,6 +130,13 @@ class BackstageController extends Controller
             $msg .= "Статус: ожидает оплаты";
 
             TelegramService::send($msg);
+
+            AdminNotificationService::notify(
+                'backstage',
+                'Новый донат Backstage (ЮKassa)',
+                "От: {$user->name}\nСумма: {$amount} ₽",
+                ['user_id' => $user->id, 'amount' => $amount]
+            );
 
             return response()->json([
                 'status' => 'success',
@@ -179,6 +197,13 @@ class BackstageController extends Controller
                 $msg .= "🆔 {$paymentId}";
 
                 TelegramService::send($msg);
+
+                AdminNotificationService::notify(
+                    'backstage',
+                    'Успешная оплата Backstage',
+                    "От: {$message->name}\nСумма: {$message->support_amount} ₽",
+                    ['payment_id' => $paymentId]
+                );
             }
         }
 

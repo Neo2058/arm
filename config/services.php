@@ -57,6 +57,7 @@ return [
         'chat_id' => env('TELEGRAM_CHAT_ID'),
         'group_id'   => env('TELEGRAM_GROUP_ID'),    // ID закрытой группы
         'bot_username' => env('TELEGRAM_BOT_USERNAME'),
+        'api_url' => env('TELEGRAM_API_URL', 'https://api.telegram.org'),  // Можно заменить на прокси третьей стороны
     ],
 
 ];

@@ -31,7 +31,8 @@ class UserResource extends Resource
 
                 Forms\Components\TextInput::make('name')
                     ->label('ФИО')
-                    ->required(),
+                    ->required()
+                    ->default(request()->query('fio')),
 
                 Forms\Components\TextInput::make('email')
                     ->label('Email')
@@ -66,7 +67,8 @@ class UserResource extends Resource
                             ->schema([
 
                                 Forms\Components\TextInput::make('tab_number')
-                                    ->label('Табельный №'),
+                                    ->label('Табельный №')
+                                    ->default(request()->query('tab_number')),
 
                                 Forms\Components\TextInput::make('column')
                                     ->label('№ Колонны'),

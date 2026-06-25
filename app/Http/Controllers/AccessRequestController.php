@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AccessRequest;
+use App\Services\AdminNotificationService;
 use App\Services\ClickHouseService;
 use App\Services\TelegramService;
 use Illuminate\Http\Request;
@@ -98,6 +99,19 @@ class AccessRequestController extends Controller
         $msg .= "_Проверьте и создайте учётную запись в админ-панели._";
 
         TelegramService::send($msg);
+
+        // Параллельное уведомление в админку (временная мера)
+        AdminNotificationService::notify(
+            'access_request',
+            'Новая заявка на учётную запись',
+            "ФИО: {$fio}\nТабельный номер: {$tabNumber}\nIP: {$request->ip()}",
+            [
+                'id' => $accessRequest->id,
+                'tab_number' => $tabNumber,
+                'fio' => $fio,
+                'ip' => $request->ip(),
+            ]
+        );
 
         Log::info('Access request submitted', [
             'id' => $accessRequest->id,
