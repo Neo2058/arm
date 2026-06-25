@@ -1,202 +1,392 @@
 # DEPLOYMENT.md
 
-Подробный план развёртывания приложения **ТЧ-15** в Docker на VDS-сервере.
+**Подробный план развёртывания приложения ТЧ-15 на VDS**  
+**Ограничения и требования:**
+- Ubuntu 24.04 LTS
+- Docker Compose
+- UFW
+- Fail2Ban
+- Nginx (в качестве reverse proxy)
+- Let's Encrypt (через certbot)
+- Cloudflare (DNS + Proxy)
+- Только SSH по ключам (без пароля)
+- Nightly backups
+- Приватная Docker-сеть (минимальное количество открытых портов)
 
-Цель — ничего не забыть и получить рабочую production-среду.
+**Исключены:** Caddy, Traefik, Portainer, Watchtower, внешние менеджеры секретов и т.п. Только базовые инструменты Ubuntu + Docker.
 
 ---
 
-## 1. Подготовка VDS-сервера
+## 1. Подготовка VDS-сервера (Ubuntu 24.04)
 
-### Рекомендуемые характеристики
-- **CPU**: 2–4 ядра
-- **RAM**: минимум 4 ГБ (лучше 8 ГБ, если будет ClickHouse + MinIO)
-- **Диск**: от 40–60 ГБ SSD
-- **ОС**: Ubuntu 22.04 LTS или 24.04 LTS (рекомендуется)
-
-### Начальная настройка сервера
+### 1.1 Первоначальная настройка системы
 
 ```bash
-# Обновление системы
+# Обновление
 sudo apt update && sudo apt upgrade -y
 
-# Создай пользователя (рекомендуется)
+# Создание отдельного пользователя (рекомендуется)
 sudo adduser deploy
 sudo usermod -aG sudo deploy
 
-# Настрой SSH (скопируй свой ключ)
-# После этого можешь отключить парольный вход
+# Выход и вход под пользователем deploy
+su - deploy
+```
 
-# Firewall
+### 1.2 Настройка SSH только по ключам
+
+```bash
+# На своей машине
+ssh-keygen -t ed25519 -C "deploy@your-server"
+ssh-copy-id -i ~/.ssh/id_ed25519.pub deploy@IP_СЕРВЕРА
+
+# На сервере (под пользователем deploy)
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+nano ~/.ssh/authorized_keys   # вставь свой публичный ключ
+chmod 600 ~/.ssh/authorized_keys
+
+# Отключаем вход по паролю и root
+sudo nano /etc/ssh/sshd_config
+```
+
+В `/etc/ssh/sshd_config` измени:
+
+```conf
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+PermitEmptyPasswords no
+ChallengeResponseAuthentication no
+UsePAM no
+```
+
+Перезапуск SSH:
+
+```bash
+sudo systemctl restart ssh
+sudo systemctl restart sshd
+```
+
+**Проверь**, что можешь зайти только по ключу.
+
+### 1.3 UFW (Firewall)
+
+```bash
 sudo apt install ufw -y
+
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
-sudo ufw allow 22/tcp
+
+# Разрешаем только Cloudflare + SSH
+# Сначала добавь IP своего текущего подключения (на всякий случай)
+sudo ufw allow from ТВОЙ_ТЕКУЩИЙ_IP to any port 22
+
+# После настройки Cloudflare можно будет сузить правила
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
-sudo ufw enable
 
-# Установка Docker
+sudo ufw enable
+sudo ufw status verbose
+```
+
+### 1.4 Fail2Ban
+
+```bash
+sudo apt install fail2ban -y
+
+sudo nano /etc/fail2ban/jail.local
+```
+
+Пример содержимого `jail.local`:
+
+```ini
+[DEFAULT]
+bantime = 1h
+findtime = 10m
+maxretry = 5
+
+[sshd]
+enabled = true
+port = ssh
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 4
+bantime = 24h
+
+[nginx-http-auth]
+enabled = true
+filter = nginx-http-auth
+port = http,https
+logpath = /var/log/nginx/error.log
+
+[nginx-botsearch]
+enabled = true
+filter = nginx-botsearch
+port = http,https
+logpath = /var/log/nginx/access.log
+maxretry = 2
+```
+
+```bash
+sudo systemctl enable fail2ban
+sudo systemctl restart fail2ban
+```
+
+---
+
+## 2. Установка Docker и Docker Compose
+
+```bash
+# Docker
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 sudo usermod -aG docker deploy
 
-# Docker Compose (v2)
+# Docker Compose plugin уже включён в современный Docker
 sudo apt install docker-compose-plugin -y
 
-# Перелогинься под пользователем deploy
+# Перелогинься
+exit
+# Войди заново под deploy
+```
+
+Проверка:
+
+```bash
+docker --version
+docker compose version
 ```
 
 ---
 
-## 2. Подготовка проекта на сервере
+## 3. Развёртывание проекта
 
 ```bash
 cd ~
-git clone <твой-репозиторий> arm
+git clone <репозиторий> arm
 cd arm
 ```
 
-### Создание production `.env`
+### Создание `.env`
 
 ```bash
 cp .env.example .env
 nano .env
 ```
 
-**Обязательные переменные для production:**
+**Важные production значения:**
 
 ```env
-APP_NAME="ТЧ-15"
 APP_ENV=production
-APP_KEY=base64:СГЕНЕРИРУЙ_КОМАНДОЙ_НИЖЕ
 APP_DEBUG=false
 APP_URL=https://твой-домен.ru
 
-# База
 DB_CONNECTION=pgsql
 DB_HOST=postgres
 DB_PORT=5432
 DB_DATABASE=main_db
 DB_USERNAME=...
-DB_PASSWORD=...   # Сложный пароль!
+DB_PASSWORD=...   # сложный!
 
-# Redis
 REDIS_HOST=redis
 
-# ClickHouse (критично для Журнала ТЧМ)
 CLICKHOUSE_HOST=clickhouse
 CLICKHOUSE_PORT=8123
 CLICKHOUSE_USER=default
-CLICKHOUSE_PASSWORD=   # можно оставить пустым или задать
+CLICKHOUSE_PASSWORD=
 CLICKHOUSE_DATABASE=default
 
-# Telegram (уведомления)
-TELEGRAM_BOT_TOKEN=...
-TELEGRAM_CHAT_ID=...
-TELEGRAM_GROUP_ID=...
-
-# MinIO (хранение документов)
+# MinIO (если используется)
 FILESYSTEM_DISK=s3
-AWS_ACCESS_KEY_ID=minio_admin
+AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
-AWS_ENDPOINT=https://твой-домен.ru:9000   # или внутренний
+AWS_ENDPOINT=http://minio:9000          # внутри сети
 AWS_USE_PATH_STYLE_ENDPOINT=true
 AWS_BUCKET=documents
-
-# Другие сервисы
-MEILISEARCH_HOST=http://meilisearch:7700
-MEILISEARCH_KEY=...
-
-# Почта (рекомендуется SMTP)
-MAIL_MAILER=smtp
-...
 ```
-
-**Генерация APP_KEY:**
-```bash
-docker compose run --rm app php artisan key:generate --show
-```
-
-Скопируй значение в `.env`.
 
 ---
 
-## 3. Docker Compose для Production
+## 4. Docker Compose с приватной сетью
 
-Рекомендуется создать `docker-compose.prod.yml` (или использовать override).
+Создай или отредактируй `docker-compose.yml` (или `docker-compose.prod.yml`).
 
-**Важные улучшения для прода:**
+**Ключевые принципы:**
+- Только `nginx` публикует порты 80 и 443.
+- Все остальные сервисы находятся в **приватной сети**.
+- Используем `networks` с `internal: true` или обычную bridge без публикации портов.
 
-- Не используй hardcoded пароли
-- Ограничь порты (MinIO, ClickHouse, Meilisearch не должны быть открыты наружу)
-- Используй named volumes для данных
-- Добавь restart: always
-- Настрой логи
-
-Пример структуры (создай файл `docker-compose.prod.yml`):
+Пример структуры (упрощённо):
 
 ```yaml
 services:
-  app:
-    build: .
-    restart: always
-    env_file: .env
-    volumes:
-      - app_storage:/var/www/storage
-    depends_on:
-      - postgres
-      - redis
-      - clickhouse
-
   nginx:
     image: nginx:stable-alpine
-    restart: always
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - .:/var/www
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./docker/nginx/ssl:/etc/nginx/ssl:ro   # для сертификатов
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    networks:
+      - frontend
+      - backend
     depends_on:
       - app
 
-  # ... остальные сервисы с restart: always и volumes
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - .:/var/www
+    networks:
+      - backend
+    depends_on:
+      - postgres
+      - redis
+      - clickhouse
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    restart: unless-stopped
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    networks:
+      - backend
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    networks:
+      - backend
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - backend
+    # Порты MinIO НЕ открываем наружу
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true          # <-- приватная сеть (рекомендуется)
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+  minio_data:
 ```
 
-Запуск в production:
-```bash
-docker compose -f docker-compose.yaml -f docker-compose.prod.yml up -d --build
-```
+**Важно:** `internal: true` у `backend` означает, что эта сеть не имеет выхода в интернет (кроме как через nginx, если нужно).
 
 ---
 
-## 4. Инициализация приложения
+## 5. Настройка Nginx + Let's Encrypt + Cloudflare
 
-Выполняй команды внутри контейнера `app`:
+### 5.1 Конфигурация Nginx
+
+`docker/nginx/default.conf`:
+
+```nginx
+server {
+    listen 80;
+    server_name твой-домен.ru www.твой-домен.ru;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name твой-домен.ru www.твой-домен.ru;
+
+    root /var/www/public;
+    index index.php;
+
+    # SSL будет добавлен certbot
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass app:9000;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+}
+```
+
+### 5.2 Получение сертификата Let's Encrypt
+
+Сначала запусти nginx с временной конфигурацией на 80 порт, затем:
 
 ```bash
-# Зайди в контейнер
+docker compose run --rm app certbot certonly --webroot \
+  -w /var/www/public \
+  -d твой-домен.ru \
+  --email твоя@почта.ru \
+  --agree-tos --non-interactive
+```
+
+Или используй плагин:
+
+```bash
+sudo apt install certbot python3-certbot-nginx -y
+```
+
+После получения сертификатов обнови `default.conf` и добавь пути к сертификатам.
+
+**Важно без Cloudflare:**
+- Убедись, что UFW разрешает 80 и 443:
+  ```bash
+  sudo ufw allow 80/tcp
+  sudo ufw allow 443/tcp
+  sudo ufw reload
+  sudo ufw status
+  ```
+- Если у провайдера есть свой Firewall в панели (Hetzner, DO, Linode и т.д.) — обязательно открой 80 и 443 там тоже.
+- Порт 443 должен быть доступен снаружи.
+
+---
+
+## 6. Запуск и инициализация
+
+```bash
+docker compose up -d --build
+
+# Зайти в контейнер приложения
 docker compose exec app bash
 
-# Внутри контейнера:
+# Внутри:
+php artisan key:generate --force
 php artisan migrate --force
 php artisan storage:link
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan optimize
-
-# Если нужны сиды
-# php artisan db:seed --force
 ```
 
-### Инициализация ClickHouse
-
-Журнал ТЧМ использует таблицу `user_actions`.
-
-Создай таблицу (выполни один раз):
+### Инициализация ClickHouse таблицы
 
 ```bash
 docker compose exec clickhouse clickhouse-client --query "
@@ -216,180 +406,109 @@ ORDER BY (event_date, event_time);
 
 ---
 
-## 5. Фоновые процессы (критично)
+## 7. Фоновые процессы
 
-### Queue Worker
-
-В production нужно постоянно работать с очередями (задачи, логи и т.д.).
-
-Варианты:
-
-**A. Через docker-compose (рекомендуется)**
-
-Добавь сервис:
+Добавь в `docker-compose.yml`:
 
 ```yaml
-queue:
-  build: .
-  restart: always
-  command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
-  env_file: .env
-  depends_on:
-    - app
-    - redis
-```
+  queue:
+    build: .
+    restart: unless-stopped
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    env_file: .env
+    networks:
+      - backend
 
-**B. Supervisor** (внутри контейнера app)
-
-### Scheduler (планировщик)
-
-Добавь в `docker-compose`:
-
-```yaml
-scheduler:
-  build: .
-  restart: always
-  command: >
-    sh -c "while true; do
-      php artisan schedule:run --verbose --no-interaction &
-      sleep 60
-    done"
-```
-
-Или используй cron внутри контейнера.
-
----
-
-## 6. SSL и Reverse Proxy (самое важное)
-
-### Вариант 1 — Caddy (самый простой и рекомендуемый)
-
-1. Установи Caddy отдельно или используй образ.
-2. Простая конфигурация с автоматическим Let's Encrypt.
-
-Пример `Caddyfile`:
-
-```
-твой-домен.ru {
-    reverse_proxy app:9000   # или nginx
-}
-
-minio.твой-домен.ru {
-    reverse_proxy minio:9000
-}
-```
-
-### Вариант 2 — Nginx + Certbot
-
-- Поставь certbot на хост
-- Получи сертификаты
-- Проксируй трафик на порт 8080 (или измени nginx)
-
-**Никогда не открывай порт 8080 наружу в production** — поменяй на внутренний.
-
----
-
-## 7. Важные настройки после деплоя
-
-```bash
-# Очистка кэша
-php artisan optimize:clear
-
-# Проверка очередей
-php artisan queue:work --once
-
-# Проверка расписания
-php artisan schedule:list
-```
-
-### Настройка Telegram webhook (если используется)
-
-```bash
-php artisan telegram:webhook:set
+  scheduler:
+    build: .
+    restart: unless-stopped
+    command: >
+      sh -c "while true; do
+        php artisan schedule:run --verbose --no-interaction
+        sleep 60
+      done"
+    env_file: .env
+    networks:
+      - backend
 ```
 
 ---
 
-## 8. Резервное копирование (обязательно!)
+## 8. Nightly Backups (автоматические бэкапы)
 
-### Минимум:
-- PostgreSQL дампы
-- ClickHouse бэкапы
-- MinIO бакеты (`mc mirror` или `rclone`)
-- `.env` и docker volumes
-
-Пример скрипта бэкапа (сохрани в `/opt/backups/`):
+Создай скрипт `scripts/backup.sh`:
 
 ```bash
 #!/bin/bash
 DATE=$(date +%Y%m%d_%H%M)
-docker compose exec -T postgres pg_dump -U neo main_db > /backups/db_$DATE.sql
-# Аналогично для ClickHouse и MinIO
+BACKUP_DIR=/home/deploy/backups
+mkdir -p $BACKUP_DIR
+
+# PostgreSQL
+docker compose exec -T postgres pg_dump -U $DB_USER $DB_NAME > $BACKUP_DIR/db_$DATE.sql
+
+# ClickHouse
+docker compose exec clickhouse clickhouse-client --query "BACKUP DATABASE default TO Disk('default', 'backup_$DATE')"
+
+# MinIO (пример)
+docker compose exec minio mc alias set local http://minio:9000 $MINIO_USER $MINIO_PASS
+docker compose exec minio mc mirror --overwrite local/documents $BACKUP_DIR/minio_$DATE/
+
+# Очистка старых бэкапов (оставляем 7 дней)
+find $BACKUP_DIR -type f -mtime +7 -delete
 ```
 
-Запускай через cron.
-
----
-
-## 9. Мониторинг и логи
-
-- `docker compose logs -f app`
-- `docker stats`
-- Настрой `logrotate` для логов контейнеров
-- Рассмотри Portainer или Dockge для удобного управления
-
----
-
-## 10. Чек-лист перед запуском в продакшен
-
-- [ ] `APP_ENV=production` и `APP_DEBUG=false`
-- [ ] `APP_KEY` сгенерирован и задан
-- [ ] Все пароли в `.env` изменены (не дефолтные)
-- [ ] Миграции выполнены
-- [ ] ClickHouse таблица `user_actions` создана
-- [ ] `php artisan storage:link`
-- [ ] Кэш и оптимизация выполнены
-- [ ] Queue worker работает
-- [ ] Scheduler работает
-- [ ] SSL сертификат получен и работает
-- [ ] Firewall открыт только 80/443 (и 22)
-- [ ] Бэкапы настроены и проверены
-- [ ] Доступ к `/admin` ограничен (через Filament или дополнительный пароль)
-- [ ] Тестовый инструктор может зайти в Журнал ТЧМ
-
----
-
-## 11. Полезные команды
+Добавь в crontab пользователя `deploy`:
 
 ```bash
-# Пересборка
-docker compose up -d --build
+crontab -e
+```
 
-# Смотреть логи
-docker compose logs -f app nginx
-
-# Зайти в контейнер приложения
-docker compose exec app bash
-
-# Выполнить artisan команду
-docker compose exec app php artisan ...
-
-# Остановить всё
-docker compose down
+```
+0 3 * * * /home/deploy/arm/scripts/backup.sh >> /home/deploy/backups/backup.log 2>&1
 ```
 
 ---
 
-## Дополнительные рекомендации
+## 9. Итоговый чек-лист безопасности
 
-1. **Используй docker secrets** или внешний менеджер секретов (Doppler, Vault) для важных ключей.
-2. Настрой автоматическое обновление системы и Docker.
-3. Рассмотри использование `watchtower` или ручные обновления.
-4. Для ClickHouse в продакшене рекомендуется задать пользователя и пароль.
-5. MinIO лучше ставить за reverse proxy с отдельным поддоменом.
+- [ ] SSH только по ключам + `PasswordAuthentication no`
+- [ ] UFW включён (80, 443, 22)
+- [ ] Fail2Ban настроен
+- [ ] Только Nginx публикует порты наружу
+- [ ] Все остальные сервисы в `internal` или приватной сети
+- [ ] Cloudflare Proxy включён
+- [ ] Let's Encrypt сертификат получен и обновляется (`certbot renew` через cron)
+- [ ] `.env` не в репозитории
+- [ ] Ночные бэкапы работают и проверены
+- [ ] `APP_DEBUG=false`
+- [ ] `php artisan optimize`
 
 ---
 
-**После успешного деплоя** обнови этот файл с реальными командами и нюансами твоего сервера.
+## Полезные команды
 
-Удачи с развёртыванием! Если что-то пойдёт не так — возвращайся к этому плану.
+```bash
+# Логи
+docker compose logs -f nginx app
+
+# Перезапуск
+docker compose restart nginx
+
+# Обновление сертификатов
+certbot renew --quiet
+
+# Ручной бэкап
+bash scripts/backup.sh
+```
+
+---
+
+**Рекомендация:** После первого успешного деплоя сохрани этот файл с реальными командами и путями, которые получились у тебя на сервере.
+
+Если нужно — могу дополнительно подготовить:
+- Пример `docker-compose.prod.yml`
+- Готовый скрипт бэкапа
+- Пример конфига Nginx под Cloudflare + Let's Encrypt
+
+Готов помочь доработать любой пункт.

@@ -126,10 +126,6 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    // Старый функционал сохранён
-//    Route::get('/index', [DocumentController::class, 'index'])
-//        ->name('index');
-
     // Новый route для страницы документов
     Route::get('/documents', [DocumentController::class, 'index'])
         ->name('documents.index');

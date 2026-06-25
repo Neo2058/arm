@@ -17,7 +17,7 @@ class TelegramService
         string $parseMode = 'Markdown'
     ): void {
         $botToken = config('services.telegram.bot_token');
-        $defaultChatId = config('services.telegram.chat_id');
+        $defaultChatId = config('services.telegram.chat_id') ?? config('services.telegram.group_id');
 
         $chatId = $chatId ?? $defaultChatId;
 
