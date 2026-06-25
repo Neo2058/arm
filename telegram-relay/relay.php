@@ -21,10 +21,19 @@
  *   parse_mode=Markdown (optional)
  */
 
-// === CONFIG from environment ===
-$allowedIps = array_filter(array_map('trim', explode(',', getenv('ALLOWED_IPS') ?: '')));
-$relaySecret = getenv('RELAY_SECRET') ?: '';
-$botToken    = getenv('TELEGRAM_BOT_TOKEN') ?: '';
+// === CONFIG from environment (robust to inline comments) ===
+function cleanEnvValue($val) {
+    if (!$val) return '';
+    // strip inline # comments and trim
+    $val = preg_replace('/\s*#.*$/', '', $val);
+    return trim($val);
+}
+
+$rawAllowed = cleanEnvValue(getenv('ALLOWED_IPS') ?: '');
+$allowedIps = array_filter(array_map('trim', explode(',', $rawAllowed)));
+
+$relaySecret = cleanEnvValue(getenv('RELAY_SECRET') ?: '');
+$botToken    = cleanEnvValue(getenv('TELEGRAM_BOT_TOKEN') ?: '');
 
 // Parse input early (JSON or form)
 $input = $_POST;
@@ -36,8 +45,21 @@ if (empty($input)) {
     }
 }
 
+// === DEBUG: always log hits (even blocked) ===
+$clientIp   = $_SERVER['REMOTE_ADDR'] ?? '';
+$reqMethod  = $_SERVER['REQUEST_METHOD'] ?? '';
+$reqUri     = $_SERVER['REQUEST_URI'] ?? '';
+error_log("Relay HIT: ip=$clientIp method=$reqMethod uri=$reqUri allowed=[" . implode(',', $allowedIps) . "] input=" . json_encode($input));
+
+// Simple health for GET / (so tests don't 403 just for connectivity)
+if (in_array($reqMethod, ['GET', 'HEAD']) && ($reqUri === '/' || $reqUri === '' || $reqUri === '/index.php')) {
+    http_response_code(200);
+    header('Content-Type: text/plain');
+    echo "TG Relay OK\n";
+    exit;
+}
+
 // === SECURITY ===
-$clientIp = $_SERVER['REMOTE_ADDR'] ?? '';
 
 // IP whitelist
 if (!empty($allowedIps) && !in_array($clientIp, $allowedIps, true)) {

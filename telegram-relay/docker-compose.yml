@@ -9,4 +9,6 @@ services:
       - ./relay.php:/var/www/html/index.php:ro
     env_file:
       - .env
-    # Basic security - the script itself does IP + secret checks
+    # Suppress apache warning + basic security in script
+    command: >
+      bash -c 'echo "ServerName localhost" >> /etc/apache2/apache2.conf && apache2-foreground'

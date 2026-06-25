@@ -38,7 +38,7 @@ services:
     volumes:
       - .:/var/www
       - app_storage:/var/www/storage
-    # entrypoint helper can be added later for auto mkdir, but we do it manually for now
+    entrypoint: ["/usr/local/bin/entrypoint.sh"]
     depends_on:
       postgres:
         condition: service_healthy

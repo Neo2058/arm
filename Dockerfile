@@ -26,3 +26,16 @@ RUN pecl install redis && docker-php-ext-enable redis
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
+
+# Increase limits for file uploads (Livewire + Filament in admin)
+RUN { \
+        echo 'upload_max_filesize = 100M'; \
+        echo 'post_max_size = 100M'; \
+        echo 'memory_limit = 256M'; \
+        echo 'max_execution_time = 300'; \
+        echo 'max_input_time = 300'; \
+    } > /usr/local/etc/php/conf.d/uploads.ini
+
+# Entrypoint for storage preparation (permissions + livewire-tmp dir)
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
