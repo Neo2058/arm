@@ -68,14 +68,23 @@ class TrainingMaterial extends Model
             return null;
         }
 
-        return \Storage::disk('s3')->temporaryUrl(
-            $this->file_path,
-            now()->addMinutes($minutes),
-            [
-                'ResponseContentDisposition' => 'inline',
-                'ResponseCacheControl'       => 'no-store, no-cache, must-revalidate, max-age=0',
-            ]
-        );
+        try {
+            return \Storage::disk('s3')->temporaryUrl(
+                $this->file_path,
+                now()->addMinutes($minutes),
+                [
+                    'ResponseContentDisposition' => 'inline',
+                    'ResponseCacheControl'       => 'no-store, no-cache, must-revalidate, max-age=0',
+                ]
+            );
+        } catch (\Throwable $e) {
+            \Log::warning('S3 temporaryUrl failed for TrainingMaterial', [
+                'id' => $this->id,
+                'file_path' => $this->file_path,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
     }
 
     /**

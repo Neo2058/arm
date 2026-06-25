@@ -35,7 +35,7 @@ export const imagesArray = [
     },
     {
         name: "Росписи",
-        src: "/watch2.jpeg",
+        src: "/images/professionalDriver.jpg",
         role: ['super_admin', 'student', 'driver', 'admin'],
         logo: "/assets/materials.svg",
         link: '/rosisi',
@@ -50,7 +50,7 @@ export const imagesArray = [
     },
     {
         name: "Связь с разработчиком",
-        src: "/watch19.jpeg",
+        src: "/images/professionalDriver.jpg",
         role: ['super_admin', 'student', 'driver', 'admin'],
         logo: "/assets/features.svg",
         link: '/backstage',
@@ -62,7 +62,7 @@ export const imagesArray = [
     },
     {
         name: "Наряды",
-        src: "/watch5.jpeg",
+        src: "/images/professionalDriver.jpg",
         role: ['super_admin', 'student', 'driver', 'admin'],
         logo: "/assets/limited.svg",
         link: '/naryady',
@@ -80,7 +80,7 @@ export const imagesArray = [
     },
     {
         name: "Подстройки",
-        src: "/watch16.jpeg",
+        src: "/images/professionalDriver.jpg",
         role: ['super_admin', 'student', 'driver', 'admin', 'naryadchik'],
         logo: "/assets/warranty.svg",
         link: '/podstroiki',
@@ -95,7 +95,7 @@ export const imagesArray = [
     },
     {
         name: "Учёт рабочих смен",
-        src: "/watch16.jpeg",
+        src: "/images/professionalDriver.jpg",
         role: ['super_admin', 'driver'],
         logo: "/assets/warranty.svg",
         link: '/worktime',
@@ -107,7 +107,7 @@ export const imagesArray = [
     },
     {
         name: "Нарядчики",
-        src: "/watch20.jpeg",
+        src: "/images/professionalDriver.jpg",
         role: ['naryadchik', 'dispatcher'],
         logo: "/assets/packaging.svg",
         link: '/naryad',
@@ -125,7 +125,7 @@ export const imagesArray = [
     },
     {
         name: "Рабочий журнал ТЧМ",
-        src: "/watch16.jpeg",
+        src: "/images/professionalDriver.jpg",
         role: ['instructor'],
         logo: "/assets/features.svg",
         link: '/journal',

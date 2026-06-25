@@ -46,11 +46,18 @@ class DocumentController extends Controller
                 'category_key' => $rawCategory,
                 'category_name' => $categoryName,
                 'updatedAt' => $document->updated_at?->format('d.m.Y'),
-                'url' => Storage::disk('s3')->temporaryUrl(
-                    $document->file_path,
-                    now()->addMinutes(20),
-                    ['ResponseContentDisposition' => 'inline']
-                ),
+                'url' => (function () use ($document) {
+                    try {
+                        return Storage::disk('s3')->temporaryUrl(
+                            $document->file_path,
+                            now()->addMinutes(20),
+                            ['ResponseContentDisposition' => 'inline']
+                        );
+                    } catch (\Throwable $e) {
+                        \Log::warning('S3 temp url failed', ['doc' => $document->id, 'err' => $e->getMessage()]);
+                        return null;
+                    }
+                })(),
                 'quiz' => $document->quiz ? [
                     'id' => $document->quiz->id,
                     'title' => $document->quiz->title,
@@ -97,11 +104,18 @@ class DocumentController extends Controller
         ClickHouseService::log('view_document', $document->id, $document->title);
 
         // 2. Генерируем свежую временную ссылку конкретно для просмотра
-        $url = Storage::disk('s3')->temporaryUrl(
-            $document->file_path,
-            now()->addMinutes(30), // Ссылка для чтения на 30 минут
-            ['ResponseContentDisposition' => 'inline']
-        );
+        $url = (function () use ($document) {
+            try {
+                return Storage::disk('s3')->temporaryUrl(
+                    $document->file_path,
+                    now()->addMinutes(30), // Ссылка для чтения на 30 минут
+                    ['ResponseContentDisposition' => 'inline']
+                );
+            } catch (\Throwable $e) {
+                \Log::warning('S3 temp url failed in show', ['doc' => $document->id, 'err' => $e->getMessage()]);
+                return null;
+            }
+        })();
 
         // 3. Возвращаем JSON (если React запрашивает ссылку по клику)
         // или отдельный Blade-вид
@@ -125,11 +139,18 @@ class DocumentController extends Controller
         foreach ($quiz->questions as $question) {
             foreach ($question->references as $ref) {
                 if ($ref->document && !isset($preSignedUrls[$ref->document_id])) {
-                    $preSignedUrls[$ref->document_id] = Storage::disk('s3')->temporaryUrl(
-                        $ref->document->file_path,
-                        now()->addMinutes(60), // Аттестация длинная, даем 60 минут
-                        ['ResponseContentDisposition' => 'inline']
-                    );
+                    $preSignedUrls[$ref->document_id] = (function () use ($ref) {
+                        try {
+                            return Storage::disk('s3')->temporaryUrl(
+                                $ref->document->file_path,
+                                now()->addMinutes(60), // Аттестация длинная, даем 60 минут
+                                ['ResponseContentDisposition' => 'inline']
+                            );
+                        } catch (\Throwable $e) {
+                            \Log::warning('S3 temp url failed in quiz', ['doc' => $ref->document_id, 'err' => $e->getMessage()]);
+                            return null;
+                        }
+                    })();
                 }
             }
         }

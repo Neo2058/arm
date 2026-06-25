@@ -32,11 +32,18 @@ class RospisiController extends Controller
                     ->where('document_id', $doc->id)
                     ->first();
 
-                $url = \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl(
-                    $doc->file_path,
-                    now()->addMinutes(30),
-                    ['ResponseContentDisposition' => 'inline']
-                );
+                $url = (function () use ($doc) {
+                    try {
+                        return \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl(
+                            $doc->file_path,
+                            now()->addMinutes(30),
+                            ['ResponseContentDisposition' => 'inline']
+                        );
+                    } catch (\Throwable $e) {
+                        \Log::warning('S3 temp url failed for rospisi', ['doc' => $doc->id, 'err' => $e->getMessage()]);
+                        return null;
+                    }
+                })();
 
                 return [
                     'id' => $doc->id,

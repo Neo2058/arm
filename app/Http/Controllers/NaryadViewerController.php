@@ -58,11 +58,18 @@ class NaryadViewerController extends Controller
             }
         }
 
-        $url = Storage::disk('s3')->temporaryUrl(
-            $naryad->file_path,
-            now()->addMinutes(30),
-            ['ResponseContentDisposition' => 'inline']
-        );
+        $url = (function () use ($naryad) {
+            try {
+                return Storage::disk('s3')->temporaryUrl(
+                    $naryad->file_path,
+                    now()->addMinutes(30),
+                    ['ResponseContentDisposition' => 'inline']
+                );
+            } catch (\Throwable $e) {
+                \Log::warning('S3 temp url failed for naryad', ['id' => $naryad->id, 'err' => $e->getMessage()]);
+                return null;
+            }
+        })();
 
         // Log the PDF view action
         // Hybrid: goes to relational DB + ClickHouse via ActionLog::log()
@@ -85,11 +92,18 @@ class NaryadViewerController extends Controller
         // For now, just return the url again or metadata.
         // The actual PDF search/highlight will be in frontend or using pdf.js text layer.
 
-        $url = Storage::disk('s3')->temporaryUrl(
-            $naryad->file_path,
-            now()->addMinutes(30),
-            ['ResponseContentDisposition' => 'inline']
-        );
+        $url = (function () use ($naryad) {
+            try {
+                return Storage::disk('s3')->temporaryUrl(
+                    $naryad->file_path,
+                    now()->addMinutes(30),
+                    ['ResponseContentDisposition' => 'inline']
+                );
+            } catch (\Throwable $e) {
+                \Log::warning('S3 temp url failed for naryad', ['id' => $naryad->id, 'err' => $e->getMessage()]);
+                return null;
+            }
+        })();
 
         return response()->json([
             'url' => $url,
