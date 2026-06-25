@@ -15,6 +15,9 @@ use App\Models\Quiz;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\TCHMJournalController;
 use App\Http\Controllers\AccessRequestController;
+use App\Http\Middleware\CheckUserExistence;
+use App\Http\Middleware\CheckDeviceBinding;
+use App\Http\Middleware\CheckDynamicBarrier;
 
 /*
 |--------------------------------------------------------------------------
@@ -47,7 +50,7 @@ Route::post('/logout', [AuthController::class, 'logout'])
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', CheckUserExistence::class, CheckDeviceBinding::class, CheckDynamicBarrier::class])->group(function () {
     /*
     |--------------------------------------------------------------------------
     | Main Menu

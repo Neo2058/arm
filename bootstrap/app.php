@@ -15,9 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
-            CheckUserExistence::class, // 1. Проверка бана/удаления
-            CheckDeviceBinding::class, // 2. Проверка железа (ПЕРВАЯ)
-            CheckDynamicBarrier::class, // 3. Динамический барьер (ВТОРАЯ)
+            CheckUserExistence::class, // 1. Проверка бана/удаления (для всех web роутов)
         ]);
         $middleware->encryptCookies(except: [
             'device_key',
