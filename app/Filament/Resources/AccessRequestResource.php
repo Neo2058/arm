@@ -109,10 +109,11 @@ class AccessRequestResource extends Resource
                     ->icon('heroicon-o-user-plus')
                     ->color('success')
                     ->visible(fn (AccessRequest $record) => $record->status === 'pending')
-                    ->url(fn (AccessRequest $record) => route('filament.admin.resources.users.create', [
-                        'tab_number' => $record->tab_number,
-                        'fio' => $record->fio,
-                    ])),
+                    ->url(fn (AccessRequest $record): string => 
+                        \App\Filament\Resources\UserResource::getUrl('create') 
+                        . '?fio=' . urlencode($record->fio) 
+                        . '&tab_number=' . urlencode($record->tab_number)
+                    ),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
