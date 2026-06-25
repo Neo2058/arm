@@ -20,38 +20,40 @@ chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache 2>/dev/null
 echo "Storage dirs ready."
 
 # Ensure S3/MinIO bucket exists (idempotent, safe for volume resets)
-echo "Ensuring S3 bucket..."
-php -r '
-require "/var/www/vendor/autoload.php";
-$app = require_once "/var/www/bootstrap/app.php";
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
-$kernel->bootstrap();
+# Run in background so php-fpm starts immediately; don't block startup
+echo "Ensuring S3 bucket in background..."
+(
+  php -r '
+  require "/var/www/vendor/autoload.php";
+  $app = require_once "/var/www/bootstrap/app.php";
+  $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+  $kernel->bootstrap();
 
-$bucket = config("filesystems.disks.s3.bucket") ?: env("AWS_BUCKET");
-if ($bucket) {
-    try {
-        $client = new Aws\S3\S3Client([
-            "version" => "latest",
-            "region" => config("filesystems.disks.s3.region") ?: env("AWS_DEFAULT_REGION", "us-east-1"),
-            "endpoint" => config("filesystems.disks.s3.endpoint") ?: env("AWS_ENDPOINT"),
-            "use_path_style_endpoint" => (bool)(config("filesystems.disks.s3.use_path_style_endpoint") ?? env("AWS_USE_PATH_STYLE_ENDPOINT", true)),
-            "credentials" => [
-                "key" => config("filesystems.disks.s3.key") ?: env("AWS_ACCESS_KEY_ID"),
-                "secret" => config("filesystems.disks.s3.secret") ?: env("AWS_SECRET_ACCESS_KEY"),
-            ],
-        ]);
-        $client->createBucket(["Bucket" => $bucket]);
-        echo "Bucket ensured: $bucket\n";
-    } catch (Exception $e) {
-        $msg = $e->getMessage();
-        if (strpos($msg, "BucketAlreadyOwnedByYou") !== false || strpos($msg, "BucketAlreadyExists") !== false) {
-            echo "Bucket exists: $bucket\n";
-        } else {
-            echo "Bucket ensure note: " . $msg . "\n";
-        }
-    }
-}
-'
+  $bucket = config("filesystems.disks.s3.bucket") ?: env("AWS_BUCKET");
+  if ($bucket) {
+      try {
+          $client = new Aws\S3\S3Client([
+              "version" => "latest",
+              "region" => config("filesystems.disks.s3.region") ?: env("AWS_DEFAULT_REGION", "us-east-1"),
+              "endpoint" => config("filesystems.disks.s3.endpoint") ?: env("AWS_ENDPOINT"),
+              "use_path_style_endpoint" => (bool)(config("filesystems.disks.s3.use_path_style_endpoint") ?? env("AWS_USE_PATH_STYLE_ENDPOINT", true)),
+              "credentials" => [
+                  "key" => config("filesystems.disks.s3.key") ?: env("AWS_ACCESS_KEY_ID"),
+                  "secret" => config("filesystems.disks.s3.secret") ?: env("AWS_SECRET_ACCESS_KEY"),
+              ],
+          ]);
+          $client->createBucket(["Bucket" => $bucket]);
+          echo "Bucket ensured: $bucket\n";
+      } catch (Exception $e) {
+          $msg = $e->getMessage();
+          if (strpos($msg, "BucketAlreadyOwnedByYou") !== false || strpos($msg, "BucketAlreadyExists") !== false) {
+              echo "Bucket exists: $bucket\n";
+          } else {
+              echo "Bucket ensure note: " . $msg . "\n";
+          }
+      }
+  }
+') &
 
 # Run the original php-fpm
 exec php-fpm

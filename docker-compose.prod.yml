@@ -44,8 +44,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      minio:
+        condition: service_healthy
     networks:
       - backend
+    healthcheck:
+      test: ["CMD", "php", "-r", "echo 'OK';"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # Веб-сервер (Nginx) — единственный с открытыми портами
   nginx:
@@ -62,7 +70,8 @@ services:
       - ./ssl:/etc/nginx/ssl:ro   # create dir + put certs here later when you have them
       # - /etc/letsencrypt:/etc/letsencrypt:ro   # для Let's Encrypt (если решите использовать бесплатный)
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     networks:
       - frontend
       - backend
@@ -118,9 +127,15 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
-    # Консоль MinIO не открыта наружу
+    # Консоль MinIO не открыта нарушу
     networks:
       - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   # Meilisearch (поиск)
   meilisearch:
