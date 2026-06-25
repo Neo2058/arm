@@ -58,7 +58,8 @@ services:
     volumes:
       - .:/var/www
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro   # сюда положить fullchain.pem и privkey.pem от купленного сертификата
+      # SSL volume is optional for now (HTTPS block is commented in the conf)
+      - ./ssl:/etc/nginx/ssl:ro   # create dir + put certs here later when you have them
       # - /etc/letsencrypt:/etc/letsencrypt:ro   # для Let's Encrypt (если решите использовать бесплатный)
     depends_on:
       - app
