@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  relay:
+    image: php:8.2-apache
+    container_name: tg-relay
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./relay.php:/var/www/html/index.php:ro
+    env_file:
+      - .env
+    # Basic security - the script itself does IP + secret checks

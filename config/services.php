@@ -57,7 +57,10 @@ return [
         'chat_id' => env('TELEGRAM_CHAT_ID'),
         'group_id'   => env('TELEGRAM_GROUP_ID'),    // ID закрытой группы
         'bot_username' => env('TELEGRAM_BOT_USERNAME'),
-        'api_url' => env('TELEGRAM_API_URL', 'https://api.telegram.org'),  // Можно заменить на прокси третьей стороны
+        'api_url' => env('TELEGRAM_API_URL', 'https://api.telegram.org'),
+        // Relay for bypassing direct Telegram API calls (e.g. self-hosted proxy on another server)
+        'relay_url' => env('TELEGRAM_RELAY_URL'),
+        'relay_secret' => env('TELEGRAM_RELAY_SECRET'),
     ],
 
 ];

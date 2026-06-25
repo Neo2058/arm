@@ -18,7 +18,6 @@ class TelegramService
     ): void {
         $botToken = config('services.telegram.bot_token');
         $defaultChatId = config('services.telegram.chat_id') ?? config('services.telegram.group_id');
-        $apiBase = config('services.telegram.api_url', 'https://api.telegram.org');
 
         $chatId = $chatId ?? $defaultChatId;
 
@@ -26,6 +25,38 @@ class TelegramService
             Log::warning('Telegram send failed: empty token or chat_id');
             return;
         }
+
+        // Relay mode: forward to another server (in another country) that will call Telegram API
+        $relayUrl = config('services.telegram.relay_url');
+        $relaySecret = config('services.telegram.relay_secret');
+
+        if (!empty($relayUrl)) {
+            try {
+                $payload = [
+                    'secret'    => $relaySecret,
+                    'chat_id'   => $chatId,
+                    'message'   => $message,
+                    'parse_mode' => $parseMode,
+                    'method'    => 'sendMessage',
+                ];
+
+                $response = Http::timeout(15)->post($relayUrl, $payload);
+
+                if ($response->failed()) {
+                    Log::error('Telegram relay error', [
+                        'status' => $response->status(),
+                        'body'   => $response->body(),
+                    ]);
+                }
+                return;
+            } catch (\Throwable $e) {
+                Log::error('Telegram relay failed', ['error' => $e->getMessage()]);
+                return;
+            }
+        }
+
+        // Direct mode
+        $apiBase = config('services.telegram.api_url', 'https://api.telegram.org');
 
         try {
             $response = Http::timeout(10)
@@ -115,7 +146,8 @@ class TelegramService
     ): void {
         $botToken = config('services.telegram.bot_token');
         $defaultChatId = config('services.telegram.chat_id') ?? config('services.telegram.group_id');
-        $apiBase = config('services.telegram.api_url', 'https://api.telegram.org');
+        $relayUrl = config('services.telegram.relay_url');
+        $relaySecret = config('services.telegram.relay_secret');
 
         $chatId = $chatId ?? $defaultChatId;
 
@@ -123,6 +155,45 @@ class TelegramService
             Log::warning('Telegram sendFile failed: empty token or chat_id');
             return;
         }
+
+        // Relay mode for files
+        if (!empty($relayUrl)) {
+            try {
+                $fileStream = Storage::disk('s3')->readStream($filePathInMinio);
+                if ($fileStream === false) {
+                    Log::warning('Telegram file stream failed for relay', ['path' => $filePathInMinio]);
+                    return;
+                }
+
+                $attachFilename = $filename ?: basename($filePathInMinio);
+
+                $payload = [
+                    'secret' => $relaySecret,
+                    'chat_id' => $chatId,
+                    'method' => $telegramMethod,
+                    'caption' => $caption,
+                    'parse_mode' => $parseMode,
+                ];
+
+                $response = Http::timeout(60)
+                    ->attach('file', $fileStream, $attachFilename)
+                    ->post($relayUrl, $payload);
+
+                if ($response->failed()) {
+                    Log::error('Telegram relay ' . $telegramMethod . ' error', [
+                        'status' => $response->status(),
+                        'body' => $response->body(),
+                    ]);
+                }
+                return;
+            } catch (\Throwable $e) {
+                Log::error('Telegram relay ' . $telegramMethod . ' failed', ['error' => $e->getMessage()]);
+                return;
+            }
+        }
+
+        // Direct
+        $apiBase = config('services.telegram.api_url', 'https://api.telegram.org');
 
         try {
             $fileStream = Storage::disk('s3')->readStream($filePathInMinio);
