@@ -63,6 +63,7 @@ class TrainingMaterialResource extends Resource
                     ->directory('training-materials')
                     // ВАЖНО: НЕ используем visibility('public')!
                     // Файлы должны оставаться приватными. Доступ только через temporaryUrl().
+                    // Note: temporaryUrl calls are wrapped in try/catch in views if needed.
                     ->acceptedFileTypes([
                         'video/mp4', 'video/quicktime', 'video/webm',
                         'audio/mpeg', 'audio/mp4', 'audio/ogg',

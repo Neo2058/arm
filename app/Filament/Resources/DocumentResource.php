@@ -81,7 +81,21 @@ class DocumentResource extends Resource
                 Tables\Columns\TextColumn::make('instructionCategory.name')->label('Папка инструктажа')->sortable(),
                 Tables\Columns\TextColumn::make('file_path')
                     ->label('Размер')
-                    ->formatStateUsing(fn ($state) => round(Storage::disk('s3')->size($state) / 1024 / 1024, 2) . ' MB'),
+                    ->formatStateUsing(function ($state) {
+                        if (empty($state)) {
+                            return '—';
+                        }
+                        try {
+                            $bytes = Storage::disk('s3')->size($state);
+                            return round($bytes / 1024 / 1024, 2) . ' MB';
+                        } catch (\Throwable $e) {
+                            \Log::warning('S3 file size lookup failed', [
+                                'path' => $state,
+                                'error' => $e->getMessage(),
+                            ]);
+                            return 'N/A';
+                        }
+                    }),
                 Tables\Columns\TextColumn::make('created_at')->label('Загружен')->dateTime(),
             ])
             ->filters([
@@ -93,7 +107,15 @@ class DocumentResource extends Resource
                 Tables\Actions\Action::make('download')
                     ->label('Скачать')
                     ->icon('heroicon-o-arrow-down-tray')
-                    ->url(fn ($record) => Storage::disk('s3')->temporaryUrl($record->file_path, now()->addMinutes(5)))
+                    ->url(function ($record) {
+                        if (empty($record->file_path)) return null;
+                        try {
+                            return Storage::disk('s3')->temporaryUrl($record->file_path, now()->addMinutes(5));
+                        } catch (\Throwable $e) {
+                            \Log::warning('S3 temporaryUrl failed', ['path' => $record->file_path, 'error' => $e->getMessage()]);
+                            return null;
+                        }
+                    })
                     ->openUrlInNewTab(),
             ])
             ->bulkActions([
