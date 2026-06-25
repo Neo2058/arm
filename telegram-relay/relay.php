@@ -26,7 +26,7 @@ $allowedIps = array_filter(array_map('trim', explode(',', getenv('ALLOWED_IPS') 
 $relaySecret = getenv('RELAY_SECRET') ?: '';
 $botToken    = getenv('TELEGRAM_BOT_TOKEN') ?: '';
 
-// === INPUT (support JSON or form) - parse early for secret check ===
+// Parse input early (JSON or form)
 $input = $_POST;
 if (empty($input)) {
     $raw = file_get_contents('php://input');
@@ -47,7 +47,7 @@ if (!empty($allowedIps) && !in_array($clientIp, $allowedIps, true)) {
     exit;
 }
 
-// Secret (optional but recommended)
+// Secret
 $providedSecret = $input['secret'] ?? ($_SERVER['HTTP_X_SECRET'] ?? '');
 if (!empty($relaySecret) && $providedSecret !== $relaySecret) {
     http_response_code(403);
@@ -75,8 +75,8 @@ if (empty($chatId)) {
     exit;
 }
 
-// Debug log (remove in production)
-error_log("Relay received from $clientIp : " . json_encode($input));
+// Debug (remove later)
+error_log("Relay received from $clientIp Allowed=[" . implode(',', $allowedIps) . "] : " . json_encode($input));
 
 $telegramUrl = "https://api.telegram.org/bot{$botToken}/{$method}";
 
