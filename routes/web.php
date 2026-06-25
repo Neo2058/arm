@@ -139,6 +139,10 @@ Route::middleware(['auth', CheckUserExistence::class, CheckDeviceBinding::class,
     // Protected file serving for viewing only (inline, no easy download)
     Route::get('/documents/{document}/file', [DocumentController::class, 'serveFile'])
         ->name('documents.file');
+
+    // Download route - for admins OK, for regular users - violation log + alert
+    Route::get('/documents/{document}/download', [DocumentController::class, 'downloadFile'])
+        ->name('documents.download');
     /*
     |--------------------------------------------------------------------------
     | Quiz

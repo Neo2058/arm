@@ -103,32 +103,12 @@ class DocumentResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                // Добавим кнопку скачивания для проверки
+                // Скачивание (только для админов; для остальных - нарушение с алертами)
                 Tables\Actions\Action::make('download')
                     ->label('Скачать')
                     ->icon('heroicon-o-arrow-down-tray')
-                    ->action(function (Document $record) {
-                        $disk = Storage::disk('s3');
-                        $path = $record->file_path;
-
-                        if (empty($path) || ! $disk->exists($path)) {
-                            \Filament\Notifications\Notification::make()
-                                ->title('Файл не найден в хранилище')
-                                ->danger()
-                                ->send();
-                            return;
-                        }
-
-                        $filename = basename($path);
-                        $mime = $disk->mimeType($path) ?: 'application/octet-stream';
-
-                        return response()->streamDownload(function () use ($disk, $path) {
-                            echo $disk->get($path);
-                        }, $filename, [
-                            'Content-Type' => $mime,
-                            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-                        ]);
-                    }),
+                    ->url(fn (Document $record) => route('documents.download', $record))
+                    ->openUrlInNewTab(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

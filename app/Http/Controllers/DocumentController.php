@@ -3,7 +3,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Document;
 use App\Models\QuizResult;
+use App\Models\ActionLog;
+use App\Services\AdminNotificationService;
 use App\Services\ClickHouseService;
+use App\Services\TelegramService;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Quiz;
 
@@ -89,8 +92,11 @@ class DocumentController extends Controller
             }
         }
 
-        // 1. Фиксируем событие просмотра в ClickHouse (передаем ID и Название документа)
-        ClickHouseService::log('view_document', $document->id, $document->title);
+        // 1. Фиксируем событие просмотра (ActionLog + ClickHouse)
+        ActionLog::log('view_document', [
+            'document_id' => $document->id,
+            'title' => $document->title,
+        ]);
 
         // 2. Возвращаем защищённую ссылку на просмотр через приложение (inline, с проверкой)
         // Фронтенд должен использовать эту ссылку для просмотра (не для скачивания)
@@ -198,8 +204,11 @@ class DocumentController extends Controller
             abort(404, 'Файл не найден');
         }
 
-        // Log access
-        ClickHouseService::log('view_document', $document->id, $document->title);
+        // Log access to both DB (ActionLog) and ClickHouse
+        ActionLog::log('view_document', [
+            'document_id' => $document->id,
+            'title' => $document->title,
+        ]);
 
         $filename = basename($path);
         $mime = $disk->mimeType($path) ?: 'application/octet-stream';
@@ -211,6 +220,78 @@ class DocumentController extends Controller
             'Pragma' => 'no-cache',
             'Expires' => '0',
             'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    /**
+     * Download the document (attachment).
+     * For regular users this is a violation: log + alert + record.
+     */
+    public function downloadFile(Document $document)
+    {
+        $user = auth()->user();
+        $userRole = strtolower((string)($user->role->value ?? $user->role));
+
+        $isAdmin = in_array($userRole, ['super_admin', 'admin']);
+
+        $disk = Storage::disk('s3');
+        $path = $document->file_path;
+
+        if (empty($path) || !$disk->exists($path)) {
+            abort(404, 'Файл не найден');
+        }
+
+        $filename = basename($path);
+        $mime = $disk->mimeType($path) ?: 'application/octet-stream';
+
+        if (!$isAdmin) {
+            // Violation: log to DB + CH
+            ActionLog::log('violation_document_download', [
+                'document_id' => $document->id,
+                'title' => $document->title,
+                'user_role' => $userRole,
+            ]);
+
+            // Send alerts to all channels
+            try {
+                AdminNotificationService::notify(
+                    'violation',
+                    'Нарушение регламента: попытка скачивания документа',
+                    "Пользователь {$user->name} (роль: {$userRole}) попытался скачать документ «{$document->title}» (ID: {$document->id}). Доступно только чтение.",
+                    [
+                        'user_id' => $user->id,
+                        'document_id' => $document->id,
+                        'action' => 'download_attempt',
+                    ]
+                );
+
+                // Telegram alert
+                $tgMessage = "🚨 *Нарушение регламента использования документов*\n";
+                $tgMessage .= "👤 Пользователь: {$user->name} (ID: {$user->id}, роль: {$userRole})\n";
+                $tgMessage .= "📄 Документ: {$document->title} (ID: {$document->id})\n";
+                $tgMessage .= "📍 Действие: попытка скачивания (запрещено, только просмотр)\n";
+                $tgMessage .= "⏰ " . now()->format('Y-m-d H:i:s');
+
+                TelegramService::send($tgMessage, null, 'Markdown');
+            } catch (\Throwable $e) {
+                \Log::error('Failed to send download violation alerts', ['error' => $e->getMessage()]);
+            }
+
+            abort(403, 'Скачивание документов запрещено согласно регламенту. Доступно только для чтения.');
+        }
+
+        // Log the download (admins)
+        ActionLog::log('document_download', [
+            'document_id' => $document->id,
+            'title' => $document->title,
+            'user_role' => $userRole,
+        ]);
+
+        ClickHouseService::log('document_download', $document->id, $document->title);
+
+        return $disk->response($path, $filename, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'attachment; filename="' . addslashes($filename) . '"',
         ]);
     }
 }
