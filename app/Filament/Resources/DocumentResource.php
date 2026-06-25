@@ -46,7 +46,7 @@ class DocumentResource extends Resource
                     ->acceptedFileTypes(['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
                     ->required()
                     ->preserveFilenames() // Сохранять оригинальное имя файла
-                    ->maxSize(10240), // Ограничение 10МБ
+                    ->maxSize(10240) // Ограничение 10МБ
                     ->afterStateHydrated(function (FileUpload $component, $state) {
                         if ($state) {
                             try {
