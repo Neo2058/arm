@@ -135,6 +135,10 @@ Route::middleware(['auth', CheckUserExistence::class, CheckDeviceBinding::class,
 
     // Новый route для фиксации клика и получения свежей ссылки
     Route::get('/api/documents/{document}/click', [DocumentController::class, 'show']);
+
+    // Protected file serving for viewing only (inline, no easy download)
+    Route::get('/documents/{document}/file', [DocumentController::class, 'serveFile'])
+        ->name('documents.file');
     /*
     |--------------------------------------------------------------------------
     | Quiz

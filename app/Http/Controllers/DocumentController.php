@@ -46,18 +46,7 @@ class DocumentController extends Controller
                 'category_key' => $rawCategory,
                 'category_name' => $categoryName,
                 'updatedAt' => $document->updated_at?->format('d.m.Y'),
-                'url' => (function () use ($document) {
-                    try {
-                        return Storage::disk('s3')->temporaryUrl(
-                            $document->file_path,
-                            now()->addMinutes(20),
-                            ['ResponseContentDisposition' => 'inline']
-                        );
-                    } catch (\Throwable $e) {
-                        \Log::warning('S3 temp url failed', ['doc' => $document->id, 'err' => $e->getMessage()]);
-                        return null;
-                    }
-                })(),
+                'url' => route('documents.file', $document->id),
                 'quiz' => $document->quiz ? [
                     'id' => $document->quiz->id,
                     'title' => $document->quiz->title,
@@ -103,19 +92,9 @@ class DocumentController extends Controller
         // 1. Фиксируем событие просмотра в ClickHouse (передаем ID и Название документа)
         ClickHouseService::log('view_document', $document->id, $document->title);
 
-        // 2. Генерируем свежую временную ссылку конкретно для просмотра
-        $url = (function () use ($document) {
-            try {
-                return Storage::disk('s3')->temporaryUrl(
-                    $document->file_path,
-                    now()->addMinutes(30), // Ссылка для чтения на 30 минут
-                    ['ResponseContentDisposition' => 'inline']
-                );
-            } catch (\Throwable $e) {
-                \Log::warning('S3 temp url failed in show', ['doc' => $document->id, 'err' => $e->getMessage()]);
-                return null;
-            }
-        })();
+        // 2. Возвращаем защищённую ссылку на просмотр через приложение (inline, с проверкой)
+        // Фронтенд должен использовать эту ссылку для просмотра (не для скачивания)
+        $url = route('documents.file', $document->id);
 
         // 3. Возвращаем JSON (если React запрашивает ссылку по клику)
         // или отдельный Blade-вид
@@ -139,18 +118,7 @@ class DocumentController extends Controller
         foreach ($quiz->questions as $question) {
             foreach ($question->references as $ref) {
                 if ($ref->document && !isset($preSignedUrls[$ref->document_id])) {
-                    $preSignedUrls[$ref->document_id] = (function () use ($ref) {
-                        try {
-                            return Storage::disk('s3')->temporaryUrl(
-                                $ref->document->file_path,
-                                now()->addMinutes(60), // Аттестация длинная, даем 60 минут
-                                ['ResponseContentDisposition' => 'inline']
-                            );
-                        } catch (\Throwable $e) {
-                            \Log::warning('S3 temp url failed in quiz', ['doc' => $ref->document_id, 'err' => $e->getMessage()]);
-                            return null;
-                        }
-                    })();
+                    $preSignedUrls[$ref->document_id] = route('documents.file', $ref->document_id);
                 }
             }
         }
@@ -204,6 +172,45 @@ class DocumentController extends Controller
         return view('quiz.results-history', [
             'results' => $results,
             'unreadCount' => 0
+        ]);
+    }
+
+    /**
+     * Serve the document file through the application (protected, inline only).
+     * This prevents direct S3 links and makes downloading harder.
+     */
+    public function serveFile(Document $document)
+    {
+        $user = auth()->user();
+        $userRole = strtolower((string)($user->role->value ?? $user->role));
+
+        // Permission check
+        if (!in_array($userRole, ['super_admin', 'admin']) && $document->allowed_roles !== null) {
+            if (!in_array($userRole, $document->allowed_roles)) {
+                abort(403, 'Доступ к данному документу ограничен протоколом безопасности.');
+            }
+        }
+
+        $disk = Storage::disk('s3');
+        $path = $document->file_path;
+
+        if (empty($path) || !$disk->exists($path)) {
+            abort(404, 'Файл не найден');
+        }
+
+        // Log access
+        ClickHouseService::log('view_document', $document->id, $document->title);
+
+        $filename = basename($path);
+        $mime = $disk->mimeType($path) ?: 'application/octet-stream';
+
+        return $disk->response($path, $filename, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="' . addslashes($filename) . '"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 }
