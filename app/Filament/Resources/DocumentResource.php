@@ -107,16 +107,28 @@ class DocumentResource extends Resource
                 Tables\Actions\Action::make('download')
                     ->label('Скачать')
                     ->icon('heroicon-o-arrow-down-tray')
-                    ->url(function ($record) {
-                        if (empty($record->file_path)) return null;
-                        try {
-                            return Storage::disk('s3')->temporaryUrl($record->file_path, now()->addMinutes(5));
-                        } catch (\Throwable $e) {
-                            \Log::warning('S3 temporaryUrl failed', ['path' => $record->file_path, 'error' => $e->getMessage()]);
-                            return null;
+                    ->action(function (Document $record) {
+                        $disk = Storage::disk('s3');
+                        $path = $record->file_path;
+
+                        if (empty($path) || ! $disk->exists($path)) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Файл не найден в хранилище')
+                                ->danger()
+                                ->send();
+                            return;
                         }
-                    })
-                    ->openUrlInNewTab(),
+
+                        $filename = basename($path);
+                        $mime = $disk->mimeType($path) ?: 'application/octet-stream';
+
+                        return response()->streamDownload(function () use ($disk, $path) {
+                            echo $disk->get($path);
+                        }, $filename, [
+                            'Content-Type' => $mime,
+                            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                        ]);
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
