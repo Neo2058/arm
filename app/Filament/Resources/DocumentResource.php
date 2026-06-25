@@ -11,7 +11,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Storage;
+use Illuminate\Support\Facades\Storage;
 
 class DocumentResource extends Resource
 {
@@ -47,6 +47,21 @@ class DocumentResource extends Resource
                     ->required()
                     ->preserveFilenames() // Сохранять оригинальное имя файла
                     ->maxSize(10240), // Ограничение 10МБ
+                    ->afterStateHydrated(function (FileUpload $component, $state) {
+                        if ($state) {
+                            try {
+                                if (!Storage::disk('s3')->exists($state)) {
+                                    $component->state(null);
+                                }
+                            } catch (\Throwable $e) {
+                                \Log::warning('S3 exists check failed during form hydration', [
+                                    'path' => $state,
+                                    'error' => $e->getMessage(),
+                                ]);
+                                $component->state(null);
+                            }
+                        }
+                    }),
 
                 Select::make('allowed_roles')
                     ->label('Доступно для ролей')
