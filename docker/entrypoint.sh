@@ -14,6 +14,15 @@ mkdir -p /var/www/storage/logs
 # Fix ownership for www-data (fpm user)
 chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache 2>/dev/null || true
 
+# Publish Filament and Livewire assets (needed for admin panel JS/CSS)
+echo "Publishing Filament and Livewire assets..."
+php artisan vendor:publish --tag=filament-assets --force --quiet || true
+php artisan vendor:publish --tag=livewire:assets --force --quiet || true
+echo "Assets published."
+
+# Fix ownership again for public (assets)
+chown -R www-data:www-data /var/www/public 2>/dev/null || true
+
 # Optional: clear config cache in prod (safe)
 # php /var/www/artisan config:clear || true
 
