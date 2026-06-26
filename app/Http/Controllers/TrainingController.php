@@ -193,4 +193,40 @@ class TrainingController extends Controller
 
         return back();
     }
+
+    /**
+     * Admin-only serve for training material files by path (for FileUpload preview in form).
+     * Proxies from MinIO so browser can fetch without CORS/private address issues.
+     */
+    public function adminServeTrainingMaterial()
+    {
+        $path = request('path');
+        if (empty($path)) {
+            abort(404);
+        }
+
+        $user = auth()->user();
+        $userRole = strtolower((string)($user?->role->value ?? $user?->role));
+
+        if (!in_array($userRole, ['super_admin', 'admin'])) {
+            abort(403);
+        }
+
+        $disk = \Illuminate\Support\Facades\Storage::disk('s3');
+
+        if (!$disk->exists($path)) {
+            abort(404, 'Файл не найден');
+        }
+
+        $filename = basename($path);
+        $mime = $disk->mimeType($path) ?: ($path ? (str_contains($path, 'video') ? 'video/mp4' : 'audio/mpeg') : 'application/octet-stream');
+
+        return $disk->response($path, $filename, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="' . addslashes($filename) . '"',
+            'Accept-Ranges' => 'bytes',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
 }

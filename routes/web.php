@@ -151,6 +151,11 @@ Route::middleware(['auth', CheckUserExistence::class, CheckDeviceBinding::class,
     Route::get('/admin/serve-document', [DocumentController::class, 'adminServeDocument'])
         ->name('admin.documents.serve')
         ->middleware('signed');
+
+    // Admin proxy for training material audio/video files in the form (to avoid direct MinIO from browser)
+    Route::get('/admin/serve-training-material', [TrainingController::class, 'adminServeTrainingMaterial'])
+        ->name('admin.training-materials.serve')
+        ->middleware('signed');
     /*
     |--------------------------------------------------------------------------
     | Quiz

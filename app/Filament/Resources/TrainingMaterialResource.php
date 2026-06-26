@@ -70,7 +70,28 @@ class TrainingMaterialResource extends Resource
                     ->maxSize(150 * 1024) // 150 MB
                     ->required(fn (Forms\Get $get) => in_array($get('type'), ['video', 'audio']))
                     ->hidden(fn (Forms\Get $get) => $get('type') === 'text')
-                    ->helperText('Файлы загружаются приватно. Доступ предоставляется только через временные подписанные ссылки (максимальная защита от скачивания).'),
+                    ->helperText('Файлы загружаются приватно. Доступ предоставляется только через временные подписанные ссылки (максимальная защита от скачивания).')
+                    ->getUploadedFileUsing(function (BaseFileUpload $component, string $file, string | array | null $storedFileNames): ?array {
+                        $disk = Storage::disk('s3');
+                        if (! $disk->exists($file)) {
+                            return null;
+                        }
+
+                        // Use signed proxy URL (browser fetchable, same origin, temporary)
+                        // Avoids direct MinIO (CORS / private address space / AccessDenied)
+                        $url = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                            'admin.training-materials.serve',
+                            now()->addMinutes(15),
+                            ['path' => $file]
+                        );
+
+                        return [
+                            'name' => ($component->isMultiple() ? ($storedFileNames[$file] ?? null) : $storedFileNames) ?? basename($file),
+                            'size' => $disk->size($file),
+                            'type' => $disk->mimeType($file),
+                            'url' => $url,
+                        ];
+                    }),
 
                 Forms\Components\TextInput::make('file_name')
                     ->label('Имя файла (для отображения)')
