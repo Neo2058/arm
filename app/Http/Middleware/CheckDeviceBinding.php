@@ -26,7 +26,8 @@ class CheckDeviceBinding
                 $request->is('api/device/register*') ||
                 $request->is('barrier*') ||
                 $request->is('api/barrier/verify*') ||
-                $request->is('logout')
+                $request->is('logout') ||
+                $request->is('admin/serve-document')
             ) {
                 return $next($request);
             }

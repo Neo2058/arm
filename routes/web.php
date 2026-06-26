@@ -137,12 +137,20 @@ Route::middleware(['auth', CheckUserExistence::class, CheckDeviceBinding::class,
     Route::get('/api/documents/{document}/click', [DocumentController::class, 'show']);
 
     // Protected file serving for viewing only (inline, no easy download)
+    // Use temporary signed URL for the link
     Route::get('/documents/{document}/file', [DocumentController::class, 'serveFile'])
-        ->name('documents.file');
+        ->name('documents.file')
+        ->middleware('signed');
 
     // Download route - for admins OK, for regular users - violation log + alert
     Route::get('/documents/{document}/download', [DocumentController::class, 'downloadFile'])
         ->name('documents.download');
+
+    // Admin-only serve by path for the FileUpload UI previews (fetchable from browser)
+    // Use temporary signed URL
+    Route::get('/admin/serve-document', [DocumentController::class, 'adminServeDocument'])
+        ->name('admin.documents.serve')
+        ->middleware('signed');
     /*
     |--------------------------------------------------------------------------
     | Quiz
@@ -202,6 +210,15 @@ Route::middleware(['auth', CheckUserExistence::class, CheckDeviceBinding::class,
         // Шаблонные страницы для медиа (video и audio)
         Route::get('/video/{material}', [TrainingController::class, 'showVideo'])->name('training.video');
         Route::get('/audio/{material}', [TrainingController::class, 'showAudio'])->name('training.audio');
+
+        // Protected streaming routes using temporary signed links (for <video>/<audio> src)
+        // These proxy through app for inline playback and protection
+        Route::get('/video/{material}/stream', [TrainingController::class, 'streamVideo'])
+            ->name('training.video.stream')
+            ->middleware('signed');
+        Route::get('/audio/{material}/stream', [TrainingController::class, 'streamAudio'])
+            ->name('training.audio.stream')
+            ->middleware('signed');
 
         // Комментарии и реакции (архитектура заложена)
         Route::post('/{material}/comment', [TrainingController::class, 'storeComment'])->name('training.comment.store');

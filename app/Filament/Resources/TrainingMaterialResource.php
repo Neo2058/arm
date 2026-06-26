@@ -62,8 +62,8 @@ class TrainingMaterialResource extends Resource
                     ->disk('s3')
                     ->directory('training-materials')
                     // ВАЖНО: НЕ используем visibility('public')!
-                    // Файлы должны оставаться приватными. Доступ только через temporaryUrl().
-                    // Note: temporaryUrl calls are wrapped in try/catch in views if needed.
+                    // Файлы приватные. Доступ через временные подписанные ссылки на прокси (через приложение).
+                    // getUploadedFileUrlUsing возвращает signed route к stream.
                     ->acceptedFileTypes([
                         'video/mp4', 'video/quicktime', 'video/webm',
                         'audio/mpeg', 'audio/mp4', 'audio/ogg',
@@ -71,7 +71,19 @@ class TrainingMaterialResource extends Resource
                     ->maxSize(150 * 1024) // 150 MB
                     ->required(fn (Forms\Get $get) => in_array($get('type'), ['video', 'audio']))
                     ->hidden(fn (Forms\Get $get) => $get('type') === 'text')
-                    ->helperText('Файлы загружаются приватно. Доступ предоставляется только через временные подписанные ссылки (максимальная защита от скачивания).'),
+                    ->helperText('Файлы загружаются приватно. Доступ предоставляется только через временные подписанные ссылки (максимальная защита от скачивания).')
+                    ->getUploadedFileUrlUsing(function (string $file, $component): ?string {
+                        if (empty($file)) {
+                            return null;
+                        }
+                        $record = $component?->getRecord();
+                        if ($record instanceof \App\Models\TrainingMaterial) {
+                            // Use the model's signed stream URL (proxy through app, same as documents)
+                            // This makes the URL fetchable in browser and uses temporary signed links
+                            return $record->getFileUrlAttribute();
+                        }
+                        return null;
+                    }),
 
                 Forms\Components\TextInput::make('file_name')
                     ->label('Имя файла (для отображения)')

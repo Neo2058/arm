@@ -38,7 +38,8 @@ class CheckDynamicBarrier
             $request->is('api/barrier/verify*') ||
             $request->is('device-register*') ||
             $request->is('api/device/register*') ||
-            $request->is('logout')
+            $request->is('logout') ||
+            $request->is('admin/serve-document')
         ) {
             return $next($request);
         }

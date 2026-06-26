@@ -49,7 +49,7 @@ class DocumentController extends Controller
                 'category_key' => $rawCategory,
                 'category_name' => $categoryName,
                 'updatedAt' => $document->updated_at?->format('d.m.Y'),
-                'url' => route('documents.file', $document->id),
+                'url' => \Illuminate\Support\Facades\URL::temporarySignedRoute('documents.file', now()->addMinutes(30), $document->id),
                 'quiz' => $document->quiz ? [
                     'id' => $document->quiz->id,
                     'title' => $document->quiz->title,
@@ -100,7 +100,7 @@ class DocumentController extends Controller
 
         // 2. Возвращаем защищённую ссылку на просмотр через приложение (inline, с проверкой)
         // Фронтенд должен использовать эту ссылку для просмотра (не для скачивания)
-        $url = route('documents.file', $document->id);
+        $url = \Illuminate\Support\Facades\URL::temporarySignedRoute('documents.file', now()->addMinutes(30), $document->id);
 
         // 3. Возвращаем JSON (если React запрашивает ссылку по клику)
         // или отдельный Blade-вид
@@ -124,7 +124,7 @@ class DocumentController extends Controller
         foreach ($quiz->questions as $question) {
             foreach ($question->references as $ref) {
                 if ($ref->document && !isset($preSignedUrls[$ref->document_id])) {
-                    $preSignedUrls[$ref->document_id] = route('documents.file', $ref->document_id);
+                    $preSignedUrls[$ref->document_id] = \Illuminate\Support\Facades\URL::temporarySignedRoute('documents.file', now()->addMinutes(60), $ref->document_id);
                 }
             }
         }
@@ -292,6 +292,41 @@ class DocumentController extends Controller
         return $disk->response($path, $filename, [
             'Content-Type' => $mime,
             'Content-Disposition' => 'attachment; filename="' . addslashes($filename) . '"',
+        ]);
+    }
+
+    /**
+     * Serve document file for admin FileUpload UI (by path).
+     * Used to provide fetchable URL for the form previews without direct S3 links.
+     */
+    public function adminServeDocument()
+    {
+        $path = request('path');
+        if (empty($path)) {
+            abort(404);
+        }
+
+        // Admin only
+        $user = auth()->user();
+        if (!$user || !in_array(strtolower((string)($user->role->value ?? $user->role)), ['super_admin', 'admin'])) {
+            abort(403);
+        }
+
+        $disk = Storage::disk('s3');
+        if (!$disk->exists($path)) {
+            abort(404, 'Файл не найден');
+        }
+
+        $filename = basename($path);
+        $mime = $disk->mimeType($path) ?: 'application/octet-stream';
+
+        return $disk->response($path, $filename, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="' . addslashes($filename) . '"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 }

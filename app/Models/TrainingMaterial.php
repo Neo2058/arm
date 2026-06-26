@@ -57,10 +57,11 @@ class TrainingMaterial extends Model
      * @param int $minutes Срок действия ссылки в минутах. По умолчанию 15 минут.
      */
     /**
-     * Генерирует временную подписанную ссылку (presigned URL).
-     * Это основной и единственный способ доступа к видео/аудио (по требованиям безопасности проекта).
+     * Генерирует временную подписанную ссылку на потоковое воспроизведение через приложение.
+     * Использует signed route + прокси для защиты (inline, no direct S3).
+     * Это обеспечивает временную ссылку и усложняет скачивание.
      *
-     * @param int $minutes Время жизни ссылки. Рекомендуется 10-20 минут для медиа.
+     * @param int $minutes Время жизни ссылки.
      */
     public function getTemporaryUrl(int $minutes = 15): ?string
     {
@@ -69,16 +70,14 @@ class TrainingMaterial extends Model
         }
 
         try {
-            return \Storage::disk('s3')->temporaryUrl(
-                $this->file_path,
+            $routeName = $this->type === 'video' ? 'training.video.stream' : 'training.audio.stream';
+            return \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                $routeName,
                 now()->addMinutes($minutes),
-                [
-                    'ResponseContentDisposition' => 'inline',
-                    'ResponseCacheControl'       => 'no-store, no-cache, must-revalidate, max-age=0',
-                ]
+                $this
             );
         } catch (\Throwable $e) {
-            \Log::warning('S3 temporaryUrl failed for TrainingMaterial', [
+            \Log::warning('Failed to generate stream URL for TrainingMaterial', [
                 'id' => $this->id,
                 'file_path' => $this->file_path,
                 'error' => $e->getMessage(),
@@ -88,9 +87,8 @@ class TrainingMaterial extends Model
     }
 
     /**
-     * Аксессор для обратной совместимости.
-     * Всегда отдаёт временную ссылку (15 минут).
-     * Используется в Blade-шаблонах видео/аудио.
+     * Аксессор для Blade ({{ $material->file_url }}).
+     * Возвращает временную подписанную ссылку на стрим (15 мин).
      */
     public function getFileUrlAttribute(): ?string
     {

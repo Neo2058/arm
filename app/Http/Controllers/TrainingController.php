@@ -90,6 +90,63 @@ class TrainingController extends Controller
     }
 
     /**
+     * Stream video through the app (protected, inline, using signed temp link).
+     * This hides direct S3 URLs and allows logging/protection.
+     */
+    public function streamVideo(TrainingMaterial $material)
+    {
+        $this->authorizeMaterial($material, 'video');
+
+        return $this->streamMedia($material);
+    }
+
+    /**
+     * Stream audio through the app.
+     */
+    public function streamAudio(TrainingMaterial $material)
+    {
+        $this->authorizeMaterial($material, 'audio');
+
+        return $this->streamMedia($material);
+    }
+
+    private function streamMedia(TrainingMaterial $material)
+    {
+        $disk = \Illuminate\Support\Facades\Storage::disk('s3');
+        $path = $material->file_path;
+
+        if (empty($path) || !$disk->exists($path)) {
+            abort(404, 'Файл не найден');
+        }
+
+        // Log the view
+        \App\Models\ActionLog::log('training_material_viewed', [
+            'material_id' => $material->id,
+            'title' => $material->title,
+            'type' => $material->type,
+        ]);
+
+        // Also to ClickHouse
+        \App\Services\ClickHouseService::log('training_material_viewed', $material->id, [
+            'title' => $material->title,
+            'type' => $material->type,
+        ]);
+
+        $filename = $material->file_name ?: basename($path);
+        $mime = $material->mime_type ?: $disk->mimeType($path) ?: ($material->type === 'video' ? 'video/mp4' : 'audio/mpeg');
+
+        return $disk->response($path, $filename, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="' . addslashes($filename) . '"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+            'X-Content-Type-Options' => 'nosniff',
+            'Accept-Ranges' => 'bytes',  // for video seeking
+        ]);
+    }
+
+    /**
      * Добавить комментарий к материалу
      */
     public function storeComment(Request $request, TrainingMaterial $material)
