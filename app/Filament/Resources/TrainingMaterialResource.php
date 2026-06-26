@@ -63,7 +63,7 @@ class TrainingMaterialResource extends Resource
                     ->directory('training-materials')
                     // ВАЖНО: НЕ используем visibility('public')!
                     // Файлы приватные. Доступ через временные подписанные ссылки на прокси (через приложение).
-                    // getUploadedFileUrlUsing возвращает signed route к stream.
+                    // getUploadedFileUrlUsing использует модель для signed stream URL.
                     ->acceptedFileTypes([
                         'video/mp4', 'video/quicktime', 'video/webm',
                         'audio/mpeg', 'audio/mp4', 'audio/ogg',
@@ -72,15 +72,19 @@ class TrainingMaterialResource extends Resource
                     ->required(fn (Forms\Get $get) => in_array($get('type'), ['video', 'audio']))
                     ->hidden(fn (Forms\Get $get) => $get('type') === 'text')
                     ->helperText('Файлы загружаются приватно. Доступ предоставляется только через временные подписанные ссылки (максимальная защита от скачивания).')
-                    ->getUploadedFileUrlUsing(function (string $file, $component): ?string {
-                        if (empty($file)) {
+                    ->getUploadedFileUrlUsing(function ($file = null, $component = null): ?string {
+                        if (blank($file)) {
                             return null;
                         }
-                        $record = $component?->getRecord();
-                        if ($record instanceof \App\Models\TrainingMaterial) {
-                            // Use the model's signed stream URL (proxy through app, same as documents)
-                            // This makes the URL fetchable in browser and uses temporary signed links
-                            return $record->getFileUrlAttribute();
+                        try {
+                            $record = $component?->getRecord();
+                            if ($record instanceof \App\Models\TrainingMaterial && $record->exists) {
+                                // Use the model's signed stream URL (proxy through app, same as documents)
+                                // This makes the URL fetchable in browser and uses temporary signed links
+                                return $record->getFileUrlAttribute();
+                            }
+                        } catch (\Throwable $e) {
+                            return null;
                         }
                         return null;
                     }),
