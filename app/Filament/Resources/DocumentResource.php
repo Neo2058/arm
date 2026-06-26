@@ -46,19 +46,7 @@ class DocumentResource extends Resource
                     ->acceptedFileTypes(['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
                     ->required()
                     ->preserveFilenames() // Сохранять оригинальное имя файла
-                    ->maxSize(10240) // Ограничение 10МБ
-                    ->getUploadedFileUrlUsing(function (string $file): ?string {
-                        // Provide a browser-fetchable temporary signed URL via the admin proxy route
-                        // This prevents "Failed to fetch" and adds temporary link for the UI preview
-                        if (empty($file)) {
-                            return null;
-                        }
-                        return \Illuminate\Support\Facades\URL::temporarySignedRoute(
-                            'admin.documents.serve',
-                            now()->addMinutes(30),
-                            ['path' => $file]
-                        );
-                    }),
+                    ->maxSize(10240), // Ограничение 10МБ
 
                 Select::make('allowed_roles')
                     ->label('Доступно для ролей')
