@@ -25,4 +25,17 @@ class VerifyCsrfToken extends Middleware
         'livewire/update',
         'livewire/upload-file',
     ];
+
+    /**
+     * Determine if the request has a valid signature or is a Livewire request.
+     * Extra safeguard using the X-Livewire header that Livewire always sends.
+     */
+    protected function inExceptArray($request)
+    {
+        if ($request->hasHeader('X-Livewire')) {
+            return true;
+        }
+
+        return parent::inExceptArray($request);
+    }
 }

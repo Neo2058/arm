@@ -5,10 +5,12 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\TrainingMaterialResource\Pages;
 use App\Models\TrainingMaterial;
 use Filament\Forms;
+use Filament\Forms\Components\BaseFileUpload;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Storage;
 
 class TrainingMaterialResource extends Resource
 {
@@ -71,7 +73,8 @@ class TrainingMaterialResource extends Resource
                     ->required(fn (Forms\Get $get) => in_array($get('type'), ['video', 'audio']))
                     ->hidden(fn (Forms\Get $get) => $get('type') === 'text')
                     ->helperText('Файлы загружаются приватно. Доступ предоставляется только через временные подписанные ссылки (максимальная защита от скачивания).')
-                    ->getUploadedFileUsing(function (BaseFileUpload $component, string $file, string | array | null $storedFileNames): ?array {
+                    ->getUploadedFileUsing(function (BaseFileUpload $component, $file, string | array | null $storedFileNames): ?array {
+                        $file = (string) $file;
                         $disk = Storage::disk('s3');
                         if (! $disk->exists($file)) {
                             return null;

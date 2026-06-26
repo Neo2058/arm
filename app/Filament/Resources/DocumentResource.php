@@ -49,7 +49,8 @@ class DocumentResource extends Resource
                     ->preserveFilenames() // Сохранять оригинальное имя файла
                     ->maxSize(10240) // Ограничение 10МБ
                     // Provide browser-fetchable preview URL via our signed admin proxy (prevents direct MinIO fetch errors / 419 related UI issues)
-                    ->getUploadedFileUsing(function (BaseFileUpload $component, string $file, string | array | null $storedFileNames): ?array {
+                    ->getUploadedFileUsing(function (BaseFileUpload $component, $file, string | array | null $storedFileNames): ?array {
+                        $file = (string) $file;
                         $disk = Storage::disk('s3');
                         if (! $disk->exists($file)) {
                             return null;

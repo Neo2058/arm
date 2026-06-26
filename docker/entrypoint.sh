@@ -23,8 +23,10 @@ echo "Assets published."
 # Fix ownership again for public (assets)
 chown -R www-data:www-data /var/www/public 2>/dev/null || true
 
-# Optional: clear config cache in prod (safe)
-# php /var/www/artisan config:clear || true
+# Clear caches so config, routes, and Livewire settings pick up .env / compose changes (safe on start)
+php artisan config:clear --quiet || true
+php artisan route:clear --quiet || true
+php artisan view:clear --quiet || true
 
 echo "Storage dirs ready."
 
