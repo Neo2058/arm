@@ -11,6 +11,11 @@ class CheckDeviceBinding
 {
     public function handle(Request $request, Closure $next)
     {
+        // Never run device checks on Livewire/Filament AJAX (can cause redirects/419 during component updates and file uploads)
+        if ($request->is('livewire*') || $request->is('filament*') || $request->routeIs('livewire.*')) {
+            return $next($request);
+        }
+
         if (Auth::check()) {
             $user = Auth::user();
             $role = strtolower((string)($user->role->value ?? $user->role));
@@ -27,7 +32,8 @@ class CheckDeviceBinding
                 $request->is('barrier*') ||
                 $request->is('api/barrier/verify*') ||
                 $request->is('logout') ||
-                $request->is('admin/serve-document')
+                $request->is('admin/serve-document') ||
+                $request->is('admin/serve-training-material')
             ) {
                 return $next($request);
             }

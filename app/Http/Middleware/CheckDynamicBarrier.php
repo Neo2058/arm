@@ -19,6 +19,12 @@ class CheckDynamicBarrier
             return $next($request);
         }
 
+        // Never run barrier/device checks during Livewire updates or Filament component lifecycle (file uploads etc).
+        // These are pure AJAX; a redirect here breaks Livewire and causes 419 / reload loops.
+        if ($request->is('livewire*') || $request->is('filament*') || $request->routeIs('livewire.*')) {
+            return $next($request);
+        }
+
         $user = Auth::user();
         $role = strtolower((string)($user->role->value ?? $user->role));
 
@@ -39,7 +45,8 @@ class CheckDynamicBarrier
             $request->is('device-register*') ||
             $request->is('api/device/register*') ||
             $request->is('logout') ||
-            $request->is('admin/serve-document')
+            $request->is('admin/serve-document') ||
+            $request->is('admin/serve-training-material')
         ) {
             return $next($request);
         }

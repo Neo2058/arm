@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\DocumentResource\Pages;
 use App\Models\Document;
+use Filament\Forms\Components\BaseFileUpload;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -46,7 +47,27 @@ class DocumentResource extends Resource
                     ->acceptedFileTypes(['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
                     ->required()
                     ->preserveFilenames() // Сохранять оригинальное имя файла
-                    ->maxSize(10240), // Ограничение 10МБ
+                    ->maxSize(10240) // Ограничение 10МБ
+                    // Provide browser-fetchable preview URL via our signed admin proxy (prevents direct MinIO fetch errors / 419 related UI issues)
+                    ->getUploadedFileUsing(function (BaseFileUpload $component, string $file, string | array | null $storedFileNames): ?array {
+                        $disk = Storage::disk('s3');
+                        if (! $disk->exists($file)) {
+                            return null;
+                        }
+
+                        $url = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                            'admin.documents.serve',
+                            now()->addMinutes(15),
+                            ['path' => $file]
+                        );
+
+                        return [
+                            'name' => ($component->isMultiple() ? ($storedFileNames[$file] ?? null) : $storedFileNames) ?? basename($file),
+                            'size' => $disk->size($file),
+                            'type' => $disk->mimeType($file),
+                            'url' => $url,
+                        ];
+                    }),
 
                 Select::make('allowed_roles')
                     ->label('Доступно для ролей')

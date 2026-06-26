@@ -10,6 +10,11 @@ class CheckUserExistence
 {
     public function handle(Request $request, Closure $next)
     {
+        // Never interfere with Livewire updates or Filament internal calls (prevents 419 / session destroy during AJAX)
+        if ($request->is('livewire*') || $request->is('filament*') || $request->routeIs('livewire.*')) {
+            return $next($request);
+        }
+
         // Проверяем только авторизованных пользователей
         if (Auth::check()) {
             $user = Auth::user();

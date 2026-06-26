@@ -61,6 +61,12 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            // Ensure CSRF token is always present in <head> for Livewire/Filament AJAX (file uploads etc).
+            // Prevents some 419 "page expired" cases when the embedded Livewire token gets out of sync.
+            ->renderHook(
+                'panels::head.start',
+                fn () => '<meta name="csrf-token" content="' . csrf_token() . '">'
+            );
     }
 }
