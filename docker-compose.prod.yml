@@ -19,9 +19,16 @@ services:
       # Force safe session cookies for HTTP-only deployment (no HTTPS yet).
       # If SESSION_SECURE_COOKIE=true in your .env, cookies won't be sent on HTTP POSTs -> 419 on Livewire.
       - SESSION_SECURE_COOKIE=false
-      - SESSION_DOMAIN=
+      # Use explicit domain (with leading dot) for reliability with punycode/IDN hostnames.
+      # This helps ensure the session cookie is sent on all Livewire POSTs (update + upload-file).
+      - SESSION_DOMAIN=.xn---15-7edz.xn--p1ai
       - SESSION_SAME_SITE=lax
       - SESSION_LIFETIME=120
+      # Use database for sessions in prod to avoid any redis locking/concurrency issues
+      # during rapid Livewire updates + file uploads (upload-file + follow-up update).
+      # Redis is still used for cache/queue.
+      - SESSION_DRIVER=database
+      - SESSION_CONNECTION=pgsql
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_DATABASE=${DB_DATABASE}
