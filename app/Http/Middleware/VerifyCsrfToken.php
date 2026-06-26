@@ -17,6 +17,10 @@ class VerifyCsrfToken extends Middleware
      * - The component snapshot + auth already provide strong protection.
      */
     protected $except = [
+        // Livewire internal endpoints — these commonly cause 419 loops in Filament + nginx + file uploads
+        // because of how signed upload URLs + large snapshots + session work.
+        // Protection is still provided by: session cookie (auth), Livewire snapshot encryption,
+        // and the hasValidSignature() check on upload-file.
         'livewire/*',
         'livewire/update',
         'livewire/upload-file',
