@@ -117,14 +117,14 @@ const Carousel = ({ role }) => {
         }
     }
     return (
-        <div className='flex pt-20 items-center justify-center flex-col gap-2 md:gap-4 bg-black py-24 w-screen h-screen overflow-x-hidden'>
-            <div className='flex pb-64 flex-col gap-2 text-center'>
+        <div className='flex pt-6 md:pt-10 items-center justify-center flex-col gap-2 md:gap-4 bg-black py-6 md:py-10 w-screen h-screen overflow-x-hidden overflow-y-hidden'>
+            <div className='flex pb-6 md:pb-8 flex-col gap-1 md:gap-2 text-center'>
                 <h3 className='text-5xl lg:text-8xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-blue-600'>Главное меню</h3>
                 <p className='text-gray-300 text-[16px] md:text-[18px]'>Выберите раздел</p>
             </div>
 
             <div
-                className="relative w-full flex justify-center items-center overflow-visible min-h-[220px] sm:min-h-[300px] md:min-h-[360px] lg:min-h-[440px] touch-pan-y"
+                className="relative w-full flex justify-center items-center overflow-visible min-h-[200px] sm:min-h-[280px] md:min-h-[320px] lg:min-h-[400px] touch-pan-y"
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
             >
@@ -142,16 +142,16 @@ const Carousel = ({ role }) => {
                 ))}
             </div>
 
-            <div className='flex flex-row gap-6 pb-12 z-20'>
+            <div className='flex flex-row gap-6 z-20 mt-4 md:mt-6'>
                 <button
-                    className='text-white mt-48 bg-blue-500 cursor-pointer rounded-[12px] py-2 px-4'
+                    className='text-white bg-blue-500 cursor-pointer rounded-[12px] py-2 px-4'
                     onClick={() => handleBack(1)}
                     aria-label="Previous"
                 >
                     <StepBack />
                 </button>
                 <button
-                    className='text-white mt-48 bg-blue-500 cursor-pointer rounded-[12px] py-2 px-4'
+                    className='text-white bg-blue-500 cursor-pointer rounded-[12px] py-2 px-4'
                     onClick={() => handleNext(1)}
                     aria-label="Next"
                 >

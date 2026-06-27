@@ -27,7 +27,7 @@ const InnerCard = ({id, src, name, variant, handleClick, details}) => {
                 backgroundImage: `url(${src})`
             }}
             className='rounded-[24px] xs:rounded-[30px] md:rounded-[40px]
-           mt-6 md:mt-10 lg:mt-0
+           mt-2 md:mt-4 lg:mt-0
            absolute cursor-pointer
            /* ШИРИНА: На мобилках берем 86% экрана, чтобы были видны карточки сзади, далее по сетке */
            w-[86%] sm:w-[450px] md:w-[600px] lg:w-[800px]
