@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="@apply box-border m-0 p-0" lang="en">
+<html class="@apply box-border m-0 p-0" lang="en" style="overflow-x: hidden;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"
@@ -18,7 +18,7 @@
         </style>
     @endif
 </head>
-<body>
+<body style="overflow-x: hidden; overscroll-behavior-x: none; touch-action: pan-y;">
     <div id="carousel-menu" data-role="{{ Auth::user()->role }}"></div>
 
     <!-- Модалка всегда в DOM, изначально скрыта. Показывается только сразу после логина -->

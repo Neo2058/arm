@@ -1,10 +1,59 @@
 import { imagesArray, imageVariants, positions } from './constants.index.js'
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import InnerCard from './InnerCard'
 import { StepBack, StepForward } from 'lucide-react'
 
 const Carousel = ({ role }) => {
     const [positionIndexes, setPositionIndexes] = useState([0, 1, 2, 3, 4, 5, 6])
+
+    const touchStartX = useRef(0)
+
+    const handleTouchStart = (e) => {
+        if (e.touches.length === 1) {
+            touchStartX.current = e.touches[0].clientX
+        }
+    }
+
+    const handleTouchEnd = (e) => {
+        if (e.changedTouches.length !== 1) return
+        const touchEndX = e.changedTouches[0].clientX
+        const deltaX = touchEndX - touchStartX.current
+        const threshold = 70 // minimum swipe distance in pixels
+
+        if (Math.abs(deltaX) > threshold) {
+            if (deltaX > 0) {
+                // Swiped right → previous
+                handleBack(1)
+            } else {
+                // Swiped left → next
+                handleNext(1)
+            }
+        }
+    }
+
+    // Prevent the entire page from horizontally panning on mobile (revealing white bg)
+    // and allow our swipe handler to control the menu instead.
+    useEffect(() => {
+        const htmlEl = document.documentElement
+        const bodyEl = document.body
+
+        const prevHtml = htmlEl.style.overflowX
+        const prevBody = bodyEl.style.overflowX
+        const prevOverscroll = bodyEl.style.overscrollBehaviorX
+        const prevTouch = bodyEl.style.touchAction
+
+        htmlEl.style.overflowX = 'hidden'
+        bodyEl.style.overflowX = 'hidden'
+        bodyEl.style.overscrollBehaviorX = 'none'
+        bodyEl.style.touchAction = 'pan-y'
+
+        return () => {
+            htmlEl.style.overflowX = prevHtml
+            bodyEl.style.overflowX = prevBody
+            bodyEl.style.overscrollBehaviorX = prevOverscroll
+            bodyEl.style.touchAction = prevTouch
+        }
+    }, [])
 
     const filterImages = imagesArray.filter(image => {
         if (!image.role) return true;
@@ -68,35 +117,43 @@ const Carousel = ({ role }) => {
         }
     }
     return (
-        <div className='flex pt-20 items-center justify-center flex-col gap-2 md:gap-4 bg-black py-24 w-screen h-screen'>
+        <div className='flex pt-20 items-center justify-center flex-col gap-2 md:gap-4 bg-black py-24 w-screen h-screen overflow-x-hidden'>
             <div className='flex pb-64 flex-col gap-2 text-center'>
                 <h3 className='text-5xl lg:text-8xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-blue-600'>Главное меню</h3>
                 <p className='text-gray-300 text-[16px] md:text-[18px]'>Выберите раздел</p>
             </div>
 
-            {filterImages.map((image, index) => (
-                <InnerCard
-                    key={`${image.name}-${index}`}
-                    id={`tech-${index}`}
-                    src={image.src}
-                    name={image.name}
-                    variant={imageVariants[positions[positionIndexes[index]]]}
-                    imageLogo={image.logo}
-                    handleClick={() => handleClick(index)}
-                    details={image.details}
-                />
-            ))}
+            <div
+                className="relative w-full flex justify-center items-center overflow-visible min-h-[220px] sm:min-h-[300px] md:min-h-[360px] lg:min-h-[440px] touch-pan-y"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+            >
+                {filterImages.map((image, index) => (
+                    <InnerCard
+                        key={`${image.name}-${index}`}
+                        id={`tech-${index}`}
+                        src={image.src}
+                        name={image.name}
+                        variant={imageVariants[positions[positionIndexes[index]]]}
+                        imageLogo={image.logo}
+                        handleClick={() => handleClick(index)}
+                        details={image.details}
+                    />
+                ))}
+            </div>
 
             <div className='flex flex-row gap-6 pb-12 z-20'>
                 <button
                     className='text-white mt-48 bg-blue-500 cursor-pointer rounded-[12px] py-2 px-4'
-                    onClick={() => handleNext(1)}
+                    onClick={() => handleBack(1)}
+                    aria-label="Previous"
                 >
                     <StepBack />
                 </button>
                 <button
                     className='text-white mt-48 bg-blue-500 cursor-pointer rounded-[12px] py-2 px-4'
-                    onClick={() => handleBack(1)}
+                    onClick={() => handleNext(1)}
+                    aria-label="Next"
                 >
                     <StepForward />
                 </button>
