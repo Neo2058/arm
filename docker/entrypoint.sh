@@ -11,7 +11,8 @@ mkdir -p /var/www/storage/framework/views
 mkdir -p /var/www/storage/framework/sessions
 mkdir -p /var/www/storage/logs
 
-# Fix ownership for www-data (fpm user)
+# Fix ownership for www-data (fpm user) — only for directories that PHP needs to WRITE to at runtime.
+# IMPORTANT: Do not chown /var/www/public recursively (see comment below).
 chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache 2>/dev/null || true
 
 # Publish Filament and Livewire assets (needed for admin panel JS/CSS)
@@ -20,8 +21,18 @@ php artisan vendor:publish --tag=filament-assets --force --quiet || true
 php artisan vendor:publish --tag=livewire:assets --force --quiet || true
 echo "Assets published."
 
-# Fix ownership again for public (assets)
-chown -R www-data:www-data /var/www/public 2>/dev/null || true
+# Do NOT recursively chown /var/www/public.
+# This directory is bind-mounted from the host. chown here changes host file ownership,
+# which breaks `npm run build` (Vite needs to rmdir public/build/assets).
+#
+# Only chown runtime-writable dirs (storage, bootstrap/cache).
+# Build output (public/build) should stay owned by the user who runs `npm run build` (usually deploy on host).
+# As long as files have 755/644 permissions, nginx + php-fpm can read them.
+#
+# If you ever need to fix published assets permissions, do it selectively:
+# chown -R www-data:www-data /var/www/public/vendor 2>/dev/null || true
+# find /var/www/public -type d -exec chmod 755 {} + 2>/dev/null || true
+# find /var/www/public -type f -exec chmod 644 {} + 2>/dev/null || true
 
 # Clear caches so config, routes, and Livewire settings pick up .env / compose changes (safe on start)
 php artisan config:clear --quiet || true
