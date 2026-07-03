@@ -66,6 +66,25 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
     const [newExpShift, setNewExpShift] = useState('');
     const [newExpText, setNewExpText] = useState('');
 
+    // === Новый функционал: Пакетный поиск по именам (аналог старой C++ программы) ===
+    const [searchLists, setSearchLists] = useState(() => {
+        const saved = localStorage.getItem('naryad_search_lists');
+        return saved ? JSON.parse(saved) : [];
+    });
+    const [newSearchListName, setNewSearchListName] = useState('');
+    const [newQueryForList, setNewQueryForList] = useState('');
+    const [editingListId, setEditingListId] = useState(null);
+    const [selectedSearchListIds, setSelectedSearchListIds] = useState([]);
+    const [selectedNaryadIdsForSearch, setSelectedNaryadIdsForSearch] = useState([]);
+    const [batchSearchResults, setBatchSearchResults] = useState([]);
+    const [isBatchSearching, setIsBatchSearching] = useState(false);
+    const [pdfTextCache, setPdfTextCache] = useState({}); // cache extracted text {naryadId: [{page, text}, ...]}
+
+    // Auto-clear batch results when selections change
+    useEffect(() => {
+        if (batchSearchResults.length > 0) setBatchSearchResults([]);
+    }, [selectedSearchListIds, selectedNaryadIdsForSearch]);
+
     // Log explanations searches (debounced)
     useEffect(() => {
         if (!expSearch || expSearch.length < 2) return;
@@ -74,6 +93,11 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
         }, 800);
         return () => clearTimeout(t);
     }, [expSearch]);
+
+    // Persist search lists
+    useEffect(() => {
+        localStorage.setItem('naryad_search_lists', JSON.stringify(searchLists));
+    }, [searchLists]);
 
     // Logging helper for user activity (phones / naryads / explanations)
     const logAction = (action, details = {}) => {
@@ -246,6 +270,155 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
         const entry = explanations.find(e => e.id === id);
         setExplanations(prev => prev.filter(e => e.id !== id));
         if (entry) logAction('delete_explanation', { shift: entry.shift });
+    };
+
+    // === Search lists handlers (mimics old C++ "search files") ===
+    const addSearchList = () => {
+        const name = newSearchListName.trim();
+        if (!name) return;
+        const newList = { id: Date.now(), name, queries: [] };
+        setSearchLists(prev => [...prev, newList]);
+        setNewSearchListName('');
+        setEditingListId(newList.id);
+    };
+
+    const deleteSearchList = (id) => {
+        setSearchLists(prev => prev.filter(l => l.id !== id));
+        setSelectedSearchListIds(prev => prev.filter(s => s !== id));
+        if (editingListId === id) setEditingListId(null);
+    };
+
+    const addQueryToList = (listId) => {
+        const q = newQueryForList.trim();
+        if (!q) return;
+        setSearchLists(prev => prev.map(l => {
+            if (l.id !== listId) return l;
+            if (l.queries.includes(q)) return l;
+            return { ...l, queries: [...l.queries, q] };
+        }));
+        setNewQueryForList('');
+    };
+
+    const removeQueryFromList = (listId, q) => {
+        setSearchLists(prev => prev.map(l => {
+            if (l.id !== listId) return l;
+            return { ...l, queries: l.queries.filter(x => x !== q) };
+        }));
+    };
+
+    const toggleSearchList = (id) => {
+        setSelectedSearchListIds(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
+
+    const toggleNaryadForSearch = (id) => {
+        setSelectedNaryadIdsForSearch(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
+
+    // Extract full text from a naryad PDF (client side)
+    const getNaryadText = async (naryad) => {
+        if (pdfTextCache[naryad.id]) return pdfTextCache[naryad.id];
+
+        try {
+            let url = naryad.url;
+            if (!url) {
+                const res = await fetch(`/naryady/${naryad.id}`);
+                const data = await res.json();
+                url = data.url;
+            }
+            if (!window.pdfjsLib) {
+                await new Promise((res, rej) => {
+                    const s = document.createElement('script');
+                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                    s.onload = () => {
+                        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                        res();
+                    };
+                    s.onerror = rej;
+                    document.head.appendChild(s);
+                });
+            }
+            const pdfjs = window.pdfjsLib;
+            const pdf = await pdfjs.getDocument(url).promise;
+            const pages = [];
+            for (let p = 1; p <= pdf.numPages; p++) {
+                const page = await pdf.getPage(p);
+                const content = await page.getTextContent();
+                const text = content.items.map(it => it.str).join(' ');
+                pages.push({ page: p, text });
+            }
+            const result = { title: naryad.title, date: naryad.naryad_date, pages };
+            setPdfTextCache(prev => ({ ...prev, [naryad.id]: result }));
+            return result;
+        } catch (e) {
+            console.error('Text extract failed', e);
+            return null;
+        }
+    };
+
+    // Main batch search - mimics the C++ logic
+    const runBatchSearch = async () => {
+        const lists = searchLists.filter(l => selectedSearchListIds.includes(l.id));
+        const naryadsToSearch = filteredNaryads.filter(n => selectedNaryadIdsForSearch.includes(n.id));
+
+        if (lists.length === 0 || naryadsToSearch.length === 0) {
+            alert('Выберите хотя бы один список поиска и хотя бы один наряд');
+            return;
+        }
+
+        setIsBatchSearching(true);
+        const results = [];
+
+        for (const naryad of naryadsToSearch) {
+            const textData = await getNaryadText(naryad);
+            if (!textData) {
+                results.push({ naryadTitle: naryad.title, error: 'Не удалось извлечь текст' });
+                continue;
+            }
+
+            for (const list of lists) {
+                for (const query of list.queries) {
+                    let foundAny = false;
+                    textData.pages.forEach(pt => {
+                        const lower = pt.text.toLowerCase();
+                        const qlower = query.toLowerCase();
+                        if (lower.includes(qlower)) {
+                            foundAny = true;
+                            // simple context snippet
+                            const idx = lower.indexOf(qlower);
+                            const start = Math.max(0, idx - 40);
+                            const end = Math.min(pt.text.length, idx + query.length + 40);
+                            let snippet = pt.text.substring(start, end);
+                            snippet = snippet.replace(new RegExp(query, 'gi'), '***$&***');
+                            results.push({
+                                naryadTitle: naryad.title,
+                                date: naryad.naryad_date,
+                                listName: list.name,
+                                query,
+                                page: pt.page,
+                                snippet
+                            });
+                        }
+                    });
+                    if (!foundAny) {
+                        results.push({
+                            naryadTitle: naryad.title,
+                            date: naryad.naryad_date,
+                            listName: list.name,
+                            query,
+                            notFound: true
+                        });
+                    }
+                }
+            }
+        }
+
+        setBatchSearchResults(results);
+        setIsBatchSearching(false);
+        logAction('batch_naryad_search', { lists: lists.length, naryads: naryadsToSearch.length });
     };
 
     // Load pdf.js from CDN + PDF (mobile friendly init)
@@ -491,6 +664,134 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
                     </div>
 
                     <div className="text-xs text-orange-400/60 px-1">Свайп в просмотрщике → листание страниц. Поиск внутри PDF работает.</div>
+
+                    {/* ========== НОВЫЙ ПУНКТ: Пакетный поиск по именам (аналог C++ программы) ========== */}
+                    <div className="mt-8 bg-[#0b1018] border border-white/10 rounded-3xl p-5">
+                        <div className="flex items-center gap-2 text-orange-400 font-semibold mb-3">
+                            <Search size={18} /> Поиск по именам в нарядах (как в старой программе на C++)
+                        </div>
+                        <div className="text-xs text-orange-300/70 mb-4">
+                            Добавляйте "списки поиска" (фамилии/ФИО). Выбирайте наряды — получите текстовые результаты с совпадениями.
+                        </div>
+
+                        {/* Управление списками поиска */}
+                        <div className="mb-4">
+                            <div className="flex gap-2 mb-2">
+                                <input
+                                    value={newSearchListName}
+                                    onChange={e => setNewSearchListName(e.target.value)}
+                                    placeholder="Название списка (например Bobrov)"
+                                    className="flex-1 rounded-2xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-orange-400 placeholder:text-orange-300/50"
+                                    onKeyDown={e => e.key === 'Enter' && addSearchList()}
+                                />
+                                <button onClick={addSearchList} className="px-4 py-2 rounded-2xl bg-orange-500 text-white text-sm active:bg-orange-600">+ Список</button>
+                            </div>
+
+                            {searchLists.length > 0 && (
+                                <div className="space-y-2">
+                                    {searchLists.map(list => (
+                                        <div key={list.id} className="bg-white/5 rounded-2xl p-3 text-sm">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="font-medium text-orange-300">{list.name}</span>
+                                                <div className="flex gap-2 text-xs">
+                                                    <button onClick={() => setEditingListId(editingListId === list.id ? null : list.id)} className="text-orange-400 hover:underline">
+                                                        {editingListId === list.id ? 'Закрыть' : 'Добавить'}
+                                                    </button>
+                                                    <button onClick={() => deleteSearchList(list.id)} className="text-red-400 hover:underline">Удалить</button>
+                                                </div>
+                                            </div>
+
+                                            {/* Queries */}
+                                            <div className="flex flex-wrap gap-1 mb-2">
+                                                {list.queries.length === 0 && <span className="text-xs text-orange-300/60">Нет запросов</span>}
+                                                {list.queries.map(q => (
+                                                    <span key={q} className="bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded text-xs flex items-center gap-1">
+                                                        {q}
+                                                        <button onClick={() => removeQueryFromList(list.id, q)} className="hover:text-red-400">×</button>
+                                                    </span>
+                                                ))}
+                                            </div>
+
+                                            {editingListId === list.id && (
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        value={newQueryForList}
+                                                        onChange={e => setNewQueryForList(e.target.value)}
+                                                        placeholder="ФИО или фамилия"
+                                                        className="flex-1 text-xs rounded bg-black/40 border border-white/10 px-2 py-1"
+                                                        onKeyDown={e => { if (e.key === 'Enter') { addQueryToList(list.id); } }}
+                                                    />
+                                                    <button onClick={() => addQueryToList(list.id)} className="text-xs px-3 py-1 bg-white/10 rounded">Добавить</button>
+                                                </div>
+                                            )}
+
+                                            <label className="flex items-center gap-2 mt-2 text-xs cursor-pointer">
+                                                <input type="checkbox" checked={selectedSearchListIds.includes(list.id)} onChange={() => toggleSearchList(list.id)} />
+                                                Использовать в поиске
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Выбор нарядов и запуск */}
+                        <div>
+                            <div className="text-xs font-semibold mb-1 text-orange-400">Выберите наряды для поиска:</div>
+                            <div className="flex gap-2 mb-1 text-xs">
+                                <button onClick={() => setSelectedNaryadIdsForSearch(filteredNaryads.map(n => n.id))} className="px-2 py-0.5 bg-white/10 rounded">Все видимые</button>
+                                <button onClick={() => setSelectedNaryadIdsForSearch([])} className="px-2 py-0.5 bg-white/10 rounded">Сбросить</button>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 max-h-32 overflow-auto mb-3 text-xs">
+                                {filteredNaryads.map(n => (
+                                    <label key={n.id} className="flex items-center gap-1.5 cursor-pointer bg-white/5 px-2 py-1 rounded">
+                                        <input type="checkbox" checked={selectedNaryadIdsForSearch.includes(n.id)} onChange={() => toggleNaryadForSearch(n.id)} />
+                                        <span className="truncate">{n.title} ({n.naryad_date})</span>
+                                    </label>
+                                ))}
+                            </div>
+
+                            <button
+                                onClick={runBatchSearch}
+                                disabled={isBatchSearching || selectedSearchListIds.length === 0 || selectedNaryadIdsForSearch.length === 0}
+                                className="w-full h-11 rounded-2xl bg-orange-500 active:bg-orange-600 text-white font-bold text-sm disabled:opacity-50"
+                            >
+                                {isBatchSearching ? 'Идёт поиск...' : 'ЗАПУСТИТЬ ПОИСК ПО ВЫБРАННЫМ'}
+                            </button>
+
+                            {batchSearchResults.length > 0 && (
+                                <div className="mt-4">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <div className="font-semibold text-sm">Результаты ({batchSearchResults.length})</div>
+                                        <button onClick={() => {
+                                            const txt = batchSearchResults.map(r => {
+                                                if (r.notFound) return `Не найдено: ${r.query} в ${r.naryadTitle}`;
+                                                if (r.error) return `Ошибка: ${r.error}`;
+                                                return `${r.naryadTitle} (стр.${r.page}) [${r.listName}] : ${r.query} → ${r.snippet}`;
+                                            }).join('\n');
+                                            const blob = new Blob([txt], {type: 'text/plain'});
+                                            const url = URL.createObjectURL(blob);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            a.download = 'naryad_search_results.txt';
+                                            a.click();
+                                            URL.revokeObjectURL(url);
+                                        }} className="text-xs underline text-orange-400">Скачать .txt</button>
+                                    </div>
+                                    <div className="max-h-64 overflow-auto text-xs bg-black/40 p-3 rounded space-y-1 font-mono">
+                                        {batchSearchResults.map((r, idx) => (
+                                            <div key={idx} className={r.notFound ? 'text-red-400/70' : ''}>
+                                                {r.error ? r.error :
+                                                r.notFound ? `✗ ${r.query} не найдено в ${r.naryadTitle}` :
+                                                `${r.naryadTitle} стр.${r.page} [${r.listName}]: ${r.snippet}`}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button onClick={() => setBatchSearchResults([])} className="mt-2 text-xs text-orange-400/70 hover:text-orange-400">Очистить результаты</button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
 
