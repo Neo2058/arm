@@ -33,6 +33,8 @@ class DeviceController extends Controller
         $user = Auth::user();
         $deviceKey = $request->input('device_key');
         $deviceName = $request->input('device_name');
+        $userAgent = $request->userAgent();
+        $os = $this->detectOS($userAgent);
 
         // ПРОВЕРКА НА СПАМ: Ищем существующую заявку для этого устройства
         $existingDevice = UserDevice::where('user_id', $user->id)
@@ -52,6 +54,7 @@ class DeviceController extends Controller
             'user_id' => $user->id,
             'device_key' => $deviceKey,
             'device_name' => $deviceName,
+            'os' => $os,
             'is_approved' => false,
         ]);
 
@@ -79,5 +82,17 @@ class DeviceController extends Controller
         );
 
         return back()->with('success', 'Заявка успешно отправлена инструктору. Ожидайте подтверждения доступа.');
+    }
+
+    private function detectOS(string $userAgent): string
+    {
+        $ua = strtolower($userAgent);
+        if (strpos($ua, 'iphone') !== false || strpos($ua, 'ipad') !== false || strpos($ua, 'ipod') !== false) {
+            return 'ios';
+        }
+        if (strpos($ua, 'android') !== false) {
+            return 'android';
+        }
+        return 'other';
     }
 }

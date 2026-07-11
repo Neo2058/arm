@@ -74,9 +74,20 @@ class DocumentController extends Controller
             ->where('is_viewed', false)
             ->count();
 
+        // Get current device OS for viewer choice (ios -> old iframe, android/other -> PDF.js)
+        $deviceOs = 'other';
+        $deviceKey = request()->cookie('device_key');
+        if ($deviceKey) {
+            $device = $user->devices()->where('device_key', $deviceKey)->where('is_approved', true)->first();
+            if ($device && $device->os) {
+                $deviceOs = $device->os;
+            }
+        }
+
         return view('teaching.documents', [
             'groupedDocuments' => $documentsGrouped,
-            'unreadCount' => $unreadResultsCount // <-- Передали во view
+            'unreadCount' => $unreadResultsCount,
+            'deviceOs' => $deviceOs
         ]);
     }
 

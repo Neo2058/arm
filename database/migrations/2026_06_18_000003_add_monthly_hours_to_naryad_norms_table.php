@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('naryad_norms', function (Blueprint $table) {
-            $table->json('monthly_hours')->nullable(); // e.g. {"2026-06": 160, "2026-07": 150}
-        });
+        if (!Schema::hasColumn('naryad_norms', 'monthly_hours')) {
+            Schema::table('naryad_norms', function (Blueprint $table) {
+                $table->json('monthly_hours')->nullable(); // e.g. {"2026-06": 160, "2026-07": 150}
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('naryad_norms', function (Blueprint $table) {
-            $table->dropColumn('monthly_hours');
-        });
+        if (Schema::hasColumn('naryad_norms', 'monthly_hours')) {
+            Schema::table('naryad_norms', function (Blueprint $table) {
+                $table->dropColumn('monthly_hours');
+            });
+        }
     }
 };

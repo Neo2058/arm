@@ -12,6 +12,7 @@ class UserDevice extends Model
         'user_id',
         'device_key',
         'device_name',
+        'os',
         'is_approved',
     ];
 

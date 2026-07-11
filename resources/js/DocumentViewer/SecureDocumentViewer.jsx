@@ -430,7 +430,9 @@ import {
 export default function SecureDocumentViewer({
                                                  categories = [],
                                                  onBack,
+                                                 deviceOs = 'other',
                                              }) {
+    const isIos = deviceOs === 'ios';
 
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [search, setSearch] = useState('');
@@ -948,12 +950,21 @@ export default function SecureDocumentViewer({
                                     </div>
                                 </div>
 
-                                <button
-                                    onClick={() => setSelectedDocument(null)}
-                                    className="rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10"
-                                >
-                                    <X className="h-5 w-5" />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setSelectedDocument(null)}
+                                        className="rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10"
+                                    >
+                                        <X className="h-5 w-5" />
+                                    </button>
+                                    <button 
+                                        onClick={toggleFullscreen} 
+                                        className="rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10"
+                                        title="Полноэкранный режим"
+                                    >
+                                        ⛶
+                                    </button>
+                                </div>
 
                             </div>
 

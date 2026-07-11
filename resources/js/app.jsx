@@ -43,7 +43,10 @@ mountComponent(
 mountComponent(
     'document-viewer',
     SecureDocumentViewer,
-    { categories: window.__DOCUMENTS_TREE__ || [] }
+    { 
+        categories: window.__DOCUMENTS_TREE__ || [],
+        deviceOs: window.__DEVICE_OS__ || 'other'
+    }
 );
 
 mountComponent(
