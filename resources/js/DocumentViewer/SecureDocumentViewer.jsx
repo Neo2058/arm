@@ -631,37 +631,71 @@ export default function SecureDocumentViewer({
         })();
     }, [pdfDoc, currentPage, scale]);
 
-    // Touch swipe for page navigation (similar to NaryadViewer)
+    // Touch swipe + pinch-to-zoom + support for panning the zoomed document
     useEffect(() => {
         const el = pdfContainerRef.current;
         if (!el || !pdfDoc) return;
 
+        let initialDistance = 0;
+        let initialScaleOnPinch = 1;
+        let isPinching = false;
+
+        const getDistance = (t1, t2) => {
+            const dx = t1.clientX - t2.clientX;
+            const dy = t1.clientY - t2.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        };
+
         const onTouchStart = (e) => {
-            touchStartX.current = e.touches[0].clientX;
+            if (e.touches.length === 1) {
+                touchStartX.current = e.touches[0].clientX;
+                isPinching = false;
+            } else if (e.touches.length === 2) {
+                isPinching = true;
+                initialDistance = getDistance(e.touches[0], e.touches[1]);
+                initialScaleOnPinch = scale;
+            }
+        };
+
+        const onTouchMove = (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const distance = getDistance(e.touches[0], e.touches[1]);
+                if (initialDistance > 0) {
+                    const ratio = distance / initialDistance;
+                    const newScale = Math.max(0.5, Math.min(4, initialScaleOnPinch * ratio));
+                    setScale(newScale);
+                }
+            }
+            // When zoomed, the parent overflow-auto will allow panning/scrolling the large canvas
         };
 
         const onTouchEnd = (e) => {
+            if (isPinching) {
+                isPinching = false;
+                return;
+            }
             if (!pdfDoc || e.touches.length > 0) return;
+
             const endX = e.changedTouches[0].clientX;
             const delta = endX - touchStartX.current;
 
-            if (Math.abs(delta) > 60) {
-                if (delta > 0) {
-                    setCurrentPage(p => Math.max(1, p - 1));
-                } else {
-                    setCurrentPage(p => Math.min(numPages, p + 1));
-                }
+            if (Math.abs(delta) > 70 && scale <= 1.4) {
+                if (delta > 0) changePage(-1);
+                else changePage(1);
             }
         };
 
         el.addEventListener('touchstart', onTouchStart, { passive: true });
+        el.addEventListener('touchmove', onTouchMove, { passive: false });
         el.addEventListener('touchend', onTouchEnd, { passive: true });
 
         return () => {
             el.removeEventListener('touchstart', onTouchStart);
+            el.removeEventListener('touchmove', onTouchMove);
             el.removeEventListener('touchend', onTouchEnd);
         };
-    }, [pdfDoc, currentPage, numPages]);
+    }, [pdfDoc, currentPage, scale]);
 
     const changePage = (delta) => {
         setCurrentPage(p => Math.max(1, Math.min(numPages, p + delta)));
@@ -924,15 +958,18 @@ export default function SecureDocumentViewer({
                                     </div>
                                 </div>
 
-                                {/* Canvas */}
+                                {/* Scrollable viewer area.
+                                    When zoomed the canvas becomes larger than the viewport.
+                                    The outer div provides native scroll/pan (wheel + touch drag on mobile).
+                                    This fixes "cannot see content that doesn't fit after zoom". */}
                                 <div
                                     ref={pdfContainerRef}
-                                    className="flex-1 bg-[#111] overflow-auto flex justify-center items-start p-2 touch-none select-none"
+                                    className="flex-1 bg-[#111] overflow-auto p-3 touch-none select-none"
                                     style={{ minHeight: '50vh' }}
                                 >
                                     {isLoadingPdf && <div className="p-8 text-zinc-400 text-sm">Загрузка документа...</div>}
                                     {loadError && <div className="p-4 text-red-400 text-sm">{loadError}</div>}
-                                    <div className="relative">
+                                    <div className="flex justify-center min-w-max min-h-max">
                                         <canvas
                                             ref={canvasRef}
                                             className="shadow-2xl bg-white block"
@@ -943,15 +980,34 @@ export default function SecureDocumentViewer({
                                     </div>
                                 </div>
 
-                                {/* Search matches */}
+                                {/* Beautiful search results list */}
                                 {searchMatches.length > 0 && (
-                                    <div className="p-2 text-xs bg-black/60 border-t border-white/10 max-h-28 overflow-auto">
-                                        {searchMatches.slice(0, 8).map((m, idx) => (
-                                            <div key={idx} onClick={() => setCurrentPage(m.page)} className="cursor-pointer hover:bg-white/10 p-1 flex gap-2 rounded">
-                                                <span className="text-orange-400 shrink-0">стр.{m.page}</span>
-                                                <span className="truncate text-zinc-300">{m.snippet}</span>
-                                            </div>
-                                        ))}
+                                    <div className="border-t border-white/10 bg-zinc-950/80 p-3 max-h-[140px] overflow-auto text-sm">
+                                        <div className="flex items-center justify-between mb-2 px-1 text-orange-400 text-xs font-medium">
+                                            <span>Результаты поиска ({searchMatches.length})</span>
+                                            <button 
+                                                onClick={() => { setDocSearchTerm(''); setSearchMatches([]); }}
+                                                className="text-zinc-400 hover:text-white"
+                                            >
+                                                Очистить
+                                            </button>
+                                        </div>
+                                        <div className="space-y-1">
+                                            {searchMatches.slice(0, 12).map((m, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => setCurrentPage(m.page)}
+                                                    className="w-full text-left px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-xl flex items-start gap-3 text-sm transition-colors"
+                                                >
+                                                    <span className="shrink-0 mt-0.5 px-2 py-0.5 text-[10px] font-mono bg-orange-500/20 text-orange-400 rounded">
+                                                        стр. {m.page}
+                                                    </span>
+                                                    <span className="text-zinc-200 leading-snug line-clamp-2">
+                                                        {m.snippet}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </div>
