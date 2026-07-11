@@ -4,6 +4,9 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
+    build: {
+        chunkSizeWarningLimit: 1000,     // или 800, 1200 — на твой вкус
+    },
     plugins: [
         react(),
         laravel({

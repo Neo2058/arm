@@ -443,6 +443,8 @@ export default function SecureDocumentViewer({
     const [scale, setScale] = useState(1.5);
     const [isLoadingPdf, setIsLoadingPdf] = useState(false);
     const [loadError, setLoadError] = useState(null);
+    const [displayWidth, setDisplayWidth] = useState(0);
+    const [displayHeight, setDisplayHeight] = useState(0);
     const canvasRef = useRef(null);
     const pdfContainerRef = useRef(null);
     const touchStartX = useRef(0);
@@ -620,9 +622,14 @@ export default function SecureDocumentViewer({
                 canvas.width = viewport.width;
                 canvas.height = viewport.height;
 
-                // Explicit style size makes the document itself enlarge/shrink with scale
-                canvas.style.width = `${baseViewport.width * scale}px`;
-                canvas.style.height = `${baseViewport.height * scale}px`;
+                // Explicit style size for visual zoom of the document content
+                const dispW = baseViewport.width * scale;
+                const dispH = baseViewport.height * scale;
+                canvas.style.width = `${dispW}px`;
+                canvas.style.height = `${dispH}px`;
+
+                setDisplayWidth(dispW);
+                setDisplayHeight(dispH);
 
                 await page.render({ canvasContext: ctx, viewport }).promise;
             } catch (err) {
@@ -664,10 +671,29 @@ export default function SecureDocumentViewer({
                 if (initialDistance > 0) {
                     const ratio = distance / initialDistance;
                     const newScale = Math.max(0.5, Math.min(4, initialScaleOnPinch * ratio));
+
+                    // Adjust scroll so the pinch center stays under the fingers (fixes "zooms to one point" on iOS)
+                    const rect = el.getBoundingClientRect();
+                    const centerClientX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+                    const centerClientY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+
+                    const oldScrollLeft = el.scrollLeft;
+                    const oldScrollTop = el.scrollTop;
+
+                    const contentCenterX = oldScrollLeft + centerClientX;
+                    const contentCenterY = oldScrollTop + centerClientY;
+
+                    const scrollRatio = newScale / scale;
+                    const newScrollLeft = contentCenterX * scrollRatio - centerClientX;
+                    const newScrollTop = contentCenterY * scrollRatio - centerClientY;
+
+                    el.scrollLeft = newScrollLeft;
+                    el.scrollTop = newScrollTop;
+
                     setScale(newScale);
                 }
             }
-            // When zoomed, the parent overflow-auto will allow panning/scrolling the large canvas
+            // When zoomed, overflow-auto on parent handles panning
         };
 
         const onTouchEnd = (e) => {
@@ -703,6 +729,24 @@ export default function SecureDocumentViewer({
 
     const changeScale = (delta) => {
         setScale(s => Math.max(0.6, Math.min(3.5, s + delta)));
+    };
+
+    // Fullscreen support - keeps all zoom, nav, search features
+    const toggleFullscreen = () => {
+        const container = pdfContainerRef.current;
+        if (!container) return;
+
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
+        } else {
+            container.requestFullscreen().catch((err) => {
+                console.warn('Fullscreen failed:', err);
+                // Fallback for older browsers or iOS (limited support)
+                if (container.webkitRequestFullscreen) {
+                    container.webkitRequestFullscreen();
+                }
+            });
+        }
     };
 
     const toggleCategory = (name) => {
@@ -956,20 +1000,41 @@ export default function SecureDocumentViewer({
                                         <span className="px-2 tabular-nums w-10 text-center select-none">{Math.round(scale * 100)}%</span>
                                         <button onClick={() => changeScale(0.2)} className="px-2 py-1 active:bg-white/20 rounded-full">+</button>
                                     </div>
+
+                                    {/* Fullscreen - keeps all features (zoom, nav, search, scroll) */}
+                                    <button 
+                                        onClick={toggleFullscreen} 
+                                        className="px-3 py-1 text-xs bg-white/10 hover:bg-white/20 rounded-full active:bg-white/30"
+                                        title="Полноэкранный режим"
+                                    >
+                                        ⛶
+                                    </button>
                                 </div>
 
                                 {/* Scrollable viewer area.
                                     When zoomed the canvas becomes larger than the viewport.
                                     The outer div provides native scroll/pan (wheel + touch drag on mobile).
                                     This fixes "cannot see content that doesn't fit after zoom". */}
+                                {/* Scroll container: allows panning the zoomed document.
+                                    The inner wrapper sizes exactly to the zoomed page so overflow works.
+                                    On iOS we use native scrolling for panning when zoomed. */}
                                 <div
                                     ref={pdfContainerRef}
                                     className="flex-1 bg-[#111] overflow-auto p-3 touch-none select-none"
-                                    style={{ minHeight: '50vh' }}
+                                    style={{ minHeight: '50vh', WebkitOverflowScrolling: 'touch' }}
                                 >
                                     {isLoadingPdf && <div className="p-8 text-zinc-400 text-sm">Загрузка документа...</div>}
                                     {loadError && <div className="p-4 text-red-400 text-sm">{loadError}</div>}
-                                    <div className="flex justify-center min-w-max min-h-max">
+                                    {/* Wrapper sized exactly to the zoomed document so the scroll container can pan it */}
+                                    <div 
+                                        className="mx-auto bg-white/5"
+                                        style={{ 
+                                            width: `${displayWidth || 0}px`, 
+                                            height: `${displayHeight || 0}px`,
+                                            minWidth: displayWidth > 0 ? `${displayWidth}px` : '100%',
+                                            minHeight: displayHeight > 0 ? `${displayHeight}px` : '100%'
+                                        }}
+                                    >
                                         <canvas
                                             ref={canvasRef}
                                             className="shadow-2xl bg-white block"
