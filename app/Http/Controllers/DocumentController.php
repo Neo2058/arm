@@ -210,12 +210,15 @@ class DocumentController extends Controller
             'title' => $document->title,
         ]);
 
-        $filename = basename($path);
-        $mime = $disk->mimeType($path) ?: 'application/octet-stream';
+        $filename = pathinfo($path, PATHINFO_FILENAME) . '.pdf';
+        $mime = 'application/pdf';
 
+        // Force inline display to prevent auto-download on Android and other mobiles.
+        // Use object tag on frontend + these headers.
         return $disk->response($path, $filename, [
             'Content-Type' => $mime,
             'Content-Disposition' => 'inline; filename="' . addslashes($filename) . '"',
+            'Accept-Ranges' => 'bytes',
             'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
             'Pragma' => 'no-cache',
             'Expires' => '0',

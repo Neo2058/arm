@@ -490,16 +490,25 @@ export default function SecureDocumentViewer({
         };
 
         if (selectedDocument) {
-            document.body.style.overflow = 'hidden';
+            // Avoid overflow: hidden — it kills native PDF gestures on iOS.
+            // Use overscroll-behavior instead (less invasive).
+            document.documentElement.style.overscrollBehavior = 'none';
+            document.body.style.overscrollBehavior = 'none';
+            // Some iOS WebKit issues are helped by this too
+            document.body.style.position = 'relative';
         } else {
-            document.body.style.overflow = '';
+            document.documentElement.style.overscrollBehavior = '';
+            document.body.style.overscrollBehavior = '';
+            document.body.style.position = '';
         }
 
         window.addEventListener('keydown', handleEsc);
 
         return () => {
             window.removeEventListener('keydown', handleEsc);
-            document.body.style.overflow = '';
+            document.documentElement.style.overscrollBehavior = '';
+            document.body.style.overscrollBehavior = '';
+            document.body.style.position = '';
         };
 
     }, [selectedDocument]);
@@ -522,7 +531,7 @@ export default function SecureDocumentViewer({
     };
 
     return (
-        <section className="relative min-h-screen overflow-hidden bg-[#0b1018] text-white">
+        <section className={`relative min-h-screen ${selectedDocument ? 'overflow-visible' : 'overflow-hidden'} bg-[#0b1018] text-white`}>
 
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,140,0,0.15),transparent_40%)]" />
 
@@ -708,15 +717,31 @@ export default function SecureDocumentViewer({
 
                             </div>
 
-                            {/* CONTENT - improved for iOS gestures */}
-                            <div className="flex-1 bg-black overflow-hidden" style={{ touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch' }}>
+                            {/* CONTENT - improved for iOS gestures.
+                                Do not use overflow-hidden on the direct parent of the iframe — 
+                                it can break internal PDF scrolling and multi-touch on iOS.
+                            */}
+                            {/* The direct wrapper must not clip or create new stacking context on iOS.
+                                motion.div ancestors with transform can break gestures inside iframe.
+                                We keep overflow visible and touch-action here.
+                            */}
+                            <div className="flex-1 bg-black" style={{ touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch', overflow: 'visible' }}>
 
-                                <iframe
-                                    src={`${selectedDocument.url}#toolbar=0`}
+                                {/* Use <object> instead of <iframe> for better PDF inline display on Android.
+                                    Combined with server headers (inline + application/pdf + accept-ranges),
+                                    this should prevent automatic download and allow viewing inside the protected viewer.
+                                */}
+                                <object
+                                    data={`${selectedDocument.url}#toolbar=0`}
+                                    type="application/pdf"
                                     className="h-full w-full border-none"
                                     title={selectedDocument.title}
                                     style={{ touchAction: 'manipulation' }}
-                                />
+                                >
+                                    <p>Ваш браузер не поддерживает встроенный просмотр PDF.
+                                        <a href={selectedDocument.url} target="_blank" rel="noopener">Открыть в новой вкладке</a>
+                                    </p>
+                                </object>
 
                             </div>
 
