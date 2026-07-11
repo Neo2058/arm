@@ -479,31 +479,70 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
         })();
     }, [pdfDoc, currentPage, scale, pdfSearchTerm]);
 
-    // Touch swipe support for PDF pages (mobile)
+    // Touch swipe support for PDF pages (mobile) + pinch zoom
     useEffect(() => {
         const el = pdfContainerRef.current;
         if (!el) return;
 
+        let initialDistance = 0;
+        let initialScaleOnPinch = 1;
+
+        const getDistance = (t1, t2) => {
+            const dx = t1.clientX - t2.clientX;
+            const dy = t1.clientY - t2.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        };
+
         const onTouchStart = (e) => {
             touchStartX.current = e.touches[0].clientX;
+            if (e.touches.length === 2) {
+                initialDistance = getDistance(e.touches[0], e.touches[1]);
+                initialScaleOnPinch = scale;
+            }
         };
+
+        const onTouchMove = (e) => {
+            if (e.touches.length === 2) {
+                // Pinch zoom
+                e.preventDefault();
+                const distance = getDistance(e.touches[0], e.touches[1]);
+                if (initialDistance > 0) {
+                    const newScale = Math.max(0.5, Math.min(4, initialScaleOnPinch * (distance / initialDistance)));
+                    setScale(newScale);
+                }
+            } else if (e.touches.length === 1) {
+                // Horizontal swipe intent - prevent page scroll
+                const currentX = e.touches[0].clientX;
+                if (Math.abs(currentX - touchStartX.current) > 15) {
+                    e.preventDefault();
+                }
+            }
+        };
+
         const onTouchEnd = (e) => {
+            if (e.touches.length > 0) return; // still pinching or multi
             if (!pdfDoc) return;
+
             const endX = e.changedTouches[0].clientX;
             const delta = endX - touchStartX.current;
-            if (Math.abs(delta) > 55) {
+
+            // Only swipe if not in middle of pinch (small delta after pinch may remain)
+            if (Math.abs(delta) > 60) {
                 if (delta > 0) changePage(-1);
                 else changePage(1);
             }
         };
 
         el.addEventListener('touchstart', onTouchStart, { passive: true });
+        el.addEventListener('touchmove', onTouchMove, { passive: false });
         el.addEventListener('touchend', onTouchEnd, { passive: true });
+
         return () => {
             el.removeEventListener('touchstart', onTouchStart);
+            el.removeEventListener('touchmove', onTouchMove);
             el.removeEventListener('touchend', onTouchEnd);
         };
-    }, [pdfDoc, currentPage]);
+    }, [pdfDoc, currentPage, scale]);
 
     const highlightOnCanvas = (term) => {
         const ctx = window.__pdfCtx;
@@ -1012,7 +1051,7 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
                         </div>
 
                         {/* Canvas area with swipe support */}
-                        <div ref={pdfContainerRef} className="flex-1 overflow-auto bg-[#0a0f17] p-2 sm:p-4 flex justify-center items-start touch-pan-y" style={{ minHeight: '300px' }}>
+                        <div ref={pdfContainerRef} className="flex-1 overflow-auto bg-[#0a0f17] p-2 sm:p-4 flex justify-center items-start touch-none select-none" style={{ minHeight: '300px', touchAction: 'none' }}>
                             {pdfDoc ? (
                                 <canvas ref={canvasRef} className="shadow-xl border border-white/10 max-w-full" style={{ touchAction: 'pan-x pan-y' }} />
                             ) : (

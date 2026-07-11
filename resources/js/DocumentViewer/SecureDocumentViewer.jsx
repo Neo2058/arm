@@ -708,13 +708,14 @@ export default function SecureDocumentViewer({
 
                             </div>
 
-                            {/* CONTENT */}
-                            <div className="flex-1 bg-black">
+                            {/* CONTENT - improved for iOS gestures */}
+                            <div className="flex-1 bg-black overflow-hidden" style={{ touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch' }}>
 
                                 <iframe
                                     src={`${selectedDocument.url}#toolbar=0`}
                                     className="h-full w-full border-none"
                                     title={selectedDocument.title}
+                                    style={{ touchAction: 'manipulation' }}
                                 />
 
                             </div>
