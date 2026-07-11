@@ -411,7 +411,7 @@
 //         </section>
 //     );
 // }
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -435,6 +435,15 @@ export default function SecureDocumentViewer({
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [search, setSearch] = useState('');
     const [openCategory, setOpenCategory] = useState(null);
+
+    // PDF.js state for protected rendering (no direct download possible)
+    const [pdfDoc, setPdfDoc] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [numPages, setNumPages] = useState(0);
+    const [scale, setScale] = useState(1.5);
+    const canvasRef = useRef(null);
+    const pdfContainerRef = useRef(null);
+    const touchStartX = useRef(0);
 
     const filteredCategories = useMemo(() => {
 
@@ -512,6 +521,118 @@ export default function SecureDocumentViewer({
         };
 
     }, [selectedDocument]);
+
+    // Load PDF.js and the document when selected (protected: we fetch bytes ourselves)
+    useEffect(() => {
+        if (!selectedDocument?.url) {
+            setPdfDoc(null);
+            setNumPages(0);
+            setCurrentPage(1);
+            return;
+        }
+
+        let cancelled = false;
+
+        (async () => {
+            try {
+                // Ensure PDF.js is loaded (same CDN as NaryadViewer for consistency)
+                if (!window.pdfjsLib) {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                        script.onload = () => {
+                            window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                            resolve();
+                        };
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                }
+
+                const pdfjs = window.pdfjsLib;
+
+                // Fetch the PDF as ArrayBuffer so we never expose a direct downloadable URL to the user
+                const response = await fetch(selectedDocument.url);
+                const arrayBuffer = await response.arrayBuffer();
+
+                const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+
+                if (!cancelled) {
+                    setPdfDoc(pdf);
+                    setNumPages(pdf.numPages);
+                    setCurrentPage(1);
+                    setScale(1.5);
+                }
+            } catch (err) {
+                console.error('Failed to load PDF with PDF.js:', err);
+                // Fallback could be added, but for protected viewer we prefer failure over download
+            }
+        })();
+
+        return () => { cancelled = true; };
+    }, [selectedDocument]);
+
+    // Render current page to canvas
+    useEffect(() => {
+        if (!pdfDoc || !canvasRef.current) return;
+
+        (async () => {
+            try {
+                const page = await pdfDoc.getPage(currentPage);
+                const viewport = page.getViewport({ scale });
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d', { alpha: true });
+
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+
+                await page.render({ canvasContext: ctx, viewport }).promise;
+            } catch (err) {
+                console.error('PDF render error:', err);
+            }
+        })();
+    }, [pdfDoc, currentPage, scale]);
+
+    // Touch swipe for page navigation (similar to NaryadViewer)
+    useEffect(() => {
+        const el = pdfContainerRef.current;
+        if (!el || !pdfDoc) return;
+
+        const onTouchStart = (e) => {
+            touchStartX.current = e.touches[0].clientX;
+        };
+
+        const onTouchEnd = (e) => {
+            if (!pdfDoc || e.touches.length > 0) return;
+            const endX = e.changedTouches[0].clientX;
+            const delta = endX - touchStartX.current;
+
+            if (Math.abs(delta) > 60) {
+                if (delta > 0) {
+                    setCurrentPage(p => Math.max(1, p - 1));
+                } else {
+                    setCurrentPage(p => Math.min(numPages, p + 1));
+                }
+            }
+        };
+
+        el.addEventListener('touchstart', onTouchStart, { passive: true });
+        el.addEventListener('touchend', onTouchEnd, { passive: true });
+
+        return () => {
+            el.removeEventListener('touchstart', onTouchStart);
+            el.removeEventListener('touchend', onTouchEnd);
+        };
+    }, [pdfDoc, currentPage, numPages]);
+
+    const changePage = (delta) => {
+        setCurrentPage(p => Math.max(1, Math.min(numPages, p + delta)));
+    };
+
+    const changeScale = (delta) => {
+        setScale(s => Math.max(0.6, Math.min(3.5, s + delta)));
+    };
 
     const toggleCategory = (name) => {
         setOpenCategory(prev => prev === name ? null : name);
@@ -704,7 +825,7 @@ export default function SecureDocumentViewer({
 
                                     <div className="mt-1 flex items-center gap-2 text-xs uppercase text-zinc-400">
                                         <Shield className="h-3 w-3" />
-                                        Secure viewer
+                                        Secure viewer (PDF.js — только просмотр)
                                     </div>
                                 </div>
 
@@ -717,32 +838,68 @@ export default function SecureDocumentViewer({
 
                             </div>
 
-                            {/* CONTENT - improved for iOS gestures.
-                                Do not use overflow-hidden on the direct parent of the iframe — 
-                                it can break internal PDF scrolling and multi-touch on iOS.
-                            */}
-                            {/* The direct wrapper must not clip or create new stacking context on iOS.
-                                motion.div ancestors with transform can break gestures inside iframe.
-                                We keep overflow visible and touch-action here.
-                            */}
-                            <div className="flex-1 bg-black" style={{ touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch', overflow: 'visible' }}>
+                            {/* PDF.js canvas viewer — мы полностью контролируем рендер.
+                                PDF никогда не отдаётся браузеру как файл. Только пиксели на canvas. */}
+                            <div
+                                ref={pdfContainerRef}
+                                className="flex-1 bg-[#111] overflow-auto flex justify-center items-start p-2 touch-none"
+                                style={{ minHeight: '60vh' }}
+                            >
+                                {!pdfDoc && (
+                                    <div className="flex items-center justify-center h-full text-zinc-400">
+                                        Загрузка документа...
+                                    </div>
+                                )}
 
-                                {/* Use <object> instead of <iframe> for better PDF inline display on Android.
-                                    Combined with server headers (inline + application/pdf + accept-ranges),
-                                    this should prevent automatic download and allow viewing inside the protected viewer.
-                                */}
-                                <object
-                                    data={`${selectedDocument.url}#toolbar=0`}
-                                    type="application/pdf"
-                                    className="h-full w-full border-none"
-                                    title={selectedDocument.title}
-                                    style={{ touchAction: 'manipulation' }}
-                                >
-                                    <p>Ваш браузер не поддерживает встроенный просмотр PDF.
-                                        <a href={selectedDocument.url} target="_blank" rel="noopener">Открыть в новой вкладке</a>
-                                    </p>
-                                </object>
+                                <div className="relative">
+                                    <canvas
+                                        ref={canvasRef}
+                                        className="max-w-full shadow-2xl bg-white"
+                                        onContextMenu={(e) => e.preventDefault()}
+                                        onDragStart={(e) => e.preventDefault()}
+                                    />
 
+                                    {/* Управление без PDF.js toolbar (нельзя скачать) */}
+                                    {pdfDoc && (
+                                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/80 text-white px-3 py-1.5 rounded-full text-sm backdrop-blur border border-white/10">
+                                            <button
+                                                onClick={() => changePage(-1)}
+                                                disabled={currentPage <= 1}
+                                                className="px-3 py-1 disabled:opacity-30 active:bg-white/10 rounded"
+                                            >
+                                                ←
+                                            </button>
+                                            <span className="tabular-nums px-2 select-none">
+                                                {currentPage} / {numPages}
+                                            </span>
+                                            <button
+                                                onClick={() => changePage(1)}
+                                                disabled={currentPage >= numPages}
+                                                className="px-3 py-1 disabled:opacity-30 active:bg-white/10 rounded"
+                                            >
+                                                →
+                                            </button>
+
+                                            <div className="w-px h-4 bg-white/20 mx-1" />
+
+                                            <button
+                                                onClick={() => changeScale(-0.2)}
+                                                className="px-2 py-0.5 active:bg-white/10 rounded"
+                                            >
+                                                –
+                                            </button>
+                                            <span className="tabular-nums w-[52px] text-center select-none">
+                                                {Math.round(scale * 100)}%
+                                            </span>
+                                            <button
+                                                onClick={() => changeScale(0.2)}
+                                                className="px-2 py-0.5 active:bg-white/10 rounded"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* QUIZ */}
