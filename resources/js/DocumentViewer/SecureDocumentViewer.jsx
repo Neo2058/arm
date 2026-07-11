@@ -441,9 +441,15 @@ export default function SecureDocumentViewer({
     const [currentPage, setCurrentPage] = useState(1);
     const [numPages, setNumPages] = useState(0);
     const [scale, setScale] = useState(1.5);
+    const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+    const [loadError, setLoadError] = useState(null);
     const canvasRef = useRef(null);
     const pdfContainerRef = useRef(null);
     const touchStartX = useRef(0);
+
+    // For document text search
+    const [docSearchTerm, setDocSearchTerm] = useState('');
+    const [searchMatches, setSearchMatches] = useState([]); // [{page, snippet}]
 
     const filteredCategories = useMemo(() => {
 
@@ -528,14 +534,20 @@ export default function SecureDocumentViewer({
             setPdfDoc(null);
             setNumPages(0);
             setCurrentPage(1);
+            setIsLoadingPdf(false);
+            setLoadError(null);
+            setDocSearchTerm('');
+            setSearchMatches([]);
             return;
         }
 
         let cancelled = false;
+        setIsLoadingPdf(true);
+        setLoadError(null);
 
         (async () => {
             try {
-                // Ensure PDF.js is loaded (same CDN as NaryadViewer for consistency)
+                // Ensure PDF.js is loaded
                 if (!window.pdfjsLib) {
                     await new Promise((resolve, reject) => {
                         const script = document.createElement('script');
@@ -552,40 +564,65 @@ export default function SecureDocumentViewer({
 
                 const pdfjs = window.pdfjsLib;
 
-                // Fetch the PDF as ArrayBuffer so we never expose a direct downloadable URL to the user
+                // Fetch bytes ourselves — never give browser a direct file link
                 const response = await fetch(selectedDocument.url);
+                if (!response.ok) throw new Error('Failed to fetch document');
                 const arrayBuffer = await response.arrayBuffer();
 
                 const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
 
-                if (!cancelled) {
-                    setPdfDoc(pdf);
-                    setNumPages(pdf.numPages);
-                    setCurrentPage(1);
-                    setScale(1.5);
+                if (cancelled) return;
+
+                setPdfDoc(pdf);
+                setNumPages(pdf.numPages);
+                setCurrentPage(1);
+                setScale(1.5);
+                setIsLoadingPdf(false);
+
+                // Extract text for in-document search
+                const extracted = [];
+                for (let p = 1; p <= pdf.numPages; p++) {
+                    const pg = await pdf.getPage(p);
+                    const content = await pg.getTextContent();
+                    const text = content.items.map(item => item.str).join(' ');
+                    extracted.push({ page: p, text });
                 }
+                window.__docPageTexts = extracted;
+
             } catch (err) {
-                console.error('Failed to load PDF with PDF.js:', err);
-                // Fallback could be added, but for protected viewer we prefer failure over download
+                console.error('Failed to load PDF:', err);
+                if (!cancelled) {
+                    setLoadError('Не удалось загрузить документ. Попробуйте обновить страницу.');
+                    setIsLoadingPdf(false);
+                }
             }
         })();
 
         return () => { cancelled = true; };
     }, [selectedDocument]);
 
-    // Render current page to canvas
+    // Render current page to canvas with proper visual zoom (fixes mobile zoom not enlarging the document)
     useEffect(() => {
         if (!pdfDoc || !canvasRef.current) return;
 
         (async () => {
             try {
                 const page = await pdfDoc.getPage(currentPage);
-                const viewport = page.getViewport({ scale });
+
+                const baseViewport = page.getViewport({ scale: 1 });
+                const qualityMultiplier = 1.5;
+                const renderScale = scale * qualityMultiplier;
+                const viewport = page.getViewport({ scale: renderScale });
+
                 const canvas = canvasRef.current;
                 const ctx = canvas.getContext('2d', { alpha: true });
 
                 canvas.width = viewport.width;
                 canvas.height = viewport.height;
+
+                // Explicit style size makes the document itself enlarge/shrink with scale
+                canvas.style.width = `${baseViewport.width * scale}px`;
+                canvas.style.height = `${baseViewport.height * scale}px`;
 
                 await page.render({ canvasContext: ctx, viewport }).promise;
             } catch (err) {
@@ -840,66 +877,83 @@ export default function SecureDocumentViewer({
 
                             {/* PDF.js canvas viewer — мы полностью контролируем рендер.
                                 PDF никогда не отдаётся браузеру как файл. Только пиксели на canvas. */}
-                            <div
-                                ref={pdfContainerRef}
-                                className="flex-1 bg-[#111] overflow-auto flex justify-center items-start p-2 touch-none"
-                                style={{ minHeight: '60vh' }}
-                            >
-                                {!pdfDoc && (
-                                    <div className="flex items-center justify-center h-full text-zinc-400">
-                                        Загрузка документа...
+                            <div className="flex flex-col flex-1 min-h-0">
+                                {/* Top bar: text search + nice page nav + zoom */}
+                                <div className="flex items-center gap-2 p-2 bg-black/70 border-b border-white/10 text-sm text-white flex-wrap sticky top-0 z-10">
+                                    {/* Text search */}
+                                    <div className="flex-1 min-w-[160px]">
+                                        <input
+                                            type="text"
+                                            value={docSearchTerm}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setDocSearchTerm(val);
+                                                if (!val || !window.__docPageTexts) {
+                                                    setSearchMatches([]);
+                                                    return;
+                                                }
+                                                const q = val.toLowerCase();
+                                                const matches = [];
+                                                window.__docPageTexts.forEach(pt => {
+                                                    if (pt.text.toLowerCase().includes(q)) {
+                                                        const idx = pt.text.toLowerCase().indexOf(q);
+                                                        const snip = pt.text.substring(Math.max(0, idx - 40), idx + val.length + 40);
+                                                        matches.push({ page: pt.page, snippet: snip });
+                                                    }
+                                                });
+                                                setSearchMatches(matches);
+                                                if (matches.length > 0) setCurrentPage(matches[0].page);
+                                            }}
+                                            placeholder="Поиск по тексту в документе..."
+                                            className="w-full bg-white/10 border border-white/20 rounded px-3 py-1 text-sm placeholder:text-zinc-400"
+                                        />
+                                    </div>
+
+                                    {/* Nice page navigation */}
+                                    <div className="flex items-center gap-1 bg-white/10 rounded-full px-1 py-0.5 text-xs">
+                                        <button onClick={() => changePage(-1)} disabled={currentPage <= 1} className="px-2.5 py-1 disabled:opacity-40 active:bg-white/20 rounded-full">← Пред.</button>
+                                        <span className="px-2 tabular-nums select-none">{currentPage} / {numPages || '?'}</span>
+                                        <button onClick={() => changePage(1)} disabled={currentPage >= numPages} className="px-2.5 py-1 disabled:opacity-40 active:bg-white/20 rounded-full">След. →</button>
+                                    </div>
+
+                                    {/* Zoom */}
+                                    <div className="flex items-center gap-1 bg-white/10 rounded-full px-1 py-0.5 ml-auto text-xs">
+                                        <button onClick={() => changeScale(-0.2)} className="px-2 py-1 active:bg-white/20 rounded-full">–</button>
+                                        <span className="px-2 tabular-nums w-10 text-center select-none">{Math.round(scale * 100)}%</span>
+                                        <button onClick={() => changeScale(0.2)} className="px-2 py-1 active:bg-white/20 rounded-full">+</button>
+                                    </div>
+                                </div>
+
+                                {/* Canvas */}
+                                <div
+                                    ref={pdfContainerRef}
+                                    className="flex-1 bg-[#111] overflow-auto flex justify-center items-start p-2 touch-none select-none"
+                                    style={{ minHeight: '50vh' }}
+                                >
+                                    {isLoadingPdf && <div className="p-8 text-zinc-400 text-sm">Загрузка документа...</div>}
+                                    {loadError && <div className="p-4 text-red-400 text-sm">{loadError}</div>}
+                                    <div className="relative">
+                                        <canvas
+                                            ref={canvasRef}
+                                            className="shadow-2xl bg-white block"
+                                            style={{ imageRendering: scale > 2 ? 'pixelated' : 'auto' }}
+                                            onContextMenu={e => e.preventDefault()}
+                                            onSelectStart={e => e.preventDefault()}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Search matches */}
+                                {searchMatches.length > 0 && (
+                                    <div className="p-2 text-xs bg-black/60 border-t border-white/10 max-h-28 overflow-auto">
+                                        {searchMatches.slice(0, 8).map((m, idx) => (
+                                            <div key={idx} onClick={() => setCurrentPage(m.page)} className="cursor-pointer hover:bg-white/10 p-1 flex gap-2 rounded">
+                                                <span className="text-orange-400 shrink-0">стр.{m.page}</span>
+                                                <span className="truncate text-zinc-300">{m.snippet}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
-
-                                <div className="relative">
-                                    <canvas
-                                        ref={canvasRef}
-                                        className="max-w-full shadow-2xl bg-white"
-                                        onContextMenu={(e) => e.preventDefault()}
-                                        onDragStart={(e) => e.preventDefault()}
-                                    />
-
-                                    {/* Управление без PDF.js toolbar (нельзя скачать) */}
-                                    {pdfDoc && (
-                                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/80 text-white px-3 py-1.5 rounded-full text-sm backdrop-blur border border-white/10">
-                                            <button
-                                                onClick={() => changePage(-1)}
-                                                disabled={currentPage <= 1}
-                                                className="px-3 py-1 disabled:opacity-30 active:bg-white/10 rounded"
-                                            >
-                                                ←
-                                            </button>
-                                            <span className="tabular-nums px-2 select-none">
-                                                {currentPage} / {numPages}
-                                            </span>
-                                            <button
-                                                onClick={() => changePage(1)}
-                                                disabled={currentPage >= numPages}
-                                                className="px-3 py-1 disabled:opacity-30 active:bg-white/10 rounded"
-                                            >
-                                                →
-                                            </button>
-
-                                            <div className="w-px h-4 bg-white/20 mx-1" />
-
-                                            <button
-                                                onClick={() => changeScale(-0.2)}
-                                                className="px-2 py-0.5 active:bg-white/10 rounded"
-                                            >
-                                                –
-                                            </button>
-                                            <span className="tabular-nums w-[52px] text-center select-none">
-                                                {Math.round(scale * 100)}%
-                                            </span>
-                                            <button
-                                                onClick={() => changeScale(0.2)}
-                                                className="px-2 py-0.5 active:bg-white/10 rounded"
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
                             </div>
 
                             {/* QUIZ */}
