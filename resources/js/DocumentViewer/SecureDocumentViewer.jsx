@@ -448,6 +448,8 @@ export default function SecureDocumentViewer({
     const canvasRef = useRef(null);
     const pdfContainerRef = useRef(null);
     const touchStartX = useRef(0);
+    const lastTouchX = useRef(0);
+    const lastTouchY = useRef(0);
 
     // For document text search
     const [docSearchTerm, setDocSearchTerm] = useState('');
@@ -656,6 +658,8 @@ export default function SecureDocumentViewer({
         const onTouchStart = (e) => {
             if (e.touches.length === 1) {
                 touchStartX.current = e.touches[0].clientX;
+                lastTouchX.current = e.touches[0].clientX;
+                lastTouchY.current = e.touches[0].clientY;
                 isPinching = false;
             } else if (e.touches.length === 2) {
                 isPinching = true;
@@ -1000,6 +1004,15 @@ export default function SecureDocumentViewer({
                                         <span className="px-2 tabular-nums w-10 text-center select-none">{Math.round(scale * 100)}%</span>
                                         <button onClick={() => changeScale(0.2)} className="px-2 py-1 active:bg-white/20 rounded-full">+</button>
                                     </div>
+
+                                    {/* Fullscreen button - enters fullscreen with all features (zoom, nav, search, scroll) */}
+                                    <button 
+                                        onClick={toggleFullscreen} 
+                                        className="px-3 py-1 text-xs bg-white/10 hover:bg-white/20 rounded-full active:bg-white/30"
+                                        title="Полноэкранный режим"
+                                    >
+                                        ⛶
+                                    </button>
 
                                     {/* Fullscreen - keeps all features (zoom, nav, search, scroll) */}
                                     <button 
