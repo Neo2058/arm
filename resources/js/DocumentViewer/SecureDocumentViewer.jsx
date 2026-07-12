@@ -449,7 +449,7 @@ export default function SecureDocumentViewer({
     const [displayHeight, setDisplayHeight] = useState(0);
     const canvasRef = useRef(null);
     const pdfContainerRef = useRef(null);
-    const touchStartX = useRef(0);
+    const viewerRef = useRef(null);
     const lastTouchX = useRef(0);
     const lastTouchY = useRef(0);
 
@@ -511,16 +511,15 @@ export default function SecureDocumentViewer({
         };
 
         if (selectedDocument) {
-            // Avoid overflow: hidden — it kills native PDF gestures on iOS.
-            // Use overscroll-behavior instead (less invasive).
+            // Lock body scroll when viewer is open to prevent the page from moving.
+            // The viewer has its own scroll for the document.
+            document.body.style.overflow = 'hidden';
             document.documentElement.style.overscrollBehavior = 'none';
             document.body.style.overscrollBehavior = 'none';
-            // Some iOS WebKit issues are helped by this too
-            document.body.style.position = 'relative';
         } else {
+            document.body.style.overflow = '';
             document.documentElement.style.overscrollBehavior = '';
             document.body.style.overscrollBehavior = '';
-            document.body.style.position = '';
         }
 
         window.addEventListener('keydown', handleEsc);
@@ -535,7 +534,20 @@ export default function SecureDocumentViewer({
     }, [selectedDocument]);
 
     // Load PDF.js and the document when selected (protected: we fetch bytes ourselves)
+    // For iOS we skip PDF.js (use native object for better built-in gestures/scroll) per device choice
     useEffect(() => {
+        if (isIos) {
+            // Old viewer path for iOS: no PDF.js load, object will use signed protected URL directly
+            setPdfDoc(null);
+            setNumPages(0);
+            setCurrentPage(1);
+            setIsLoadingPdf(false);
+            setLoadError(null);
+            setDocSearchTerm('');
+            setSearchMatches([]);
+            return;
+        }
+
         if (!selectedDocument?.url) {
             setPdfDoc(null);
             setNumPages(0);
@@ -605,7 +617,7 @@ export default function SecureDocumentViewer({
         })();
 
         return () => { cancelled = true; };
-    }, [selectedDocument]);
+    }, [selectedDocument, isIos]);
 
     // Render current page to canvas with proper visual zoom (fixes mobile zoom not enlarging the document)
     useEffect(() => {
@@ -642,7 +654,9 @@ export default function SecureDocumentViewer({
         })();
     }, [pdfDoc, currentPage, scale]);
 
-    // Touch swipe + pinch-to-zoom + support for panning the zoomed document
+    // Pinch-to-zoom + free drag-to-pan (single finger or mouse) inside the viewport.
+    // NO swipe page change. Scrolling/panning the oversized document is native + manual drag.
+    // This enables "свободное перемещение документа внутри вьюпорта" on mobile/desktop when zoomed.
     useEffect(() => {
         const el = pdfContainerRef.current;
         if (!el || !pdfDoc) return;
@@ -650,6 +664,13 @@ export default function SecureDocumentViewer({
         let initialDistance = 0;
         let initialScaleOnPinch = 1;
         let isPinching = false;
+
+        // Drag tracking (for touch 1-finger pan and mouse drag)
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let dragStartScrollLeft = 0;
+        let dragStartScrollTop = 0;
 
         const getDistance = (t1, t2) => {
             const dx = t1.clientX - t2.clientX;
@@ -659,12 +680,18 @@ export default function SecureDocumentViewer({
 
         const onTouchStart = (e) => {
             if (e.touches.length === 1) {
-                touchStartX.current = e.touches[0].clientX;
                 lastTouchX.current = e.touches[0].clientX;
                 lastTouchY.current = e.touches[0].clientY;
                 isPinching = false;
+                // prepare for possible drag pan
+                isDragging = true;
+                dragStartX = e.touches[0].clientX;
+                dragStartY = e.touches[0].clientY;
+                dragStartScrollLeft = el.scrollLeft;
+                dragStartScrollTop = el.scrollTop;
             } else if (e.touches.length === 2) {
                 isPinching = true;
+                isDragging = false;
                 initialDistance = getDistance(e.touches[0], e.touches[1]);
                 initialScaleOnPinch = scale;
             }
@@ -678,7 +705,7 @@ export default function SecureDocumentViewer({
                     const ratio = distance / initialDistance;
                     const newScale = Math.max(0.5, Math.min(4, initialScaleOnPinch * ratio));
 
-                    // Adjust scroll so the pinch center stays under the fingers (fixes "zooms to one point" on iOS)
+                    // Adjust scroll so the pinch center stays under the fingers (fixes "zooms to one point")
                     const rect = el.getBoundingClientRect();
                     const centerClientX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
                     const centerClientY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
@@ -698,36 +725,81 @@ export default function SecureDocumentViewer({
 
                     setScale(newScale);
                 }
+                return;
             }
-            // When zoomed, overflow-auto on parent handles panning
+
+            // Single finger: free drag-to-pan the document inside viewport.
+            // Always capture when dragging so viewport moves the content (fixes "refuses to scroll").
+            if (e.touches.length === 1 && !isPinching) {
+                const curX = e.touches[0].clientX;
+                const curY = e.touches[0].clientY;
+
+                e.preventDefault(); // take over gesture for reliable inner pan (no page/body interference)
+                const dx = curX - lastTouchX.current;
+                const dy = curY - lastTouchY.current;
+                // Finger drag right: document content follows = scroll position decreases
+                el.scrollLeft -= dx;
+                el.scrollTop -= dy;
+
+                lastTouchX.current = curX;
+                lastTouchY.current = curY;
+            }
         };
 
         const onTouchEnd = (e) => {
             if (isPinching) {
                 isPinching = false;
-                return;
             }
-            if (!pdfDoc || e.touches.length > 0) return;
-
-            const endX = e.changedTouches[0].clientX;
-            const delta = endX - touchStartX.current;
-
-            if (Math.abs(delta) > 70 && scale <= 1.4) {
-                if (delta > 0) changePage(-1);
-                else changePage(1);
-            }
+            isDragging = false;
+            // No swipe/page logic at all. Pure scroll + buttons for page change.
         };
 
+        // Mouse drag-to-pan (desktop / mouse devices for free movement)
+        const onMouseDown = (e) => {
+            if (!pdfDoc) return;
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            dragStartScrollLeft = el.scrollLeft;
+            dragStartScrollTop = el.scrollTop;
+        };
+
+        const onMouseMove = (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
+            el.scrollLeft = dragStartScrollLeft - dx;
+            el.scrollTop = dragStartScrollTop - dy;
+        };
+
+        const onMouseUpOrLeave = () => {
+            isDragging = false;
+        };
+
+        // Touch listeners (passive where safe)
         el.addEventListener('touchstart', onTouchStart, { passive: true });
         el.addEventListener('touchmove', onTouchMove, { passive: false });
         el.addEventListener('touchend', onTouchEnd, { passive: true });
+        el.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
+        // Mouse drag
+        el.addEventListener('mousedown', onMouseDown);
+        el.addEventListener('mousemove', onMouseMove);
+        el.addEventListener('mouseup', onMouseUpOrLeave);
+        el.addEventListener('mouseleave', onMouseUpOrLeave);
 
         return () => {
             el.removeEventListener('touchstart', onTouchStart);
             el.removeEventListener('touchmove', onTouchMove);
             el.removeEventListener('touchend', onTouchEnd);
+            el.removeEventListener('touchcancel', onTouchEnd);
+            el.removeEventListener('mousedown', onMouseDown);
+            el.removeEventListener('mousemove', onMouseMove);
+            el.removeEventListener('mouseup', onMouseUpOrLeave);
+            el.removeEventListener('mouseleave', onMouseUpOrLeave);
         };
-    }, [pdfDoc, currentPage, scale]);
+    }, [pdfDoc, scale, displayWidth, displayHeight]);
 
     const changePage = (delta) => {
         setCurrentPage(p => Math.max(1, Math.min(numPages, p + delta)));
@@ -737,9 +809,9 @@ export default function SecureDocumentViewer({
         setScale(s => Math.max(0.6, Math.min(3.5, s + delta)));
     };
 
-    // Fullscreen support - keeps all zoom, nav, search features
+    // Fullscreen support - keeps all zoom, nav, search, pan/scroll features
     const toggleFullscreen = () => {
-        const container = pdfContainerRef.current;
+        const container = viewerRef.current || pdfContainerRef.current;
         if (!container) return;
 
         if (document.fullscreenElement) {
@@ -933,6 +1005,7 @@ export default function SecureDocumentViewer({
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             transition={{ type: 'spring', stiffness: 200, damping: 25 }}
                             onClick={(e) => e.stopPropagation()}
+                            ref={viewerRef}
                             className="relative flex h-[95vh] w-full max-w-7xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#0d131d]"
                         >
 
@@ -946,7 +1019,7 @@ export default function SecureDocumentViewer({
 
                                     <div className="mt-1 flex items-center gap-2 text-xs uppercase text-zinc-400">
                                         <Shield className="h-3 w-3" />
-                                        Secure viewer (PDF.js — только просмотр)
+                                        {isIos ? 'Secure viewer (iOS — встроенный просмотр)' : 'Secure viewer (PDF.js — только просмотр)'}
                                     </div>
                                 </div>
 
@@ -968,109 +1041,112 @@ export default function SecureDocumentViewer({
 
                             </div>
 
-                            {/* PDF.js canvas viewer — мы полностью контролируем рендер.
-                                PDF никогда не отдаётся браузеру как файл. Только пиксели на canvas. */}
+                            {/* Viewer area: for iOS use native <object> (old viewer path) for reliable native scroll/pan/zoom gestures.
+                                For Android/other: full PDF.js canvas with our pan/drag + search + controls. */}
                             <div className="flex flex-col flex-1 min-h-0">
-                                {/* Top bar: text search + nice page nav + zoom */}
-                                <div className="flex items-center gap-2 p-2 bg-black/70 border-b border-white/10 text-sm text-white flex-wrap sticky top-0 z-10">
-                                    {/* Text search */}
-                                    <div className="flex-1 min-w-[160px]">
-                                        <input
-                                            type="text"
-                                            value={docSearchTerm}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                setDocSearchTerm(val);
-                                                if (!val || !window.__docPageTexts) {
-                                                    setSearchMatches([]);
-                                                    return;
-                                                }
-                                                const q = val.toLowerCase();
-                                                const matches = [];
-                                                window.__docPageTexts.forEach(pt => {
-                                                    if (pt.text.toLowerCase().includes(q)) {
-                                                        const idx = pt.text.toLowerCase().indexOf(q);
-                                                        const snip = pt.text.substring(Math.max(0, idx - 40), idx + val.length + 40);
-                                                        matches.push({ page: pt.page, snippet: snip });
+                                {/* Top bar with search / nav / zoom ONLY for non-iOS (PDF.js path) */}
+                                {!isIos && (
+                                    <div className="flex items-center gap-2 p-2 bg-black/70 border-b border-white/10 text-sm text-white flex-wrap sticky top-0 z-10">
+                                        {/* Text search */}
+                                        <div className="flex-1 min-w-[160px]">
+                                            <input
+                                                type="text"
+                                                value={docSearchTerm}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setDocSearchTerm(val);
+                                                    if (!val || !window.__docPageTexts) {
+                                                        setSearchMatches([]);
+                                                        return;
                                                     }
-                                                });
-                                                setSearchMatches(matches);
-                                                if (matches.length > 0) setCurrentPage(matches[0].page);
-                                            }}
-                                            placeholder="Поиск по тексту в документе..."
-                                            className="w-full bg-white/10 border border-white/20 rounded px-3 py-1 text-sm placeholder:text-zinc-400"
-                                        />
+                                                    const q = val.toLowerCase();
+                                                    const matches = [];
+                                                    window.__docPageTexts.forEach(pt => {
+                                                        if (pt.text.toLowerCase().includes(q)) {
+                                                            const idx = pt.text.toLowerCase().indexOf(q);
+                                                            const snip = pt.text.substring(Math.max(0, idx - 40), idx + val.length + 40);
+                                                            matches.push({ page: pt.page, snippet: snip });
+                                                        }
+                                                    });
+                                                    setSearchMatches(matches);
+                                                    if (matches.length > 0) setCurrentPage(matches[0].page);
+                                                }}
+                                                placeholder="Поиск по тексту в документе..."
+                                                className="w-full bg-white/10 border border-white/20 rounded px-3 py-1 text-sm placeholder:text-zinc-400"
+                                            />
+                                        </div>
+
+                                        {/* Nice page navigation */}
+                                        <div className="flex items-center gap-1 bg-white/10 rounded-full px-1 py-0.5 text-xs">
+                                            <button onClick={() => changePage(-1)} disabled={currentPage <= 1} className="px-2.5 py-1 disabled:opacity-40 active:bg-white/20 rounded-full">← Пред.</button>
+                                            <span className="px-2 tabular-nums select-none">{currentPage} / {numPages || '?'}</span>
+                                            <button onClick={() => changePage(1)} disabled={currentPage >= numPages} className="px-2.5 py-1 disabled:opacity-40 active:bg-white/20 rounded-full">След. →</button>
+                                        </div>
+
+                                        {/* Zoom */}
+                                        <div className="flex items-center gap-1 bg-white/10 rounded-full px-1 py-0.5 ml-auto text-xs">
+                                            <button onClick={() => changeScale(-0.2)} className="px-2 py-1 active:bg-white/20 rounded-full">–</button>
+                                            <span className="px-2 tabular-nums w-10 text-center select-none">{Math.round(scale * 100)}%</span>
+                                            <button onClick={() => changeScale(0.2)} className="px-2 py-1 active:bg-white/20 rounded-full">+</button>
+                                        </div>
                                     </div>
-
-                                    {/* Nice page navigation */}
-                                    <div className="flex items-center gap-1 bg-white/10 rounded-full px-1 py-0.5 text-xs">
-                                        <button onClick={() => changePage(-1)} disabled={currentPage <= 1} className="px-2.5 py-1 disabled:opacity-40 active:bg-white/20 rounded-full">← Пред.</button>
-                                        <span className="px-2 tabular-nums select-none">{currentPage} / {numPages || '?'}</span>
-                                        <button onClick={() => changePage(1)} disabled={currentPage >= numPages} className="px-2.5 py-1 disabled:opacity-40 active:bg-white/20 rounded-full">След. →</button>
-                                    </div>
-
-                                    {/* Zoom */}
-                                    <div className="flex items-center gap-1 bg-white/10 rounded-full px-1 py-0.5 ml-auto text-xs">
-                                        <button onClick={() => changeScale(-0.2)} className="px-2 py-1 active:bg-white/20 rounded-full">–</button>
-                                        <span className="px-2 tabular-nums w-10 text-center select-none">{Math.round(scale * 100)}%</span>
-                                        <button onClick={() => changeScale(0.2)} className="px-2 py-1 active:bg-white/20 rounded-full">+</button>
-                                    </div>
-
-                                    {/* Fullscreen button - enters fullscreen with all features (zoom, nav, search, scroll) */}
-                                    <button 
-                                        onClick={toggleFullscreen} 
-                                        className="px-3 py-1 text-xs bg-white/10 hover:bg-white/20 rounded-full active:bg-white/30"
-                                        title="Полноэкранный режим"
-                                    >
-                                        ⛶
-                                    </button>
-
-                                    {/* Fullscreen - keeps all features (zoom, nav, search, scroll) */}
-                                    <button 
-                                        onClick={toggleFullscreen} 
-                                        className="px-3 py-1 text-xs bg-white/10 hover:bg-white/20 rounded-full active:bg-white/30"
-                                        title="Полноэкранный режим"
-                                    >
-                                        ⛶
-                                    </button>
-                                </div>
+                                )}
 
                                 {/* Scrollable viewer area.
-                                    When zoomed the canvas becomes larger than the viewport.
-                                    The outer div provides native scroll/pan (wheel + touch drag on mobile).
-                                    This fixes "cannot see content that doesn't fit after zoom". */}
-                                {/* Scroll container: allows panning the zoomed document.
-                                    The inner wrapper sizes exactly to the zoomed page so overflow works.
-                                    On iOS we use native scrolling for panning when zoomed. */}
+                                    The container uses overflow-auto + sized child so that after zoom the document can be freely panned/scrolled inside.
+                                    Drag (touch 1-finger or mouse) + native wheel/scroll handle movement.
+                                    Swipe gestures removed completely to avoid conflicts. */}
                                 <div
                                     ref={pdfContainerRef}
-                                    className="flex-1 bg-[#111] overflow-auto p-3 touch-none select-none"
-                                    style={{ minHeight: '50vh', WebkitOverflowScrolling: 'touch' }}
+                                    className={`flex-1 min-h-0 bg-[#111] overflow-auto select-none ${isIos ? 'p-0' : 'p-3'}`}
+                                    style={{ WebkitOverflowScrolling: 'touch' }}
                                 >
-                                    {isLoadingPdf && <div className="p-8 text-zinc-400 text-sm">Загрузка документа...</div>}
-                                    {loadError && <div className="p-4 text-red-400 text-sm">{loadError}</div>}
-                                    {/* Wrapper sized exactly to the zoomed document so the scroll container can pan it */}
-                                    <div 
-                                        className="mx-auto bg-white/5"
-                                        style={{ 
-                                            width: `${displayWidth || 0}px`, 
-                                            height: `${displayHeight || 0}px`,
-                                            minWidth: displayWidth > 0 ? `${displayWidth}px` : '100%',
-                                            minHeight: displayHeight > 0 ? `${displayHeight}px` : '100%'
-                                        }}
-                                    >
-                                        <canvas
-                                            ref={canvasRef}
-                                            className="shadow-2xl bg-white block"
-                                            style={{ imageRendering: scale > 2 ? 'pixelated' : 'auto' }}
-                                            onContextMenu={e => e.preventDefault()}
-                                            onSelectStart={e => e.preventDefault()}
-                                        />
-                                    </div>
+                                    {isIos ? (
+                                        /* Old viewer for iPhone/iOS: native object using protected signed URL.
+                                           Browser's PDF renderer handles free pan, scroll, pinch-zoom natively inside.
+                                           No our touch listeners -> no gesture conflicts. */
+                                        <div className="w-full h-full min-h-[60vh]">
+                                            <object
+                                                data={`${selectedDocument?.url || ''}#toolbar=0&navpanes=0&scrollbar=1`}
+                                                type="application/pdf"
+                                                className="block w-full h-full bg-white"
+                                                style={{ border: 'none', minHeight: '60vh' }}
+                                                onContextMenu={e => e.preventDefault()}
+                                            >
+                                                <div className="p-6 text-center text-sm text-zinc-400">
+                                                    Ваш браузер не поддерживает встроенный просмотр PDF.<br />
+                                                    Но документ доступен только для чтения.
+                                                </div>
+                                            </object>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {isLoadingPdf && <div className="p-8 text-zinc-400 text-sm">Загрузка документа...</div>}
+                                            {loadError && <div className="p-4 text-red-400 text-sm">{loadError}</div>}
+                                            {/* Wrapper sized exactly to the zoomed document so the scroll container can pan it */}
+                                            <div 
+                                                className="mx-auto bg-white/5"
+                                                style={{ 
+                                                    width: `${displayWidth || 0}px`, 
+                                                    height: `${displayHeight || 0}px`,
+                                                    minWidth: displayWidth > 0 ? `${displayWidth}px` : '100%',
+                                                    minHeight: displayHeight > 0 ? `${displayHeight}px` : '100%'
+                                                }}
+                                            >
+                                                <canvas
+                                                    ref={canvasRef}
+                                                    className="shadow-2xl bg-white block"
+                                                    style={{ imageRendering: scale > 2 ? 'pixelated' : 'auto' }}
+                                                    onContextMenu={e => e.preventDefault()}
+                                                    onSelectStart={e => e.preventDefault()}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
 
-                                {/* Beautiful search results list */}
-                                {searchMatches.length > 0 && (
+                                {/* Beautiful search results list — only for PDF.js path (non-iOS) */}
+                                {!isIos && searchMatches.length > 0 && (
                                     <div className="border-t border-white/10 bg-zinc-950/80 p-3 max-h-[140px] overflow-auto text-sm">
                                         <div className="flex items-center justify-between mb-2 px-1 text-orange-400 text-xs font-medium">
                                             <span>Результаты поиска ({searchMatches.length})</span>
