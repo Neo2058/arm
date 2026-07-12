@@ -34,9 +34,14 @@ class DocumentResource extends Resource
                 Select::make('category')
                     ->label('Категория')
                     ->options([
-                        'manual' => 'Руководство',
-                        'order' => 'Приказ',
-                        'technical' => 'Тех. документация',
+                        'manual' => 'Инструкции',
+                        'order' => 'П по Депо',
+                        'orderForMetro' => 'П по М',
+                        'instruction' => 'И по Депо',
+                        'instForMetro' => 'И по М',
+                        'technical' => 'Конспекты',
+                        'student' => 'Конспект ТУ',
+                        'remember' => 'Памятки',
                     ]),
 
                 FileUpload::make('file_path')
