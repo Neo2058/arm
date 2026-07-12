@@ -11,15 +11,21 @@ class ClickHouseService
         $user = Auth::user();
         if (!$user) return;
 
-        // Подгружаем профиль, чтобы знать номер колонны
+        // Подгружаем профиль, чтобы знать номер колонны (безопасно, профиль может отсутствовать)
         $profile = $user->profile;
+        $userColumn = $profile?->column ?? 'Не указана';
+
+        // Привести роль к строке (может быть enum)
+        $userRole = $user->role instanceof \App\Enums\UserRole
+            ? $user->role->value
+            : (string) ($user->role ?? 'unknown');
 
         $data = [
             'event_date' => date('Y-m-d'),
             'event_time' => date('Y-m-d H:i:s'),
             'user_id' => $user->id,
-            'user_role' => $user->role,
-            'user_column' => $profile->column ?? 'Не указана',
+            'user_role' => $userRole,
+            'user_column' => $userColumn,
             'action_type' => $actionType,
             'resource_id' => $resourceId,
             'details' => is_array($details) ? json_encode($details, JSON_UNESCAPED_UNICODE) : $details,

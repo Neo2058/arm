@@ -91,18 +91,48 @@
         return matches ? decodeURIComponent(matches[1]) : undefined;
         }
 
-        // Подставляем хэш устройства в скрытый инпут
-        const deviceKey = getCookie('device_key');
-        if (deviceKey) {
-        document.getElementById('device_key_input').value = deviceKey;
+        // Быстрая генерация хэша устройства если куки нет (fallback, чтобы register не падал)
+        function ensureDeviceKey() {
+            if (getCookie('device_key')) return getCookie('device_key');
+
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.textBaseline = "top";
+                ctx.font = "14px 'Arial'";
+                ctx.fillText("ARM-Security-Token", 2, 2);
+                const canvasData = canvas.toDataURL();
+                const raw = canvasData + navigator.userAgent + screen.width + screen.height + (navigator.hardwareConcurrency || 2);
+
+                let hash = 0;
+                for (let i = 0; i < raw.length; i++) {
+                    const chr = raw.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + chr;
+                    hash |= 0;
+                }
+                const hashHex = Math.abs(hash).toString(16).padStart(8, '0') + Math.abs(hash ^ 0x55555555).toString(16).padStart(8, '0');
+
+                document.cookie = `device_key=${hashHex}; path=/; max-age=157680000; SameSite=Lax; Secure`;
+                return hashHex;
+            } catch (e) {
+                console.error('device key gen fallback failed', e);
+                return null;
+            }
+        }
+
+        // Подставляем хэш устройства в скрытый инпут (генерируем при необходимости)
+        const deviceKeyInput = document.getElementById('device_key_input');
+        const deviceKey = ensureDeviceKey();
+        if (deviceKey && deviceKeyInput) {
+            deviceKeyInput.value = deviceKey;
         }
 
         // Интеллектуальное автоопределение имени устройства для удобства
         const inputName = document.getElementById('device_name_input');
         if (inputName && !inputName.value) {
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        const browser = navigator.userAgent.includes("Chrome") ? "Chrome" : navigator.userAgent.includes("Safari") ? "Safari" : "Браузер";
-        inputName.value = isMobile ? `Мобильное устройство (${browser})` : `Стационарный ПК (${browser})`;
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const browser = navigator.userAgent.includes("Chrome") ? "Chrome" : navigator.userAgent.includes("Safari") ? "Safari" : "Браузер";
+            inputName.value = isMobile ? `Мобильное устройство (${browser})` : `Стационарный ПК (${browser})`;
         }
         });
     </script>

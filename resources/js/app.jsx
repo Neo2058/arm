@@ -128,8 +128,8 @@ async function generateDeviceFingerprint() {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-    // Записываем хэш устройства в куки на 5 лет
-    document.cookie = `device_key=${hashHex}; path=/; max-age=157680000`;
+    // Записываем хэш устройства в куки на 5 лет (https + SameSite для надёжности на проде)
+    document.cookie = `device_key=${hashHex}; path=/; max-age=157680000; SameSite=Lax; Secure`;
 }
 generateDeviceFingerprint();
 

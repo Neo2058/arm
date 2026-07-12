@@ -46,7 +46,7 @@ class DeviceController extends Controller
                 return redirect()->route('mainMenu');
             }
             // Если заявка уже на модерации — мягко уведомляем пользователя, не отправляя спам в Telegram
-            return back()->with('success', 'Заявка для этого устройства уже находится на рассмотрении у инструктора. Повторный запрос не требуется.');
+            return redirect()->route('device.register.form')->with('success', 'Заявка для этого устройства уже находится на рассмотрении у инструктора. Повторный запрос не требуется.');
         }
 
         // Если заявки нет — создаем новую
@@ -58,30 +58,34 @@ class DeviceController extends Controller
             'is_approved' => false,
         ]);
 
-        // Отправляем уведомление в Telegram (сработает ТОЛЬКО один раз)
-        $msg = "📱 *НОВАЯ ЗАЯВКА НА ПРИВЯЗКУ УСТРОЙСТВА*\n\n";
-        $msg .= "👤 Сотрудник: *{$user->name}*\n";
-        $msg .= "🛠️ Устройство: *{$deviceName}*\n";
-        $msg .= "🔑 Ключ: `{$deviceKey}`\n";
-        $msg .= "🌐 IP: " . $request->ip();
+        // Уведомления — не должны ломать регистрацию устройства (оборачиваем)
+        try {
+            $msg = "📱 *НОВАЯ ЗАЯВКА НА ПРИВЯЗКУ УСТРОЙСТВА*\n\n";
+            $msg .= "👤 Сотрудник: *{$user->name}*\n";
+            $msg .= "🛠️ Устройство: *{$deviceName}*\n";
+            $msg .= "🔑 Ключ: `{$deviceKey}`\n";
+            $msg .= "🌐 IP: " . $request->ip();
 
-        TelegramService::send($msg);
-        ClickHouseService::log('device_request', 0, "Заявка на устройство: {$deviceName}");
+            TelegramService::send($msg);
+            ClickHouseService::log('device_request', 0, "Заявка на устройство: {$deviceName}");
 
-        // Параллельное уведомление в админку
-        AdminNotificationService::notify(
-            'device_request',
-            'Новая заявка на привязку устройства',
-            "Сотрудник: {$user->name}\nУстройство: {$deviceName}\nКлюч: {$deviceKey}\nIP: {$request->ip()}",
-            [
-                'user_id' => $user->id,
-                'device_name' => $deviceName,
-                'device_key' => $deviceKey,
-                'ip' => $request->ip(),
-            ]
-        );
+            AdminNotificationService::notify(
+                'device_request',
+                'Новая заявка на привязку устройства',
+                "Сотрудник: {$user->name}\nУстройство: {$deviceName}\nКлюч: {$deviceKey}\nIP: {$request->ip()}",
+                [
+                    'user_id' => $user->id,
+                    'device_name' => $deviceName,
+                    'device_key' => $deviceKey,
+                    'ip' => $request->ip(),
+                ]
+            );
+        } catch (\Throwable $e) {
+            \Log::warning('Device registration notification failed (non-fatal)', ['error' => $e->getMessage()]);
+        }
 
-        return back()->with('success', 'Заявка успешно отправлена инструктору. Ожидайте подтверждения доступа.');
+        // Используем явный редирект на форму (надёжнее back() после POST к /api/... пути)
+        return redirect()->route('device.register.form')->with('success', 'Заявка успешно отправлена инструктору. Ожидайте подтверждения доступа.');
     }
 
     private function detectOS(string $userAgent): string

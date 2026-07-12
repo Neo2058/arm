@@ -130,8 +130,8 @@
             // Генерируем хэш СИНХРОННО (без await)
             const hashHex = generateStringHash(rawString);
 
-            // Записываем куку с флагами доступности для всего сайта
-            document.cookie = `device_key=${hashHex}; path=/; max-age=157680000; SameSite=Lax`;
+            // Записываем куку с флагами доступности для всего сайта (https)
+            document.cookie = `device_key=${hashHex}; path=/; max-age=157680000; SameSite=Lax; Secure`;
 
             console.log('Устройство идентифицировано мгновенно. Хэш:', hashHex);
         } catch (e) {
