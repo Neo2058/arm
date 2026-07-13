@@ -44,6 +44,10 @@ class UserResource extends Resource
                     ->options(UserRole::options())
                     ->required(),
 
+                Forms\Components\Toggle::make('is_active')
+                    ->label('Активен')
+                    ->default(true)
+                    ->required(),
 
                 Forms\Components\TextInput::make('password')
                     ->label('Пароль')

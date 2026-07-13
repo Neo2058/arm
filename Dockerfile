@@ -36,6 +36,9 @@ RUN { \
         echo 'max_input_time = 300'; \
     } > /usr/local/etc/php/conf.d/uploads.ini
 
+# Timezone (removes the "Invalid date.timezone value ''" warning)
+RUN echo 'date.timezone = UTC' > /usr/local/etc/php/conf.d/timezone.ini
+
 # Entrypoint for storage preparation (permissions + livewire-tmp dir)
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh

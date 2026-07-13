@@ -11,9 +11,16 @@ mkdir -p /var/www/storage/framework/views
 mkdir -p /var/www/storage/framework/sessions
 mkdir -p /var/www/storage/logs
 
-# Fix ownership for www-data (fpm user) — only for directories that PHP needs to WRITE to at runtime.
-# IMPORTANT: Do not chown /var/www/public recursively (see comment below).
+# Ensure the main log file exists and is writable (prevents "Permission denied" when Laravel tries to log errors)
+touch /var/www/storage/logs/laravel.log
+
+# Fix ownership and permissions for www-data (fpm user) — only for directories that PHP needs to WRITE to at runtime.
+# Make writable dirs group-writable (775) so that:
+#   - Container (www-data) can write
+#   - Host user running `php artisan` directly has fewer permission problems
 chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache 2>/dev/null || true
+chmod -R 775 /var/www/storage /var/www/bootstrap/cache 2>/dev/null || true
+chmod 664 /var/www/storage/logs/laravel.log 2>/dev/null || true
 
 # Publish Filament and Livewire assets (needed for admin panel JS/CSS)
 echo "Publishing Filament and Livewire assets..."
@@ -75,6 +82,10 @@ if ($bucket) {
     }
 }
 ' 2>&1 || echo "Bucket ensure script note (non-fatal)"
+
+# Final permission sweep for logs (in case volume/bind mount semantics reset some bits)
+touch /var/www/storage/logs/laravel.log
+chmod 664 /var/www/storage/logs/laravel.log 2>/dev/null || true
 
 # Run the original php-fpm
 exec php-fpm

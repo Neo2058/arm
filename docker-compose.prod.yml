@@ -16,14 +16,14 @@ services:
       - APP_ENV=production
       - APP_DEBUG=false
       - APP_URL=${APP_URL:-https://xn---15-7edz.xn--p1ai}
-      # Force safe session cookies for HTTP-only deployment (no HTTPS yet).
-      # If SESSION_SECURE_COOKIE=true in your .env, cookies won't be sent on HTTP POSTs -> 419 on Livewire.
-      - SESSION_SECURE_COOKIE=false
+      # HTTPS is active. Session cookies must be secure.
+      # Setting to true prevents cookies from being sent over HTTP and fixes 419 on POSTs (login, device registration, Livewire) for new users.
+      - SESSION_SECURE_COOKIE=true
       - SESSION_SAME_SITE=lax
       - SESSION_LIFETIME=120
       # IMPORTANT: Do NOT force SESSION_DOMAIN or SESSION_DRIVER here unless you know what you are doing.
       # Changing them invalidates active browser cookies/sessions and causes 419 loops on login and Livewire.
-      # Leave to your .env (or set empty). The secure=false is the critical one for HTTP.
+      # Leave to your .env (or set empty).
       - SESSION_DOMAIN=
       # If you previously forced database and have 419 loops, clear your browser cookies for the domain after deploy.
       - DB_HOST=postgres
