@@ -370,20 +370,64 @@ sudo apt install certbot python3-certbot-nginx -y
 
 ## 6. Запуск и инициализация
 
+**КРИТИЧНО:** Все `php artisan` команды **должны** выполняться **внутри контейнера** `app`.
+
+Ты запускаешь их на хосте (`deploy@www:~/arm$ php artisan ...`). Из-за этого:
+
+- Хостовый PHP не имеет `date.timezone`.
+- Права на `storage/` и `bootstrap/cache/` принадлежат `www-data` (entrypoint делает `chown`).
+- Не может записать лог → ошибка маскируется как "Permission denied on laravel.log", хотя реальная проблема — symlink или запись кэша.
+
+### Правильные команды
+
 ```bash
-docker compose up -d --build
+# После `docker compose -f docker-compose.prod.yml up -d --build`
 
-# Зайти в контейнер приложения
-docker compose exec app bash
+# Лучший способ — без входа в shell
+docker compose -f docker-compose.prod.yml exec app php artisan storage:link
+docker compose -f docker-compose.prod.yml exec app php artisan config:cache
+docker compose -f docker-compose.prod.yml exec app php artisan route:cache
+docker compose -f docker-compose.prod.yml exec app php artisan view:cache
+docker compose -f docker-compose.prod.yml exec app php artisan optimize
+```
 
-# Внутри:
-php artisan key:generate --force
-php artisan migrate --force
+Или зайти внутрь:
+
+```bash
+docker compose -f docker-compose.prod.yml exec app bash
 php artisan storage:link
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan optimize
+exit
+```
+
+### Если storage:link всё равно ругается
+
+```bash
+docker compose -f docker-compose.prod.yml exec app sh -c '
+  rm -f /var/www/public/storage
+  php artisan storage:link
+'
+```
+
+### Временный костыль на хосте (не рекомендуется)
+
+```bash
+cd ~/arm
+sudo chown -R deploy:deploy storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
+sudo chmod 664 storage/logs/laravel.log 2>/dev/null || true
+
+php artisan storage:link
+# ... остальные команды
+```
+
+После рестарта контейнера права снова сбросятся. Всегда используй `docker compose ... exec`.
+```
+
+**storage:link** часто требует, чтобы `storage/app/public` существовал. EntryPoint его создаёт, но если запускаешь на хосте — убедись что папка есть.
 ```
 
 ### Инициализация ClickHouse таблицы

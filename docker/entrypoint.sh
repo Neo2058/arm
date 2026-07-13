@@ -11,15 +11,21 @@ mkdir -p /var/www/storage/framework/views
 mkdir -p /var/www/storage/framework/sessions
 mkdir -p /var/www/storage/logs
 
+# Also ensure bootstrap/cache exists (needed for config/route/view cache)
+mkdir -p /var/www/bootstrap/cache
+
 # Ensure the main log file exists and is writable (prevents "Permission denied" when Laravel tries to log errors)
 touch /var/www/storage/logs/laravel.log
 
 # Fix ownership and permissions for www-data (fpm user) — only for directories that PHP needs to WRITE to at runtime.
-# Make writable dirs group-writable (775) so that:
-#   - Container (www-data) can write
-#   - Host user running `php artisan` directly has fewer permission problems
+# We set 775 so the host "deploy" user can also run artisan commands directly if needed
+# (the uid/gid of www-data inside container may differ from host user).
 chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache 2>/dev/null || true
 chmod -R 775 /var/www/storage /var/www/bootstrap/cache 2>/dev/null || true
+chmod 664 /var/www/storage/logs/laravel.log 2>/dev/null || true
+
+# Make sure the log file is writable by group (helps when running artisan on host as deploy)
+touch /var/www/storage/logs/laravel.log
 chmod 664 /var/www/storage/logs/laravel.log 2>/dev/null || true
 
 # Publish Filament and Livewire assets (needed for admin panel JS/CSS)
@@ -47,6 +53,14 @@ php artisan route:clear --quiet || true
 php artisan view:clear --quiet || true
 
 echo "Storage dirs ready."
+
+# Ensure storage/app/public exists (required for storage:link)
+mkdir -p /var/www/storage/app/public
+
+# Force correct symlink (robust against broken links from host runs)
+rm -f /var/www/public/storage
+php artisan storage:link --quiet || echo "storage:link note"
+
 
 # Ensure S3/MinIO bucket exists (idempotent, safe for volume resets)
 # Run synchronously because uploads and form loads depend on S3 being ready

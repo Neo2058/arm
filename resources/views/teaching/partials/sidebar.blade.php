@@ -236,6 +236,11 @@
             'icon' => 'results',
         ],
         [
+            'title' => 'Документы',
+            'route' => 'documents.index',
+            'icon' => 'documents',
+        ],
+        [
             'title' => 'Обратно в меню',
             'route' => 'mainMenu',
             'icon' => 'logout',
