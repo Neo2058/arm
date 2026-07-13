@@ -160,6 +160,7 @@
     // Определяем роль пользователя для скрытия пунктов меню
     $user = auth()->user();
     $userRole = $user ? strtolower( (string) ($user->role->value ?? $user->role) ) : '';
+    $isInstructor = $userRole === 'instructor';
     $canSeeRospisiStats = in_array($userRole, ['super_admin', 'admin', 'instructor']);
 
     $trainingMenu = [
@@ -238,6 +239,7 @@
         [
             'title' => 'Документы',
             'route' => 'documents.index',
+            'active' => 'documents.*',
             'icon' => 'documents',
         ],
         [
@@ -284,6 +286,8 @@
 
     $menu = match (true) {
 
+        // Инструктор в разделе документов остаётся в контексте журнала ТЧМ
+        request()->routeIs('documents.*') && $isInstructor => $journalMenu,
         request()->routeIs('documents.*') => $documentsMenu,
         request()->routeIs('quiz.*') => $documentsMenu,
         request()->routeIs('results.*') => $documentsMenu,
@@ -325,7 +329,8 @@
                 if (!empty($item['tab'])) {
                     $linkHref .= '?tab=' . $item['tab'];
                 }
-                $isActive = request()->routeIs($item['route']) &&
+                $activeRoute = $item['active'] ?? $item['route'];
+                $isActive = request()->routeIs($activeRoute) &&
                     (empty($item['tab']) || request()->query('tab', 'naryady') === $item['tab']);
             @endphp
             <a href="{{ $linkHref }}" class="sidebar__link {{ $isActive ? 'sidebar__link-active' : '' }}">
