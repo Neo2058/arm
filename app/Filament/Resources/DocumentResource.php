@@ -52,7 +52,7 @@ class DocumentResource extends Resource
                     ->acceptedFileTypes(['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
                     ->required()
                     ->preserveFilenames() // Сохранять оригинальное имя файла
-                    ->maxSize(10240) // Ограничение 10МБ
+                    ->maxSize(20240) // Ограничение 10МБ
                     // Provide browser-fetchable preview URL via our signed admin proxy (prevents direct MinIO fetch errors / 419 related UI issues)
                     ->getUploadedFileUsing(function (BaseFileUpload $component, $file, string | array | null $storedFileNames): ?array {
                         $file = (string) $file;
