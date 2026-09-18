@@ -2,9 +2,7 @@
 
 namespace App\Filament\Pages;
 
-use App\Enums\UserRole;
 use App\Models\ActionLog;
-use App\Models\User;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
 
@@ -22,7 +20,7 @@ class UserActivityStats extends Page
 
     public static function canAccess(): bool
     {
-        return Auth::user()?->role?->value === UserRole::SUPER_ADMIN->value;
+        return Auth::user()?->isSuperAdmin() ?? false;
     }
 
     public function getStats(): array

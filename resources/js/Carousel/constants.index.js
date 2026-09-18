@@ -19,7 +19,7 @@ export const imagesArray = [
     {
         name: "Тех кабинет",
         src: "/images/professionalDriver.jpg",
-        role: ['super_admin', 'student'],
+        role: ['super_admin', 'admin'],
         link: '/admin',
         details: [
             {
@@ -81,7 +81,7 @@ export const imagesArray = [
     {
         name: "Подстройки",
         src: "/images/professionalDriver.jpg",
-        role: ['super_admin', 'student', 'driver', 'admin', 'naryadchik'],
+        role: ['super_admin', 'student', 'driver', 'admin', 'dispatcher'],
         logo: "/assets/warranty.svg",
         link: '/podstroiki',
         details: [
@@ -108,7 +108,7 @@ export const imagesArray = [
     {
         name: "Нарядчики",
         src: "/images/professionalDriver.jpg",
-        role: ['naryadchik', 'dispatcher'],
+        role: ['dispatcher'],
         logo: "/assets/packaging.svg",
         link: '/naryad',
         details: [

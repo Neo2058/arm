@@ -56,17 +56,34 @@ enum UserRole: string
     {
         return collect(self::cases())
             ->mapWithKeys(fn ($role) => [
-                $role->value => $role->label()
+                $role->value => $role->label(),
             ])
             ->toArray();
     }
 
-    public static function safeFrom(self|string $value): self
+    public function isAdmin(): bool
+    {
+        return $this === self::ADMIN || $this === self::SUPER_ADMIN;
+    }
+
+    public function isDispatcher(): bool
+    {
+        return $this === self::DISPATCHER;
+    }
+
+    public static function safeFrom(self|string|null $value): self
     {
         if ($value instanceof self) {
             return $value;
         }
 
-        return self::tryFrom($value) ?? self::STUDENT;
+        $normalized = strtolower(trim((string) $value));
+
+        // Legacy alias: в UI/коде раньше фигурировал naryadchik, в БД роль всегда dispatcher.
+        if ($normalized === 'naryadchik') {
+            return self::DISPATCHER;
+        }
+
+        return self::tryFrom($normalized) ?? self::STUDENT;
     }
 }

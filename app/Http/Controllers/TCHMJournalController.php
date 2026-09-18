@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
+use App\Http\Middleware\EnsureInstructor;
 use App\Models\JournalCrewNormative;
 use App\Models\JournalDocument;
 use App\Models\JournalNormativeSetting;
@@ -10,24 +12,27 @@ use App\Models\JournalVacation;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Services\ClickHouseService;
+use Carbon\Carbon;
+use ClickHouseDB\Client;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
-class TCHMJournalController extends Controller
+class TCHMJournalController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            EnsureInstructor::class,
+        ];
+    }
+
     public function index()
     {
         $user = Auth::user();
-        $role = strtolower($user->role->value ?? $user->role);
-
-        if ($role !== 'instructor') {
-            abort(403, 'Доступ только для инструкторов (ТЧМ).');
-        }
-
         $profile = $user->profile;
 
-        if (!$profile || !$profile->column) {
+        if (! $profile || ! $profile->column) {
             return view('journal.index', [
                 'column' => 'Не указана',
                 'tasks' => collect(),
@@ -97,7 +102,7 @@ class TCHMJournalController extends Controller
 
         // Log to ClickHouse for history and analysis
         try {
-            \App\Services\ClickHouseService::log('normative_completed', $task->user_id, [
+            ClickHouseService::log('normative_completed', $task->user_id, [
                 'type' => $task->source,
                 'title' => $task->title,
                 'column' => $task->column,
@@ -149,7 +154,7 @@ class TCHMJournalController extends Controller
         ]);
 
         $file = $request->file('pdf');
-        $path = $file->store('journal-documents/' . $user->id, 'local'); // or 's3'
+        $path = $file->store('journal-documents/'.$user->id, 'local'); // or 's3'
 
         JournalDocument::create([
             'user_id' => $user->id,
@@ -238,7 +243,7 @@ class TCHMJournalController extends Controller
         // Load crew for marks table
         $crew = [];
         if ($column) {
-            $crew = User::where('role', 'driver')
+            $crew = User::where('role', UserRole::DRIVER)
                 ->whereHas('profile', function ($q) use ($column) {
                     $q->where('column', $column);
                 })->with('profile')->get();
@@ -282,9 +287,9 @@ class TCHMJournalController extends Controller
         foreach ($crewData as $userId => $data) {
             UserProfile::where('user_id', $userId)->update([
                 'normative_class' => $data['class'] ?? null,
-                'is_maneuver' => !empty($data['is_maneuver']),
-                'is_t6' => !empty($data['is_t6']),
-                'is_pomoshnik' => !empty($data['is_pomoshnik']),
+                'is_maneuver' => ! empty($data['is_maneuver']),
+                'is_t6' => ! empty($data['is_t6']),
+                'is_pomoshnik' => ! empty($data['is_pomoshnik']),
             ]);
         }
 
@@ -298,12 +303,12 @@ class TCHMJournalController extends Controller
         $profile = $user->profile;
         $column = $profile?->column;
 
-        if (!$column) {
+        if (! $column) {
             return redirect()->route('journal.index')->with('error', 'Колонна не указана.');
         }
 
         // Crew in the column - only drivers/machinists
-        $crew = User::where('role', 'driver')
+        $crew = User::where('role', UserRole::DRIVER)
             ->whereHas('profile', function ($q) use ($column) {
                 $q->where('column', $column);
             })->with('profile')->get();
@@ -360,13 +365,13 @@ class TCHMJournalController extends Controller
         foreach ($crewData as $userId => $data) {
             if (isset($data['class'])) {
                 UserProfile::where('user_id', $userId)->update([
-                    'normative_class' => $data['class']
+                    'normative_class' => $data['class'],
                 ]);
             }
         }
 
         // Update normatives and recalc next
-        if (!empty($validated['normatives'])) {
+        if (! empty($validated['normatives'])) {
             $setting = JournalNormativeSetting::firstOrCreate(['user_id' => $user->id], ['column' => $column]);
 
             foreach ($validated['normatives'] as $userId => $types) {
@@ -403,14 +408,14 @@ class TCHMJournalController extends Controller
                         $norm->save();
 
                         // Log directly to ClickHouse (sync to ensure appears in history; crew as user_id)
-                        if (!empty($dates['last_date'])) {
+                        if (! empty($dates['last_date'])) {
                             try {
-                                $ch = new \ClickHouseDB\Client(config('clickhouse'));
+                                $ch = new Client(config('clickhouse'));
                                 $data = [
                                     'event_date' => date('Y-m-d'),
                                     'event_time' => now()->format('Y-m-d H:i:s'),
-                                    'user_id' => (int)$userId, // the crew member
-                                    'user_role' => 'driver',
+                                    'user_id' => (int) $userId, // the crew member
+                                    'user_role' => UserRole::DRIVER->value,
                                     'user_column' => $column,
                                     'action_type' => 'normative_completed',
                                     'resource_id' => 0,
@@ -439,9 +444,11 @@ class TCHMJournalController extends Controller
 
     private function calculateNextDate($lastDate, $type, $class, $setting)
     {
-        if (!$lastDate) return null;
+        if (! $lastDate) {
+            return null;
+        }
 
-        $last = \Carbon\Carbon::parse($lastDate);
+        $last = Carbon::parse($lastDate);
 
         $months = 12; // default
 
@@ -486,11 +493,11 @@ class TCHMJournalController extends Controller
         $userMap = [];
         try {
             if ($column) {
-                $crews = User::whereHas('profile', fn($q) => $q->where('column', $column))->pluck('name', 'id')->toArray();
+                $crews = User::whereHas('profile', fn ($q) => $q->where('column', $column))->pluck('name', 'id')->toArray();
                 $userMap = $crews;
             }
 
-            $ch = new \ClickHouseDB\Client(config('clickhouse'));
+            $ch = new Client(config('clickhouse'));
             $query = "
                 SELECT 
                     event_time,
@@ -510,8 +517,8 @@ class TCHMJournalController extends Controller
             $seen = [];
             $unique = [];
             foreach ($history as $row) {
-                $key = ($row['user_id'] ?? '') . '|' . ($row['event_time'] ?? '') . '|' . ($row['details'] ?? '');
-                if (!isset($seen[$key])) {
+                $key = ($row['user_id'] ?? '').'|'.($row['event_time'] ?? '').'|'.($row['details'] ?? '');
+                if (! isset($seen[$key])) {
                     $seen[$key] = true;
                     $unique[] = $row;
                 }
@@ -542,11 +549,11 @@ class TCHMJournalController extends Controller
         $profile = $user->profile;
         $column = $profile?->column;
 
-        if (!$column) {
+        if (! $column) {
             return redirect()->route('journal.index')->with('error', 'Колонна не указана.');
         }
 
-        $crew = User::where('role', 'driver')
+        $crew = User::where('role', UserRole::DRIVER)
             ->whereHas('profile', function ($q) use ($column) {
                 $q->where('column', $column);
             })->with('profile')->get();
@@ -576,14 +583,14 @@ class TCHMJournalController extends Controller
 
         // Compute intersections (vacation overlaps with any next normative date)
         $intersections = [];
-        $today = \Carbon\Carbon::today();
+        $today = Carbon::today();
 
         foreach ($crew as $member) {
             $memberNorms = $normatives->get($member->id, collect());
             $memberVacs = $vacations->get($member->id, collect());
 
             foreach ($memberNorms as $norm) {
-                if (!$norm->next_date || $norm->next_date->lt($today)) {
+                if (! $norm->next_date || $norm->next_date->lt($today)) {
                     continue;
                 }
 
@@ -605,7 +612,7 @@ class TCHMJournalController extends Controller
         }
 
         // Sort intersections by next_date
-        usort($intersections, function($a, $b) {
+        usort($intersections, function ($a, $b) {
             return $a['next_date']->timestamp <=> $b['next_date']->timestamp;
         });
 
@@ -646,10 +653,10 @@ class TCHMJournalController extends Controller
         $user = Auth::user();
         $column = $user->profile?->column;
 
-        $vac = JournalVacation::where(function($q) use ($user, $column) {
-                $q->where('instructor_id', $user->id)
-                  ->orWhere('column', $column);
-            })
+        $vac = JournalVacation::where(function ($q) use ($user, $column) {
+            $q->where('instructor_id', $user->id)
+                ->orWhere('column', $column);
+        })
             ->findOrFail($id);
 
         $vac->delete();

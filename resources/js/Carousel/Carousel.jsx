@@ -78,24 +78,6 @@ const Carousel = ({ role }) => {
     const handleClick = (clickedIndex) => {
         const clickedPosition = positions[positionIndexes[clickedIndex]]
 
-        // const positionMap = {
-        //     left3: -3,
-        //     left2: -2,
-        //     left1: -1,
-        //     center: 0,
-        //     right1: 1,
-        //     right2: 2,
-        //     right3: 3
-        // }
-        //
-        // const offset = positionMap[clickedPosition]
-        //
-        // if(offset > 0) {
-        //     handleNext(offset)
-        // } else if (offset < 0) {
-        //     handleBack(-offset)
-        // }
-        // return clickedPosition;
         if (clickedPosition !== 'center') {
             const positionMap = {
                 left3: -3, left2: -2, left1: -1, center: 0, right1: 1, right2: 2, right3: 3
@@ -107,14 +89,7 @@ const Carousel = ({ role }) => {
         }
 
         const item = filterImages[clickedIndex];
-
-        if (role === 'student') {
-            // Студентов всегда кидаем на форму входа Filament (обычно /admin/login)
-            window.location.href = '/admin/login';
-        } else {
-            // Все остальные идут по прямой ссылке на Blade-шаблоны
-            window.location.href = item.link;
-        }
+        window.location.href = item.link;
     }
     return (
         <div className='flex pt-6 md:pt-10 items-center justify-center flex-col gap-2 md:gap-4 bg-black py-6 md:py-10 w-screen h-screen overflow-x-hidden overflow-y-hidden'>

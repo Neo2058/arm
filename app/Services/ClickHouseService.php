@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use ClickHouseDB\Client;
@@ -9,16 +10,15 @@ class ClickHouseService
     public static function log($actionType, $resourceId = 0, $details = '')
     {
         $user = Auth::user();
-        if (!$user) return;
+        if (! $user) {
+            return;
+        }
 
         // Подгружаем профиль, чтобы знать номер колонны (безопасно, профиль может отсутствовать)
         $profile = $user->profile;
         $userColumn = $profile?->column ?? 'Не указана';
 
-        // Привести роль к строке (может быть enum)
-        $userRole = $user->role instanceof \App\Enums\UserRole
-            ? $user->role->value
-            : (string) ($user->role ?? 'unknown');
+        $userRole = $user->roleValue();
 
         $data = [
             'event_date' => date('Y-m-d'),
@@ -36,7 +36,7 @@ class ClickHouseService
             $client = new Client(config('clickhouse'));
             $client->insert('user_actions', [$data], [
                 'event_date', 'event_time', 'user_id', 'user_role',
-                'user_column', 'action_type', 'resource_id', 'details'
+                'user_column', 'action_type', 'resource_id', 'details',
             ]);
         })->onQueue('analytics');
     }

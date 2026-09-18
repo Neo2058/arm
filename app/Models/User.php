@@ -3,13 +3,14 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Filament\Panel;
-use App\Enums\UserRole;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements FilamentUser
 {
@@ -18,29 +19,120 @@ class User extends Authenticatable implements FilamentUser
         'password' => 'hashed',
         'role' => UserRole::class,
     ];
-    public function profile() {
+
+    public function profile()
+    {
         return $this->hasOne(UserProfile::class);
     }
-    public function canAccessPanel(Panel $panel): bool {
-        // Support both enum and string (in case of casting issues or legacy data)
-        $roleValue = $this->role instanceof UserRole
-            ? $this->role->value
-            : strtolower((string) ($this->role ?? ''));
 
-        // Only super admins and (regular) admins are allowed to access the Filament admin panel.
-        // Previously restricted to only student + super_admin, which broke login for admin users.
-        return in_array($roleValue, [
-            UserRole::SUPER_ADMIN->value,
-            UserRole::ADMIN->value,
-        ], true);
+    public function roleEnum(): UserRole
+    {
+        return UserRole::safeFrom($this->role ?? '');
     }
 
-    public function devices() { return $this->hasMany(UserDevice::class); }
+    public function roleValue(): string
+    {
+        return $this->roleEnum()->value;
+    }
 
-    public function podstroikas() { return $this->hasMany(Podstroika::class); }
+    /**
+     * Значения роли для JSON-доступов. dispatcher также матчит legacy naryadchik.
+     *
+     * @return list<string>
+     */
+    public function roleValuesForAccess(): array
+    {
+        $value = $this->roleValue();
+
+        return $value === UserRole::DISPATCHER->value
+            ? [UserRole::DISPATCHER->value, 'naryadchik']
+            : [$value];
+    }
+
+    public function isInstructor(): bool
+    {
+        return $this->roleEnum() === UserRole::INSTRUCTOR;
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->roleEnum()->isAdmin();
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->roleEnum() === UserRole::SUPER_ADMIN;
+    }
+
+    public function isDispatcher(): bool
+    {
+        return $this->roleEnum() === UserRole::DISPATCHER;
+    }
+
+    public function isDriver(): bool
+    {
+        return $this->roleEnum() === UserRole::DRIVER;
+    }
+
+    public function isStudent(): bool
+    {
+        return $this->roleEnum() === UserRole::STUDENT;
+    }
+
+    public function canBypassAccessBarriers(): bool
+    {
+        return $this->isAdmin();
+    }
+
+    public function canViewRospisiStatistics(): bool
+    {
+        return $this->isAdmin() || $this->isInstructor();
+    }
+
+    public function canAccessByRoles(?array $allowedRoles): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        if ($allowedRoles === null) {
+            return true;
+        }
+
+        return count(array_intersect($this->roleValuesForAccess(), $allowedRoles)) > 0;
+    }
+
+    public function constrainByAllowedRoles($query)
+    {
+        if ($this->isAdmin()) {
+            return $query;
+        }
+
+        return $query->where(function ($q) {
+            $q->whereNull('allowed_roles');
+            foreach ($this->roleValuesForAccess() as $role) {
+                $q->orWhereJsonContains('allowed_roles', $role);
+            }
+        });
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->isAdmin();
+    }
+
+    public function devices()
+    {
+        return $this->hasMany(UserDevice::class);
+    }
+
+    public function podstroikas()
+    {
+        return $this->hasMany(Podstroika::class);
+    }
 
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.

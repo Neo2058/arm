@@ -4,26 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Models\NaryadPodstroikaLimit;
 use App\Models\Podstroika;
-use App\Models\User;
-use App\Models\UserProfile;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 
 class PodstroikiController extends Controller
 {
     public function index()
     {
         $user = Auth::user();
-        $roleObj = $user->role;
-        $roleValue = is_object($roleObj) && property_exists($roleObj, 'value') ? strtolower($roleObj->value) : strtolower((string) $roleObj);
 
         $currentMonth = Carbon::now()->startOfMonth();
         $nextMonth = Carbon::now()->addMonth()->startOfMonth();
 
         $monthFilter = request('month', 'both'); // both, current, next
 
-        if (in_array($roleValue, ['naryadchik', 'dispatcher'])) {
+        if ($user->isDispatcher()) {
             // Dispatcher sees ONLY the table of applicants for current and next month.
             // Support filter by month. Sorted by tab_number asc.
             // Each row is a separate заявка so status can be changed per month.
@@ -47,23 +43,23 @@ class PodstroikiController extends Controller
                     $surname = $nameParts[0] ?? '';
                     $initials = '';
                     if (isset($nameParts[1])) {
-                        $initials .= mb_substr($nameParts[1], 0, 1) . '.';
+                        $initials .= mb_substr($nameParts[1], 0, 1).'.';
                     }
                     if (isset($nameParts[2])) {
-                        $initials .= mb_substr($nameParts[2], 0, 1) . '.';
+                        $initials .= mb_substr($nameParts[2], 0, 1).'.';
                     }
 
                     return [
                         'id' => $p->id,
                         'tab_number' => $tab,
-                        'name' => trim($surname . ' ' . $initials),
+                        'name' => trim($surname.' '.$initials),
                         'month' => $p->for_month->format('Y-m'),
                         'details' => $p->details,
                         'status' => $p->status,
                     ];
                 })
                 ->sortBy(function ($item) {
-                    return [(int)$item['tab_number'], $item['month']];
+                    return [(int) $item['tab_number'], $item['month']];
                 })
                 ->values();
 
@@ -93,10 +89,8 @@ class PodstroikiController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
-        $roleObj = $user->role;
-        $roleValue = is_object($roleObj) && property_exists($roleObj, 'value') ? strtolower($roleObj->value) : strtolower((string) $roleObj);
 
-        if (in_array($roleValue, ['naryadchik', 'dispatcher'])) {
+        if ($user->isDispatcher()) {
             return redirect()->route('podstroiki.index')->with('error', 'У нарядчиков нет доступа к подаче заявок.');
         }
 
@@ -109,7 +103,7 @@ class PodstroikiController extends Controller
         $requestedMonth = Carbon::parse($request->for_month)->startOfMonth();
         $nextMonth = Carbon::now()->addMonth()->startOfMonth();
 
-        if (!$requestedMonth->equalTo($nextMonth)) {
+        if (! $requestedMonth->equalTo($nextMonth)) {
             $requestedMonth = $nextMonth;
         }
 
@@ -127,10 +121,8 @@ class PodstroikiController extends Controller
     public function updateStatus(Request $request, Podstroika $podstroika)
     {
         $user = Auth::user();
-        $roleObj = $user->role;
-        $roleValue = is_object($roleObj) && property_exists($roleObj, 'value') ? strtolower($roleObj->value) : strtolower((string) $roleObj);
 
-        if (!in_array($roleValue, ['naryadchik', 'dispatcher'])) {
+        if (! $user->isDispatcher()) {
             abort(403);
         }
 
@@ -161,9 +153,10 @@ class PodstroikiController extends Controller
                 if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                     return response()->json([
                         'success' => false,
-                        'message' => "Превышен лимит подстроек для пользователя на этот месяц (макс. {$max})"
+                        'message' => "Превышен лимит подстроек для пользователя на этот месяц (макс. {$max})",
                     ], 422);
                 }
+
                 return back()->with('error', "Превышен лимит подстроек для пользователя на этот месяц (макс. {$max})");
             }
         }

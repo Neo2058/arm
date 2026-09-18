@@ -57,8 +57,32 @@
 
 ### Важные сервисы
 - `ClickHouseService::log($actionType, $resourceId, $details)` — **всегда используй** для фиксации действий пользователя (ставится в очередь).
+- `FileProxyService` — стрим документов и training-медиа из MinIO через приложение. Не возвращай `Storage::temporaryUrl()` в браузер для новых фич. Не меняй Filament `FileUpload` (disk / visibility / `getUploadedFileUsing`) мимоходом.
+- `NaryadHoursCalculator` — часы сетки наряда; формулы не дублировать в контроллерах.
 - `TelegramService`
 - Кастомные контроллеры в `App\Http\Controllers\Api\...`
+
+### Маршруты
+`routes/web.php` — публичные + группа `auth` + Check-middleware. Домены:
+
+- `routes/account.php`, `documents.php`, `training.php`, `work.php`, `journal.php`, `naryad.php`, `support.php`
+
+Новые URI клади в соответствующий файл. Имена маршрутов не ломай (на них завязан JS).
+
+### Мобильный API (`/api/mobile`)
+- Sanctum personal access token (`Authorization: Bearer`).
+- JSON для логина, документов, тем обучения, материалов, комментариев.
+- Стрим файлов: signed URL (`mobile.files.documents` / `mobile.files.training`) + `FileProxyService`, без сессии и без MinIO URL.
+- Клиент: каталог `mobile/` (Expo). Не путать с web-группой (CSRF / device / barrier).
+- Привязка устройства на мобильном прототипе **не** включена.
+
+### Планирование наряда
+Контроллеры в `App\Http\Controllers\Naryad\`:
+- `PlanningController` — оболочка `/naryad`
+- `SetkaController` — сетка, assign/unassign, лимиты подстроек
+- `CatalogsController` — справочники
+
+Доступ: `EnsureDispatcher` (роль `dispatcher`).
 
 ### Фронтенд-монтирование
 Смотри `resources/js/app.jsx`. Компоненты монтируются по `id`:
@@ -79,6 +103,7 @@
 - Используй `todo_write` для любых задач из 3+ шагов.
 - Не трогай `vendor/`, `node_modules/`, сгенерированные билды без крайней необходимости.
 - Все секреты — только через `.env` + `config/`. Никогда не хардкодь пароли/ключи.
+- После правок доступа, файлов или маршрутов гоняй существующие feature-тесты (`JournalAccessTest`, `FileProxyTest`, `NaryadPlanningTest`, `WebRoutesSplitTest`, `UserRoleAccessTest`).
 
 ### Работа с квизами и документами
 - При изменении структуры квиза/вопросов/ответов/ссылок на инструкции обязательно поддерживай вложенные Repeater'ы в `QuizResource`.
@@ -108,8 +133,12 @@
 - Миграции и сиды должны работать в контейнере.
 
 ### Роли и доступ
-- Проверка доступа к Filament — в `User::canAccessPanel()` (только SUPER_ADMIN и ADMIN; STUDENT больше не имеет доступа).
-- Роли определены в `App\Enums\UserRole`.
+- Роли — `App\Enums\UserRole`. Канонический нарядчик: `dispatcher`. Строка `naryadchik` только как алиас в `UserRole::safeFrom()` (старые JSON `allowed_roles`).
+- Проверки в PHP: `User::isAdmin()`, `isSuperAdmin()`, `isInstructor()`, `isDispatcher()`, `isDriver()`, `isStudent()`, `canBypassAccessBarriers()`, `canViewRospisiStatistics()`, `canAccessByRoles()`.
+- Filament (`canAccessPanel`): только `SUPER_ADMIN` и `ADMIN`.
+- Журнал ТЧМ: только `instructor` — `EnsureInstructor` на всех `/journal*` (не дублировать проверку в каждом методе).
+- Планирование наряда: только `dispatcher` — `EnsureDispatcher`.
+- Не пиши `in_array($role, ['super_admin', 'admin'])` и не вводи роль `naryadchik` в enum/БД.
 
 ## Правила взаимодействия с AI-ассистентом
 
@@ -151,6 +180,6 @@ php artisan optimize:clear
 
 ---
 
-**Последнее обновление:** 2026-06-15 (создано на основе исследования проекта)
+**Последнее обновление:** 2026-09-17 (роли, журнал, FileProxyService, split наряда и `routes/*.php`)
 
 Этот файл имеет высокий приоритет и будет автоматически подгружаться в контекст AI при работе в директории проекта.

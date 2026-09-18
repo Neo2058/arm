@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\UserRole;
 use App\Filament\Resources\DocumentResource\Pages;
 use App\Models\Document;
 use Filament\Forms\Components\BaseFileUpload;
@@ -13,6 +14,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 class DocumentResource extends Resource
 {
@@ -21,7 +23,6 @@ class DocumentResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $navigationLabel = 'Документы';
-
 
     public static function form(Form $form): Form
     {
@@ -54,14 +55,14 @@ class DocumentResource extends Resource
                     ->preserveFilenames() // Сохранять оригинальное имя файла
                     ->maxSize(20240) // Ограничение 10МБ
                     // Provide browser-fetchable preview URL via our signed admin proxy (prevents direct MinIO fetch errors / 419 related UI issues)
-                    ->getUploadedFileUsing(function (BaseFileUpload $component, $file, string | array | null $storedFileNames): ?array {
+                    ->getUploadedFileUsing(function (BaseFileUpload $component, $file, string|array|null $storedFileNames): ?array {
                         $file = (string) $file;
                         $disk = Storage::disk('s3');
                         if (! $disk->exists($file)) {
                             return null;
                         }
 
-                        $url = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                        $url = URL::temporarySignedRoute(
                             'admin.documents.serve',
                             now()->addMinutes(15),
                             ['path' => $file]
@@ -78,13 +79,7 @@ class DocumentResource extends Resource
                 Select::make('allowed_roles')
                     ->label('Доступно для ролей')
                     ->multiple() // Позволяет выбрать несколько ролей сразу
-                    ->options([
-                        'super_admin' => 'Супер админ',
-                        'admin' => 'Админ',
-                        'instructor' => 'Инструктор',
-                        'driver' => 'Машинист',
-                        'student' => 'Обучающийся',
-                    ])
+                    ->options(UserRole::options())
                     ->placeholder('Если пусто — доступно ВСЕМ')
                     ->required(false),
 
@@ -114,12 +109,14 @@ class DocumentResource extends Resource
                         }
                         try {
                             $bytes = Storage::disk('s3')->size($state);
-                            return round($bytes / 1024 / 1024, 2) . ' MB';
+
+                            return round($bytes / 1024 / 1024, 2).' MB';
                         } catch (\Throwable $e) {
                             \Log::warning('S3 file size lookup failed', [
                                 'path' => $state,
                                 'error' => $e->getMessage(),
                             ]);
+
                             return 'N/A';
                         }
                     }),

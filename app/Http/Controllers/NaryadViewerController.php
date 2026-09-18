@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActionLog;
 use App\Models\Naryad;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -11,17 +12,8 @@ class NaryadViewerController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $userRole = strtolower((string)($user->role->value ?? $user->role));
 
-        $query = Naryad::query();
-
-        // Similar role filtering as documents
-        if (!in_array($userRole, ['super_admin', 'admin'])) {
-            $query->where(function ($q) use ($userRole) {
-                $q->whereJsonContains('allowed_roles', $userRole)
-                    ->orWhereNull('allowed_roles');
-            });
-        }
+        $query = $user->constrainByAllowedRoles(Naryad::query());
 
         $naryads = $query->orderBy('naryad_date', 'desc')
             ->get()
@@ -34,11 +26,11 @@ class NaryadViewerController extends Controller
                 ];
             });
 
-        $isAdmin = in_array($userRole, ['super_admin', 'admin']);
+        $isAdmin = $user->isAdmin();
 
         // Log viewing the naryads list page (the three blocks viewer)
         // Hybrid: goes to relational DB + ClickHouse
-        \App\Models\ActionLog::log('view_naryads_page');
+        ActionLog::log('view_naryads_page');
 
         return view('naryady.index', [
             'naryads' => $naryads,
@@ -49,13 +41,10 @@ class NaryadViewerController extends Controller
     public function show(Naryad $naryad)
     {
         $user = auth()->user();
-        $userRole = strtolower((string)($user->role->value ?? $user->role));
 
         // Role check
-        if (!in_array($userRole, ['super_admin', 'admin']) && $naryad->allowed_roles !== null) {
-            if (!in_array($userRole, $naryad->allowed_roles)) {
-                abort(403, 'Доступ ограничен.');
-            }
+        if (! $user->canAccessByRoles($naryad->allowed_roles)) {
+            abort(403, 'Доступ ограничен.');
         }
 
         $url = (function () use ($naryad) {
@@ -67,13 +56,14 @@ class NaryadViewerController extends Controller
                 );
             } catch (\Throwable $e) {
                 \Log::warning('S3 temp url failed for naryad', ['id' => $naryad->id, 'err' => $e->getMessage()]);
+
                 return null;
             }
         })();
 
         // Log the PDF view action
         // Hybrid: goes to relational DB + ClickHouse via ActionLog::log()
-        \App\Models\ActionLog::log('view_naryad', [
+        ActionLog::log('view_naryad', [
             'naryad_id' => $naryad->id,
             'title' => $naryad->title,
             'date' => $naryad->naryad_date?->format('Y-m-d'),
@@ -101,6 +91,7 @@ class NaryadViewerController extends Controller
                 );
             } catch (\Throwable $e) {
                 \Log::warning('S3 temp url failed for naryad', ['id' => $naryad->id, 'err' => $e->getMessage()]);
+
                 return null;
             }
         })();

@@ -13,7 +13,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
                 <!-- Форма обратной связи -->
-                <div class="lg:col-span-3 {{ ($user->role->value ?? $user->role) === 'driver' ? '' : 'lg:col-span-5' }}">
+                <div class="lg:col-span-3 {{ $user->isDriver() ? '' : 'lg:col-span-5' }}">
                     <div class="bg-[#0b1018] border border-white/10 rounded-3xl p-6 shadow-2xl">
                         <div class="flex items-center gap-3 mb-4">
                             <div class="w-9 h-9 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400">
@@ -55,7 +55,7 @@
                 </div>
 
                 <!-- Поддержать проект -->
-                @if( ($user->role->value ?? $user->role) === 'driver' )
+                @if($user->isDriver())
                 <div class="lg:col-span-2">
                     <div class="bg-[#0b1018] border border-white/10 rounded-3xl p-6 shadow-2xl">
                         <div class="flex items-center gap-3 mb-4">

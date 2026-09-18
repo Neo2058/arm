@@ -1,21 +1,23 @@
 <?php
+
 namespace App\Http\Controllers;
 
-use App\Models\Document;
-use App\Models\QuizResult;
 use App\Models\ActionLog;
+use App\Models\Document;
+use App\Models\Quiz;
+use App\Models\QuizResult;
 use App\Services\AdminNotificationService;
 use App\Services\ClickHouseService;
+use App\Services\FileProxyService;
 use App\Services\TelegramService;
-use Illuminate\Support\Facades\Storage;
-use App\Models\Quiz;
 
 class DocumentController extends Controller
 {
+    public function __construct(private FileProxyService $files) {}
+
     public function index()
     {
         $user = auth()->user();
-        $userRole = strtolower((string)($user->role->value ?? $user->role));
 
         // Массив для перевода системных названий в читаемые
         $categoryLabels = [
@@ -27,34 +29,28 @@ class DocumentController extends Controller
             'technical' => 'Конспекты УПЦ',
             'student' => 'Конспект ТУ',
             'other' => 'Прочие материалы',
-            'remember' => 'Памятки'
+            'remember' => 'Памятки',
         ];
 
         // Получаем документы
         $query = Document::with('quiz.questions');
 
         // КРИТИЧЕСКИ ВАЖНО: Если это не админ, фильтруем документы по его роли
-        if (!in_array($userRole, ['super_admin', 'admin'])) {
-            $query->where(function ($q) use ($userRole) {
-                // Показываем документы, где роль пользователя есть в массиве allowed_roles,
-                // ИЛИ документы, у которых allowed_roles равен null (доступны всем)
-                $q->whereJsonContains('allowed_roles', $userRole)
-                    ->orWhereNull('allowed_roles');
-            });
-        }
+        $query = $user->constrainByAllowedRoles($query);
 
         // 1. Получаем документы со связями
         $documentsGrouped = $query->get()->map(function ($document) use ($categoryLabels) {
             // Определяем понятное имя категории, если её нет — пишем "Прочие материалы"
             $rawCategory = $document->category ?: 'other';
             $categoryName = $categoryLabels[$rawCategory] ?? $rawCategory;
+
             return [
                 'id' => $document->id,
                 'title' => $document->title,
                 'category_key' => $rawCategory,
                 'category_name' => $categoryName,
                 'updatedAt' => $document->updated_at?->format('d.m.Y'),
-                'url' => \Illuminate\Support\Facades\URL::temporarySignedRoute('documents.file', now()->addMinutes(30), $document->id),
+                'url' => $this->files->temporarySignedRoute('documents.file', 30, $document->id),
                 'quiz' => $document->quiz ? [
                     'id' => $document->quiz->id,
                     'title' => $document->quiz->title,
@@ -69,7 +65,7 @@ class DocumentController extends Controller
             ->map(function ($items, $categoryName) {
                 return [
                     'name' => $categoryName,
-                    'items' => $items->values()->toArray()
+                    'items' => $items->values()->toArray(),
                 ];
             })
             ->values()
@@ -92,20 +88,17 @@ class DocumentController extends Controller
         return view('teaching.documents', [
             'groupedDocuments' => $documentsGrouped,
             'unreadCount' => $unreadResultsCount,
-            'deviceOs' => $deviceOs
+            'deviceOs' => $deviceOs,
         ]);
     }
 
     public function show(Document $document)
     {
         $user = auth()->user();
-        $userRole = strtolower((string)($user->role->value ?? $user->role));
 
         // Защита прямой ссылки: если документ ограничен и роль пользователя не совпадает
-        if (!in_array($userRole, ['super_admin', 'admin']) && $document->allowed_roles !== null) {
-            if (!in_array($userRole, $document->allowed_roles)) {
-                abort(403, 'Доступ к данному документу ограничен протоколом безопасности.');
-            }
+        if (! $user->canAccessByRoles($document->allowed_roles)) {
+            abort(403, 'Доступ к данному документу ограничен протоколом безопасности.');
         }
 
         // 1. Фиксируем событие просмотра (ActionLog + ClickHouse)
@@ -116,13 +109,13 @@ class DocumentController extends Controller
 
         // 2. Возвращаем защищённую ссылку на просмотр через приложение (inline, с проверкой)
         // Фронтенд должен использовать эту ссылку для просмотра (не для скачивания)
-        $url = \Illuminate\Support\Facades\URL::temporarySignedRoute('documents.file', now()->addMinutes(30), $document->id);
+        $url = $this->files->temporarySignedRoute('documents.file', 30, $document->id);
 
         // 3. Возвращаем JSON (если React запрашивает ссылку по клику)
         // или отдельный Blade-вид
         return response()->json([
             'url' => $url,
-            'title' => $document->title
+            'title' => $document->title,
         ]);
     }
 
@@ -131,7 +124,7 @@ class DocumentController extends Controller
         // Жадная загрузка вопросов, ответов, ссылок и самих документов
         $quiz = Quiz::whereNull('document_id')->where('is_active', true)->first();
 
-        if (!$quiz) {
+        if (! $quiz) {
             return redirect()->route('mainMenu')->with('error', 'Активных аттестаций не найдено');
         }
 
@@ -139,8 +132,8 @@ class DocumentController extends Controller
         $preSignedUrls = [];
         foreach ($quiz->questions as $question) {
             foreach ($question->references as $ref) {
-                if ($ref->document && !isset($preSignedUrls[$ref->document_id])) {
-                    $preSignedUrls[$ref->document_id] = \Illuminate\Support\Facades\URL::temporarySignedRoute('documents.file', now()->addMinutes(60), $ref->document_id);
+                if ($ref->document && ! isset($preSignedUrls[$ref->document_id])) {
+                    $preSignedUrls[$ref->document_id] = $this->files->temporarySignedRoute('documents.file', 60, $ref->document_id);
                 }
             }
         }
@@ -159,22 +152,21 @@ class DocumentController extends Controller
                         return [
                             'anchor_text' => $r->anchor_text,
                             'page' => $r->page_number,
-                            'url' => $preSignedUrls[$r->document_id] ?? null
+                            'url' => $preSignedUrls[$r->document_id] ?? null,
                         ];
-                    })
+                    }),
                 ];
-            })
+            }),
         ];
 
         $unreadResultsCount = QuizResult::where('user_id', auth()->id())
             ->where('is_viewed', false)
             ->count();
 
-
         return view('quiz.general', [
             'quiz' => $quizData,
-            'unreadCount' => $unreadResultsCount // <-- Передали во view
-            ]);
+            'unreadCount' => $unreadResultsCount, // <-- Передали во view
+        ]);
     }
 
     public function history()
@@ -193,7 +185,7 @@ class DocumentController extends Controller
         // Передаем результаты в форму (подсчет unreadCount передаем как 0, так как они только что прочитаны)
         return view('quiz.results-history', [
             'results' => $results,
-            'unreadCount' => 0
+            'unreadCount' => 0,
         ]);
     }
 
@@ -204,19 +196,15 @@ class DocumentController extends Controller
     public function serveFile(Document $document)
     {
         $user = auth()->user();
-        $userRole = strtolower((string)($user->role->value ?? $user->role));
 
         // Permission check
-        if (!in_array($userRole, ['super_admin', 'admin']) && $document->allowed_roles !== null) {
-            if (!in_array($userRole, $document->allowed_roles)) {
-                abort(403, 'Доступ к данному документу ограничен протоколом безопасности.');
-            }
+        if (! $user->canAccessByRoles($document->allowed_roles)) {
+            abort(403, 'Доступ к данному документу ограничен протоколом безопасности.');
         }
 
-        $disk = Storage::disk('s3');
         $path = $document->file_path;
 
-        if (empty($path) || !$disk->exists($path)) {
+        if (! $this->files->exists($path)) {
             abort(404, 'Файл не найден');
         }
 
@@ -226,14 +214,13 @@ class DocumentController extends Controller
             'title' => $document->title,
         ]);
 
-        $filename = pathinfo($path, PATHINFO_FILENAME) . '.pdf';
-        $mime = 'application/pdf';
+        $filename = pathinfo($path, PATHINFO_FILENAME).'.pdf';
 
         // Force inline display to prevent auto-download on Android and other mobiles.
         // Use object tag on frontend + these headers.
-        return $disk->response($path, $filename, [
-            'Content-Type' => $mime,
-            'Content-Disposition' => 'inline; filename="' . addslashes($filename) . '"',
+        return $this->files->respond($path, $filename, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.addslashes($filename).'"',
             'Accept-Ranges' => 'bytes',
             'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
             'Pragma' => 'no-cache',
@@ -249,21 +236,19 @@ class DocumentController extends Controller
     public function downloadFile(Document $document)
     {
         $user = auth()->user();
-        $userRole = strtolower((string)($user->role->value ?? $user->role));
+        $isAdmin = $user->isAdmin();
+        $userRole = $user->roleValue();
 
-        $isAdmin = in_array($userRole, ['super_admin', 'admin']);
-
-        $disk = Storage::disk('s3');
         $path = $document->file_path;
 
-        if (empty($path) || !$disk->exists($path)) {
+        if (! $this->files->exists($path)) {
             abort(404, 'Файл не найден');
         }
 
         $filename = basename($path);
-        $mime = $disk->mimeType($path) ?: 'application/octet-stream';
+        $mime = $this->files->disk()->mimeType($path) ?: 'application/octet-stream';
 
-        if (!$isAdmin) {
+        if (! $isAdmin) {
             // Violation: log to DB + CH
             ActionLog::log('violation_document_download', [
                 'document_id' => $document->id,
@@ -289,7 +274,7 @@ class DocumentController extends Controller
                 $tgMessage .= "👤 Пользователь: {$user->name} (ID: {$user->id}, роль: {$userRole})\n";
                 $tgMessage .= "📄 Документ: {$document->title} (ID: {$document->id})\n";
                 $tgMessage .= "📍 Действие: попытка скачивания (запрещено, только просмотр)\n";
-                $tgMessage .= "⏰ " . now()->format('Y-m-d H:i:s');
+                $tgMessage .= '⏰ '.now()->format('Y-m-d H:i:s');
 
                 TelegramService::send($tgMessage, null, 'Markdown');
             } catch (\Throwable $e) {
@@ -308,9 +293,9 @@ class DocumentController extends Controller
 
         ClickHouseService::log('document_download', $document->id, $document->title);
 
-        return $disk->response($path, $filename, [
+        return $this->files->respond($path, $filename, [
             'Content-Type' => $mime,
-            'Content-Disposition' => 'attachment; filename="' . addslashes($filename) . '"',
+            'Content-Disposition' => 'attachment; filename="'.addslashes($filename).'"',
         ]);
     }
 
@@ -327,21 +312,20 @@ class DocumentController extends Controller
 
         // Admin only
         $user = auth()->user();
-        if (!$user || !in_array(strtolower((string)($user->role->value ?? $user->role)), ['super_admin', 'admin'])) {
+        if (! $user?->isAdmin()) {
             abort(403);
         }
 
-        $disk = Storage::disk('s3');
-        if (!$disk->exists($path)) {
+        if (! $this->files->exists($path)) {
             abort(404, 'Файл не найден');
         }
 
         $filename = basename($path);
-        $mime = $disk->mimeType($path) ?: 'application/octet-stream';
+        $mime = $this->files->disk()->mimeType($path) ?: 'application/octet-stream';
 
-        return $disk->response($path, $filename, [
+        return $this->files->respond($path, $filename, [
             'Content-Type' => $mime,
-            'Content-Disposition' => 'inline; filename="' . addslashes($filename) . '"',
+            'Content-Disposition' => 'inline; filename="'.addslashes($filename).'"',
             'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
             'Pragma' => 'no-cache',
             'Expires' => '0',

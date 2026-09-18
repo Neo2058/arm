@@ -5,13 +5,13 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\RoutesCatalogResource\Pages;
 use App\Models\RoutesCatalog;
 use Filament\Forms;
+use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Table;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Grid;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 class RoutesCatalogResource extends Resource
@@ -19,9 +19,13 @@ class RoutesCatalogResource extends Resource
     protected static ?string $model = RoutesCatalog::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-map';
+
     protected static ?string $navigationLabel = 'Каталог маршрутов';
+
     protected static ?string $modelLabel = 'Шаблон маршрута';
+
     protected static ?string $pluralModelLabel = 'Каталог маршрутов';
+
     protected static ?string $navigationGroup = 'Управление временем'; // Сгруппируем для порядка
 
     public static function form(Form $form): Form
@@ -135,6 +139,7 @@ class RoutesCatalogResource extends Resource
                             '4+' => '4+-ночь',
                             '5+' => '5+-поздняя ночь',
                         ];
+
                         return $map[$state] ?? $state;
                     })
                     ->searchable()
@@ -195,10 +200,7 @@ class RoutesCatalogResource extends Resource
     public static function canViewAny(): bool
     {
         $user = auth()->user();
-        if (!$user) return false;
 
-        $role = strtolower((string)($user->role->value ?? $user->role));
-        return in_array($role, ['super_admin', 'admin', 'naryadchik', 'dispatcher']);
+        return $user && ($user->isAdmin() || $user->isDispatcher());
     }
-
 }

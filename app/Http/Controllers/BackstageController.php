@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\BackstageMessage;
 use App\Services\AdminNotificationService;
 use App\Services\TelegramService;
 use App\Services\YookassaService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -18,6 +18,7 @@ class BackstageController extends Controller
     public function index()
     {
         $user = Auth::user();
+
         return view('backstage.index', compact('user'));
     }
 
@@ -54,7 +55,7 @@ class BackstageController extends Controller
         // Уведомление в Telegram
         $amountText = $request->support_amount ? "💰 *Поддержка проекта:* {$request->support_amount} ₽\n" : '';
         $msg = "📨 *НОВОЕ СООБЩЕНИЕ ИЗ BACKSTAGE*\n\n";
-        $msg .= "👤 От: *{$name}* (" . ($user->role->value ?? $user->role) . ")\n";
+        $msg .= "👤 От: *{$name}* (".$user->roleValue().")\n";
         $msg .= $amountText;
         $msg .= "📝 Сообщение:\n_{$request->message}_";
 
@@ -67,7 +68,7 @@ class BackstageController extends Controller
         AdminNotificationService::notify(
             'backstage',
             'Новое сообщение из Backstage',
-            "От: {$name}\n" . ($request->support_amount ? "Поддержка: {$request->support_amount} ₽\n" : '') . "Сообщение: {$request->message}",
+            "От: {$name}\n".($request->support_amount ? "Поддержка: {$request->support_amount} ₽\n" : '')."Сообщение: {$request->message}",
             [
                 'user_id' => $user->id,
                 'support_amount' => $request->support_amount,
@@ -78,7 +79,7 @@ class BackstageController extends Controller
             'status' => 'success',
             'message' => $request->support_amount
                 ? 'Спасибо огромное за поддержку проекта! Сообщение разработчику отправлено.'
-                : 'Спасибо! Ваше сообщение отправлено разработчику.'
+                : 'Спасибо! Ваше сообщение отправлено разработчику.',
         ]);
     }
 
@@ -113,7 +114,7 @@ class BackstageController extends Controller
                     'backstage_message_id' => $message->id,
                     'user_id' => $user->id,
                 ],
-                route('backstage.index') . '?payment=success'
+                route('backstage.index').'?payment=success'
             );
 
             // Сохраняем payment_id
@@ -127,7 +128,7 @@ class BackstageController extends Controller
             $msg .= "👤 От: *{$user->name}*\n";
             $msg .= "💰 Сумма: *{$amount} ₽*\n";
             $msg .= "🆔 Payment ID: {$payment['payment_id']}\n";
-            $msg .= "Статус: ожидает оплаты";
+            $msg .= 'Статус: ожидает оплаты';
 
             TelegramService::send($msg);
 
@@ -141,11 +142,11 @@ class BackstageController extends Controller
             return response()->json([
                 'status' => 'success',
                 'confirmation_url' => $payment['confirmation_url'],
-                'message' => 'Перенаправляем на страницу оплаты ЮKassa...'
+                'message' => 'Перенаправляем на страницу оплаты ЮKassa...',
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Yookassa payment error: ' . $e->getMessage());
+            Log::error('Yookassa payment error: '.$e->getMessage());
 
             // Fallback: сохраняем без оплаты
             return response()->json([
@@ -170,8 +171,9 @@ class BackstageController extends Controller
 
         $verifiedPayment = $yookassa->verifyAndGetPayment($data);
 
-        if (!$verifiedPayment || empty($verifiedPayment['id'])) {
+        if (! $verifiedPayment || empty($verifiedPayment['id'])) {
             Log::warning('Yookassa webhook verification failed', $data);
+
             return response()->json(['error' => 'Verification failed'], 400);
         }
 

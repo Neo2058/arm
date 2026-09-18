@@ -4,7 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ActionLogResource\Pages;
 use App\Models\ActionLog;
-use App\Enums\UserRole;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -25,8 +25,7 @@ class ActionLogResource extends Resource
 
     public static function canAccess(): bool
     {
-        $user = Auth::user();
-        return $user && $user->role?->value === UserRole::SUPER_ADMIN->value;
+        return Auth::user()?->isSuperAdmin() ?? false;
     }
 
     public static function shouldRegisterNavigation(): bool
@@ -68,9 +67,10 @@ class ActionLogResource extends Resource
                     ->formatStateUsing(function ($state) {
                         if (is_array($state)) {
                             return collect($state)
-                                ->map(fn($v, $k) => "$k: $v")
+                                ->map(fn ($v, $k) => "$k: $v")
                                 ->implode(' | ');
                         }
+
                         return $state ?? '—';
                     })
                     ->wrap()
@@ -114,13 +114,13 @@ class ActionLogResource extends Resource
 
                 Tables\Filters\Filter::make('created_at')
                     ->form([
-                        \Filament\Forms\Components\DatePicker::make('created_from')->label('С даты'),
-                        \Filament\Forms\Components\DatePicker::make('created_until')->label('По дату'),
+                        DatePicker::make('created_from')->label('С даты'),
+                        DatePicker::make('created_until')->label('По дату'),
                     ])
                     ->query(function ($query, array $data) {
                         return $query
-                            ->when($data['created_from'], fn($q, $date) => $q->whereDate('created_at', '>=', $date))
-                            ->when($data['created_until'], fn($q, $date) => $q->whereDate('created_at', '<=', $date));
+                            ->when($data['created_from'], fn ($q, $date) => $q->whereDate('created_at', '>=', $date))
+                            ->when($data['created_until'], fn ($q, $date) => $q->whereDate('created_at', '<=', $date));
                     }),
             ])
             ->actions([

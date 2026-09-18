@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\UserRole;
 use App\Filament\Resources\NaryadResource\Pages;
 use App\Models\Naryad;
 use Filament\Forms;
@@ -9,16 +10,19 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 class NaryadResource extends Resource
 {
     protected static ?string $model = Naryad::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
+
     protected static ?string $navigationLabel = 'Наряды (PDF)';
+
     protected static ?string $modelLabel = 'Наряд';
+
     protected static ?string $pluralModelLabel = 'Наряды';
+
     protected static ?string $navigationGroup = 'Документы';
 
     public static function form(Form $form): Form
@@ -42,12 +46,7 @@ class NaryadResource extends Resource
                 Forms\Components\Select::make('allowed_roles')
                     ->label('Доступные роли')
                     ->multiple()
-                    ->options([
-                        'driver' => 'Водитель',
-                        'naryadchik' => 'Нарядчик',
-                        'instructor' => 'Инструктор',
-                        'admin' => 'Админ',
-                    ])
+                    ->options(UserRole::options())
                     ->nullable(),
             ]);
     }
@@ -92,9 +91,6 @@ class NaryadResource extends Resource
 
     public static function canViewAny(): bool
     {
-        $user = auth()->user();
-        if (!$user) return false;
-        $role = strtolower((string)($user->role->value ?? $user->role));
-        return in_array($role, ['super_admin', 'admin']);
+        return auth()->user()?->isAdmin() ?? false;
     }
 }

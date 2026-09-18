@@ -3,10 +3,9 @@
 namespace Database\Seeders;
 
 use App\Enums\UserRole;
-use Illuminate\Database\Seeder;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-
 
 class RoleUserSeeder extends Seeder
 {
@@ -52,6 +51,14 @@ class RoleUserSeeder extends Seeder
             'email' => 'student@test.com',
             'password' => Hash::make('password'),
             'role' => UserRole::STUDENT,
+            'is_active' => true,
+        ]);
+
+        User::create([
+            'name' => 'Dispatcher',
+            'email' => 'dispatcher@test.com',
+            'password' => Hash::make('password'),
+            'role' => UserRole::DISPATCHER,
             'is_active' => true,
         ]);
     }

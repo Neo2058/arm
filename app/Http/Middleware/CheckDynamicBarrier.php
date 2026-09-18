@@ -15,7 +15,7 @@ class CheckDynamicBarrier
     {
         // КРИТИЧЕСКИ ВАЖНО: Если пользователь НЕ авторизован (гость),
         // этот посредник вообще не должен работать! Пропускаем его на логин.
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return $next($request);
         }
 
@@ -26,10 +26,9 @@ class CheckDynamicBarrier
         }
 
         $user = Auth::user();
-        $role = strtolower((string)($user->role->value ?? $user->role));
 
         // Пропускаем админов мимо барьера автоматически
-        if ($role === 'super_admin' || $role === 'admin' || str_contains($role, 'admin')) {
+        if ($user->canBypassAccessBarriers()) {
             return $next($request);
         }
 

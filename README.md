@@ -36,10 +36,11 @@
 
 ## Документация
 
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** — высокоуровневая архитектура системы (особенно важно для работы с файлами)
-- **[TECHNICAL_DEBT.md](./TECHNICAL_DEBT.md)** — известный технический долг, приоритеты рефакторинга и рекомендации
-- **[DEPLOY_SUMMARY.md](./DEPLOY_SUMMARY.md)** — подробное описание функционала
-- **[DEPLOYMENT.md](./DEPLOYMENT.md)** — пошаговый план развёртывания
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** — архитектура, файловый прокси, доступ, маршруты
+- **[AGENTS.md](./AGENTS.md)** — соглашения для разработки (роли, наряд, файлы)
+- **[TECHNICAL_DEBT.md](./TECHNICAL_DEBT.md)** — только **открытый** долг; закрытое в 2026-09 там перечислено отдельно
+- **[DEPLOY_SUMMARY.md](./DEPLOY_SUMMARY.md)** — описание функционала журнала и модулей
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** — план развёртывания
 
 Перед деплоем на продакшен **обязательно** прочитай оба файла.
 
@@ -55,9 +56,11 @@ docker compose exec app php artisan migrate --seed
 ```
 
 ## Роли
-- `instructor` — полный доступ к Журналу ТЧМ своей колонны
+- `instructor` — полный доступ к Журналу ТЧМ своей колонны (`EnsureInstructor` на всех `/journal*`)
+- `dispatcher` — планирование наряда (`/naryad`). Legacy-имя `naryadchik` в коде не используется
 - `driver` — просмотр нарядов и другие разделы
-- `admin`, `super_admin` — административный доступ
+- `student` — обучение (в Filament не пускаем)
+- `admin`, `super_admin` — административный доступ / Filament
 
 Подробная информация о текущем состоянии функционала — в файле `DEPLOY_SUMMARY.md`.
 

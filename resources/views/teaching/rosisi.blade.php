@@ -9,7 +9,7 @@
             <p class="mt-2 text-gray-600 dark:text-gray-400 max-w-2xl">Ознакомьтесь с инструктажами, пройдите тест и поставьте роспись. Отдельный раздел для записей в формуляр.</p>
         </div>
         <div class="mt-4 sm:mt-0 flex gap-3">
-            @if(auth()->user() && in_array(strtolower(auth()->user()->role->value ?? auth()->user()->role), ['super_admin', 'admin', 'instructor']))
+            @if(auth()->user()?->canViewRospisiStatistics())
                 <a href="{{ route('rosisi.statistics') }}" 
                    class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-2xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition shadow-sm">
                     📊 Статистика

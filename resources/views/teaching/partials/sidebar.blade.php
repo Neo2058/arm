@@ -159,9 +159,8 @@
 
     // Определяем роль пользователя для скрытия пунктов меню
     $user = auth()->user();
-    $userRole = $user ? strtolower( (string) ($user->role->value ?? $user->role) ) : '';
-    $isInstructor = $userRole === 'instructor';
-    $canSeeRospisiStats = in_array($userRole, ['super_admin', 'admin', 'instructor']);
+    $isInstructor = $user?->isInstructor() ?? false;
+    $canSeeRospisiStats = $user?->canViewRospisiStatistics() ?? false;
 
     $trainingMenu = [
 

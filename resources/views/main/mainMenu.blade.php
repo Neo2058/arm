@@ -19,7 +19,7 @@
     @endif
 </head>
 <body style="overflow-x: hidden; overscroll-behavior-x: none; touch-action: pan-y;">
-    <div id="carousel-menu" data-role="{{ Auth::user()->role }}"></div>
+    <div id="carousel-menu" data-role="{{ Auth::user()->roleValue() }}"></div>
 
     <!-- Модалка всегда в DOM, изначально скрыта. Показывается только сразу после логина -->
     <div id="welcome-modal" 

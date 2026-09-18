@@ -51,26 +51,27 @@ This is one of the most important and carefully designed parts of the system.
 
    **A. User-facing (Documents / Training)**
    - Routes use `->middleware('signed')`
-   - Controller performs:
-     - Auth + role check
-     - `ActionLog::log()` + ClickHouse
-     - Violation logging + alerts for downloads
-     - `Storage::disk('s3')->response()` with `inline` + strong no-cache headers
+   - Controller: auth + role check, `ActionLog` / ClickHouse, violation alerts on download
+   - Stream goes through `App\Services\FileProxyService` (`exists` + `respond`)
+   - Callers keep **their own** headers (PDF, video `Accept-Ranges`, admin preview differ on purpose)
 
    **B. Admin Form Previews**
    - Special routes: `admin.documents.serve` / `admin.training-materials.serve`
    - Used exclusively by `->getUploadedFileUsing()` in Filament `FileUpload`
    - Admin-only + signed
    - Returns proxy URL so the form can display existing files without direct S3 access
+   - Filament FileUpload (`disk`, `directory`, `visibility`, `getUploadedFileUsing`) is a fragile contract — do not change it in passing
 
 ### Key Components
 
-- `DocumentController` + `TrainingController` — streaming logic
+- `FileProxyService` — only S3 exists-check + stream through the app; never MinIO URLs
+- `DocumentController` + `TrainingController` — auth, logging, per-endpoint headers
 - `getUploadedFileUsing` closures in `DocumentResource` / `TrainingMaterialResource`
-- Models: `getTemporaryUrl()` / `getFileUrlAttribute()` (generate signed routes)
-- `URL::temporarySignedRoute(...)` with 15-minute TTL
+- Models: `getTemporaryUrl()` / `getFileUrlAttribute()` (signed app routes)
+- TTL is **not** one number: documents 30 min, quiz refs 60 min, admin preview / training stream 15 min
 
-**Never** use `Storage::temporaryUrl()` or direct S3 URLs.
+**Never** use `Storage::temporaryUrl()` or direct S3 URLs for new code.  
+`NaryadViewerController` and `RospisiController` still do; that is remaining debt.
 
 ---
 
@@ -89,9 +90,27 @@ This is one of the most important and carefully designed parts of the system.
        CheckDynamicBarrier::class
    ])
    ```
-4. **Per-route**:
+4. **Per-route / per-controller**:
    - `->middleware('signed')` for file routes
+   - `EnsureInstructor` — all `/journal*` (`routes/journal.php` + `TCHMJournalController`)
+   - `EnsureDispatcher` — all `/naryad*` (`routes/naryad.php` + Naryad controllers)
    - Filament's own `Authenticate` for `/admin`
+
+Role checks in PHP go through `User` helpers (`isAdmin()`, `isInstructor()`, `isDispatcher()`, `canBypassAccessBarriers()`, `canAccessByRoles()`). Canonical dispatcher role is `dispatcher`; `naryadchik` is only a `UserRole::safeFrom()` alias.
+
+### Routes
+
+`routes/web.php` is the public entry + auth wrapper. Domain files (same middleware group):
+
+| File | Domain |
+|---|---|
+| `account.php` | main menu, barrier, device |
+| `documents.php` | documents, signed PDF, quizzes |
+| `training.php` | training, rosisi, signed media |
+| `work.php` | naryady PDF viewer, shifts, podstroiki |
+| `journal.php` | TCHM journal |
+| `naryad.php` | dispatcher planning |
+| `support.php` | backstage, bugs, Telegram, YooKassa |
 
 ### Custom Middlewares
 
@@ -157,9 +176,10 @@ When a non-admin tries to download or sometimes view:
 - `minio_data` volume
 - Entrypoint ensures directories + bucket existence
 
-**Environment overrides** in compose for production safety:
-- `SESSION_SECURE_COOKIE=false` (HTTP only)
-- Internal MinIO endpoint
+**Environment overrides** in compose:
+- Production (`docker-compose.prod.yml`): HTTPS, `SESSION_SECURE_COOKIE=true`
+- Local compose may still be HTTP
+- Internal MinIO endpoint (browser never talks to it)
 
 ---
 
@@ -190,6 +210,8 @@ These are documented in code comments.
 4. **Admin-only preview URLs** — used only inside Filament forms.
 5. **Separate middleware stack** for Filament vs user routes.
 6. **ClickHouse for analytics** — keeps PostgreSQL clean.
+7. **Role enum + User helpers** — no scattered `in_array($role, ['admin', …])`.
+8. **Naryad split** — `App\Http\Controllers\Naryad\{Planning,Setka,Catalogs}Controller`; hours in `NaryadHoursCalculator`.
 
 ---
 
@@ -204,11 +226,12 @@ Nginx (static + proxy)
    ▼
 Laravel (web group)
    ├── Auth + 3 Check Middlewares
+   ├── EnsureInstructor / EnsureDispatcher (domain)
    ├── Signed middleware (files)
    └── Filament (own stack)
             │
             ▼
-   File Proxy Controllers
+   FileProxyService (documents / training)
             │
             ▼
    MinIO (internal only)
@@ -216,4 +239,4 @@ Laravel (web group)
 
 ---
 
-**Last updated:** 2026-06-26 (after major 419 + private file fixes)
+**Last updated:** 2026-09-17 (access guards, roles, FileProxyService, naryad/route split)

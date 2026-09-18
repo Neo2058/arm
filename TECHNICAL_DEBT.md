@@ -1,178 +1,73 @@
 # Technical Debt & Refactoring Roadmap
 
 **Project:** ТЧ-15 (ARM)  
-**Last reviewed:** 2026-06-26 (after stabilization of file uploads and 419 issues)
+**Last reviewed:** 2026-09-17 (после полировки доступа, ролей, файлового прокси, наряда и маршрутов)
 
 ---
 
-## Critical / High Priority
+## Resolved (2026-09) — больше не долг
 
-### 1. File Proxy Duplication
-**Location:** `DocumentController`, `TrainingController`, models (`getTemporaryUrl`), Filament resources
+Эти пункты закрыты, не открывать заново без новой причины:
 
-**Problem:**
-- Almost identical streaming + logging + violation logic duplicated.
-- Admin serve methods also have similar patterns.
-- Signed URL generation scattered.
-
-**Impact:** Hard to maintain security rules consistently. Easy to miss logging on new file types.
-
-**Suggested fix:**
-- Create `App\Services\FileProxyService`
-- Extract common streaming + header logic
-- Move violation detection into the service
-- Use in both controllers and potentially in a middleware
-
-### 2. Middleware Duplication & Complexity
-**Files:**
-- `CheckUserExistence`
-- `CheckDeviceBinding`
-- `CheckDynamicBarrier`
-
-**Problems:**
-- Similar admin bypass logic
-- Path exceptions maintained in multiple places
-- Livewire skips added reactively (after 419 incidents)
-- Role checks are string-based (`str_contains($role, 'admin')`)
-
-**Impact:** Fragile. Adding new protected areas or roles is error-prone.
-
-**Suggestions:**
-- Introduce a single `AccessControl` middleware + configuration
-- Or move more logic to Policies + FormRequest
-- Create a `Role` helper / enum with clear methods (`isAdmin()`, `canBypassBarrier()`)
-
-### 3. CSRF + Livewire Workarounds
-**Files:**
-- `app/Http/Middleware/VerifyCsrfToken`
-- `bootstrap/app.php`
-- `AdminPanelProvider`
-- `docker-compose.prod.yml` + `config/session.php`
-
-**Current state:**
-- Custom exception list for `livewire/*`
-- Header-based bypass
-- Forced `SESSION_SECURE_COOKIE=false`
-- Explicit domain handling because of punycode domain + Docker
-
-**Risk:** These mitigations are necessary today but hide potential deeper issues.
-
-**Action items:**
-- Document exactly why each workaround exists
-- Re-evaluate when HTTPS is enabled
-- Consider moving sensitive Livewire components to a separate authenticated API (future)
+| Было | Как закрыто |
+|---|---|
+| Журнал ТЧМ проверял `instructor` только в `index()` | `EnsureInstructor` на группе `/journal` и на `TCHMJournalController` |
+| Строковые роли, legacy `naryadchik` | `UserRole` + хелперы `User::isAdmin()`, `isDispatcher()`, `isInstructor()`, …; `naryadchik` только алиас в `UserRole::safeFrom()` |
+| Дубли стрима документов/обучения | `App\Services\FileProxyService` в `DocumentController` и `TrainingController` (заголовки и signed URL не унифицировали специально) |
+| God-контроллер `NaryadPlanningController` | `Naryad/PlanningController`, `SetkaController`, `CatalogsController` + `NaryadHoursCalculator` |
+| Монолитный `routes/web.php` | Доменные файлы: `account`, `documents`, `training`, `work`, `journal`, `naryad`, `support` |
+| Почти не было автотестов | Feature-тесты журнала, ролей, файлового прокси, наряда и снимка маршрутов |
 
 ---
 
-## Medium Priority
+## Still open
 
-### 4. Logging is Scattered
-**Components:**
-- `ActionLog` (Postgres)
-- `ClickHouseService`
-- `AdminNotificationService`
-- Inline calls in controllers and TrainingContentService
+### 1. CSRF + Livewire workarounds
+**Files:** `VerifyCsrfToken`, `bootstrap/app.php`, `AdminPanelProvider`, session / compose
 
-**Problems:**
-- No single place that decides "this is a violation"
-- Violation logic is duplicated between document download and training streaming
-- Hard to get a complete audit trail
+Кастомные исключения `livewire/*`, skip в Check-middleware, нюансы `SESSION_DOMAIN` / punycode. Нужны для загрузок Filament; не ломать «заодно». На проде HTTPS уже есть (`SESSION_SECURE_COOKIE=true` в `docker-compose.prod.yml`) — workarounds стоит пересмотреть отдельно, не в том же PR, что загрузки.
 
-**Recommendation:**
-- Central `AuditService` or `AccessLogger`
-- Clear separation: "Event" vs "Violation"
-- Consistent use of enums for event types
+### 2. Три Check-middleware с одинаковыми исключениями путей
+`CheckUserExistence`, `CheckDeviceBinding`, `CheckDynamicBarrier` по-прежнему дублируют skip для Livewire / barrier / device / admin serve. Ролевой bypass уже через `User::canBypassAccessBarriers()`, но списки путей всё ещё в трёх местах.
 
-### 5. Filament Resource Closures
-**Files:**
-- `DocumentResource.php`
-- `TrainingMaterialResource.php`
+Слияние в один `AccessControl` — отдельная задача, не трогать пути skip без регрессионных тестов 419.
 
-**Problem:**
-- Large anonymous functions inside `->getUploadedFileUsing()`
-- Business logic mixed with form definition
+### 3. Прямые MinIO URL вне прокси
+`NaryadViewerController` и `RospisiController` всё ещё вызывают `Storage::disk('s3')->temporaryUrl()`. Это нарушает правило «браузер не ходит в MinIO». Перевод на `FileProxyService` — отдельный аккуратный шаг (как с документами: не менять TTL/заголовки/Filament).
 
-**Fix:**
-- Extract to dedicated methods: `getDocumentFileInfo(string $path)`, etc.
-- Or create `FileUploadConfigurator` classes
+**Не делать:** повторно выносить стрим документов/обучения; Filament `FileUpload` (`disk`, `visibility`, `getUploadedFileUsing`) не трогать без явного плана — прошлый раз от этого слетали загрузки.
 
-### 6. Hardcoded Roles and Strings
-Seen in:
-- All three middlewares
-- Controllers (`in_array(..., ['super_admin', 'admin'])`)
-- Resources
+### 4. Filament `getUploadedFileUsing`
+Крупные замыкания в `DocumentResource` / `TrainingMaterialResource`. Можно вынести в хелпер **без смены** диска, directory, visibility и формы возвращаемого массива.
 
-**Better approach:**
-- Use the `Role` enum consistently
-- Add methods like `User::isAdmin()`, `User::canAccessAdminPanel()`
+### 5. Логи размазаны
+`ActionLog`, `ClickHouseService`, `AdminNotificationService`, прямые вызовы в контроллерах. Нет единого «это violation». `FileProxyService` стримит, но не решает, что считать нарушением.
 
-### 7. Large `web.php`
-The protected route group is very long.
-
-**Suggestions:**
-- Split into domain route files (`routes/documents.php`, `routes/training.php`, `routes/naryad.php`, etc.)
-- Use `Route::middleware(...)->group(...)` in separate files
+### 6. Два расчёта зарплаты
+`WorkShift::booted()` (хардкод ставок) и `PayrollService` в API. Preview и сохранённая смена могут разойтись.
 
 ---
 
-## Lower Priority / Nice to Have
+## Operational / lower priority
 
-| Area                        | Debt                                                                 | Priority |
-|----------------------------|----------------------------------------------------------------------|----------|
-| **Testing**                | Almost no automated tests                                            | High    |
-| **Error handling on S3**   | Few try/catch around `Storage::disk('s3')` operations                | Medium  |
-| **Entrypoint.sh**          | Mix of shell + embedded PHP (`php -r`). Hard to test                 | Low     |
-| **Session configuration**  | Multiple overrides between `.env`, `config/session.php`, compose     | Medium  |
-| **Nginx config**           | Some duplication between HTTP and commented HTTPS blocks             | Low     |
-| **Model accessors**        | `getFileUrlAttribute` etc. can throw during eager loading in some cases | Low  |
-| **Backup strategy**        | No documented backup process for postgres / minio_data / clickhouse  | High    |
-| **HTTPS**                  | Still not implemented (critical for removing many workarounds)       | High    |
-| **Monitoring**             | No health checks beyond basic, no metrics                            | Medium  |
-| **Code style / docs**      | Some services and controllers lack PHPDoc                            | Low     |
+| Area | Status |
+|---|---|
+| **Тесты** | Есть базовые feature-тесты ключевых охран; нет e2e Livewire-загрузки в Filament и мало покрытия журнала/наряда по бизнес-правилам |
+| **ClickHouse из контроллеров** | Журнал иногда пишет напрямую, минуя очередь `analytics` |
+| **ЮKassa / Telegram webhook** | Лежат в auth-группе (`routes/support.php`); не выносили — нет наплыва |
+| **Backup / monitoring** | Нет описанного бэкапа postgres / minio / clickhouse и метрик |
+| **S3 error handling** | Мало try/catch вокруг `Storage::disk('s3')` |
+| **entrypoint.sh** | Смесь shell + `php -r` |
+| **Demo в журнале** | `rand()` в статистике, Q&A по PDF — демо |
 
 ---
 
-## Known Workarounds (Track These)
+## How to work with remaining debt
 
-1. **Livewire 419 mitigations** (see `VerifyCsrfToken` and middlewares)
-2. **Admin-only file preview URLs** (`admin.serve-*`) — used because Filament FileUpload needs a fetchable URL
-3. **Forcing `SESSION_SECURE_COOKIE=false`** until HTTPS
-4. **Explicit Livewire path skips** in Check middlewares
-5. **Punycode vs Cyrillic** handling in `APP_URL` and `SESSION_DOMAIN`
-
-**When HTTPS is enabled**, many of the above should be revisited.
-
----
-
-## Suggested Refactoring Order (Recommended)
-
-1. **FileProxyService** + centralize streaming/violation logic (highest ROI)
-2. **Unify role checks** + improve middlewares
-3. **Add basic feature tests** for file upload → create → proxy download flow
-4. **Extract Filament file upload configuration**
-5. **AuditService** for logging
-6. **Split routes**
-7. **Backup & monitoring** (operational debt)
-
----
-
-## Areas Safe to Extend Without Major Refactoring
-
-- New Filament resources / pages
-- New user-facing Blade pages (if they follow existing patterns)
-- Additional Telegram notification types
-- New columns in existing journal/naryad modules
-- ClickHouse event types (as long as you use the service)
-
----
-
-## How to Work With This Debt
-
-- When adding **new file-related features**, always go through the future `FileProxyService`.
-- When touching **access control**, update all three middlewares or (better) create a common helper first.
-- Before enabling **HTTPS**, create a task to clean up session/CSRF workarounds.
-- Keep this file updated after any significant change.
-
----
+- Новые **файлы документов/обучения** — только через `FileProxyService`, без прямых MinIO URL.
+- **Filament FileUpload и CSRF/Livewire** — не «подчищать» мимоходом.
+- Доступ — хелперы `User` / `UserRole`, не строки ролей и не `naryadchik`.
+- Новые маршруты — в соответствующий `routes/*.php`, не возвращать монолит в `web.php`.
+- Планирование наряда — контроллеры в `App\Http\Controllers\Naryad\`, часы — `NaryadHoursCalculator`.
 
 **Goal:** Keep the application maintainable while the core (private files + strict access) remains solid.

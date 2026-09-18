@@ -98,48 +98,68 @@
                         <label class="block text-xs font-semibold tracking-[0.5px] uppercase text-[#706f6c] dark:text-[#A1A09A] mb-2">
                             Табельный номер
                         </label>
-                        <input 
-                            type="text" 
-                            name="tab_number" 
+                        <input
+                            type="text"
+                            name="tab_number"
                             value="{{ old('tab_number') }}"
                             placeholder="Например: 45231"
                             required
                             maxlength="20"
-                            class="form-input w-full h-12 px-4 rounded-2xl border border-[#e3e3e0] dark:border-[#3E3E3A] bg-white dark:bg-[#0a0a0a] text-[#1b1b18] dark:text-white placeholder:text-[#a3a29e] focus:border-orange-500 dark:focus:border-orange-400"
+                            autocomplete="off"
+                            inputmode="text"
+                            pattern="[0-9A-Za-z\-]{4,20}"
+                            title="Только цифры, латинские буквы и дефис, 4–20 символов"
+                            aria-invalid="{{ $errors->has('tab_number') ? 'true' : 'false' }}"
+                            class="form-input w-full h-12 px-4 rounded-2xl border {{ $errors->has('tab_number') ? 'border-red-400 dark:border-red-500' : 'border-[#e3e3e0] dark:border-[#3E3E3A]' }} bg-white dark:bg-[#0a0a0a] text-[#1b1b18] dark:text-white placeholder:text-[#a3a29e] focus:border-orange-500 dark:focus:border-orange-400"
                         >
-                        <p class="mt-1 text-[10px] text-[#a3a29e]">Только цифры, буквы и дефис. 4–20 символов.</p>
+                        @error('tab_number')
+                            <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                        @else
+                            <p class="mt-1 text-[10px] text-[#a3a29e]">Только цифры, латинские буквы и дефис. 4–20 символов.</p>
+                        @enderror
                     </div>
 
                     <div>
                         <label class="block text-xs font-semibold tracking-[0.5px] uppercase text-[#706f6c] dark:text-[#A1A09A] mb-2">
                             ФИО (полностью)
                         </label>
-                        <input 
-                            type="text" 
-                            name="fio" 
+                        <input
+                            type="text"
+                            name="fio"
                             value="{{ old('fio') }}"
                             placeholder="Иванов Иван Иванович"
                             required
                             maxlength="150"
-                            class="form-input w-full h-12 px-4 rounded-2xl border border-[#e3e3e0] dark:border-[#3E3E3A] bg-white dark:bg-[#0a0a0a] text-[#1b1b18] dark:text-white placeholder:text-[#a3a29e] focus:border-orange-500 dark:focus:border-orange-400"
+                            autocomplete="name"
+                            aria-invalid="{{ $errors->has('fio') ? 'true' : 'false' }}"
+                            class="form-input w-full h-12 px-4 rounded-2xl border {{ $errors->has('fio') ? 'border-red-400 dark:border-red-500' : 'border-[#e3e3e0] dark:border-[#3E3E3A]' }} bg-white dark:bg-[#0a0a0a] text-[#1b1b18] dark:text-white placeholder:text-[#a3a29e] focus:border-orange-500 dark:focus:border-orange-400"
                         >
-                        <p class="mt-1 text-[10px] text-[#a3a29e]">Кириллица, пробелы, дефисы и точки.</p>
+                        @error('fio')
+                            <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                        @else
+                            <p class="mt-1 text-[10px] text-[#a3a29e]">Фамилия и имя полностью. Буквы, пробелы, дефисы и точки.</p>
+                        @enderror
                     </div>
                 </div>
 
                 <!-- Чекбокс согласия на обработку ПД -->
                 <div class="flex items-start gap-3">
-                    <input 
-                        type="checkbox" 
-                        id="consent" 
-                        name="consent" 
-                        required 
+                    <input
+                        type="checkbox"
+                        id="consent"
+                        name="consent"
+                        value="1"
+                        required
+                        @checked(old('consent'))
                         class="mt-1 h-4 w-4 rounded border-[#e3e3e0] dark:border-[#3E3E3A] text-orange-500 focus:ring-orange-500"
                     >
                     <label for="consent" class="text-xs leading-snug text-[#706f6c] dark:text-[#A1A09A]">
                         Соглашаюсь на обработку персональных данных в соответствии с законодательством РФ
                     </label>
                 </div>
+                @error('consent')
+                    <p class="-mt-4 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
+                @enderror
 
                 <div class="pt-2">
                     <button 

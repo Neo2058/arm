@@ -3,15 +3,12 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\DeviationsCatalogResource\Pages;
-use App\Filament\Resources\DeviationsCatalogResource\RelationManagers;
 use App\Models\DeviationsCatalog;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class DeviationsCatalogResource extends Resource
 {
@@ -20,7 +17,6 @@ class DeviationsCatalogResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $navigationLabel = 'Каталог отвлечений';
-
 
     public static function form(Form $form): Form
     {
@@ -40,7 +36,7 @@ class DeviationsCatalogResource extends Resource
                 Tables\Columns\TextColumn::make('name')->label('Название отвлечения')->searchable(),
                 Tables\Columns\TextColumn::make('sys_key')->label('Ключ'),
                 Tables\Columns\TextColumn::make('hourly_rate')->label('Ставка (руб/ч)')->money('RUB', locale: 'ru'),
-                Tables\Columns\TextColumn::make('default_minutes')->label('Длительность (ч.)')->formatStateUsing(fn($state) => ($state/60) . ' ч.'),
+                Tables\Columns\TextColumn::make('default_minutes')->label('Длительность (ч.)')->formatStateUsing(fn ($state) => ($state / 60).' ч.'),
             ])
             ->filters([
                 //
@@ -57,10 +53,7 @@ class DeviationsCatalogResource extends Resource
 
     public static function canViewAny(): bool
     {
-        $user = auth()->user();
-        if (!$user) return false;
-        $role = strtolower((string)($user->role->value ?? $user->role));
-        return in_array($role, ['super_admin', 'admin']);
+        return auth()->user()?->isAdmin() ?? false;
     }
 
     public static function getRelations(): array

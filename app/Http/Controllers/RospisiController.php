@@ -10,6 +10,7 @@ use App\Models\UserInstructionSignature;
 use App\Services\ClickHouseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class RospisiController extends Controller
 {
@@ -34,13 +35,14 @@ class RospisiController extends Controller
 
                 $url = (function () use ($doc) {
                     try {
-                        return \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl(
+                        return Storage::disk('s3')->temporaryUrl(
                             $doc->file_path,
                             now()->addMinutes(30),
                             ['ResponseContentDisposition' => 'inline']
                         );
                     } catch (\Throwable $e) {
                         \Log::warning('S3 temp url failed for rospisi', ['doc' => $doc->id, 'err' => $e->getMessage()]);
+
                         return null;
                     }
                 })();
@@ -93,7 +95,7 @@ class RospisiController extends Controller
         $user = Auth::user();
 
         // Проверка, что документ принадлежит категории инструктажа
-        if (!$document->instruction_category_id) {
+        if (! $document->instruction_category_id) {
             abort(403, 'Этот документ не предназначен для росписи.');
         }
 
@@ -145,9 +147,8 @@ class RospisiController extends Controller
     public function statistics()
     {
         $user = Auth::user();
-        $userRole = strtolower((string)($user->role->value ?? $user->role));
 
-        if (!in_array($userRole, ['super_admin', 'admin', 'instructor'])) {
+        if (! $user->canViewRospisiStatistics()) {
             abort(403, 'Доступ только для инструкторов и выше.');
         }
 

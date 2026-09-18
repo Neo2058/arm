@@ -3,17 +3,14 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserDeviceResource\Pages;
-use App\Filament\Resources\UserDeviceResource\RelationManagers;
 use App\Models\UserDevice;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
+use Filament\Tables\Table;
 
 class UserDeviceResource extends Resource
 {
@@ -21,8 +18,11 @@ class UserDeviceResource extends Resource
 
     // Иконка в боковом меню Filament
     protected static ?string $navigationIcon = 'heroicon-o-device-phone-mobile';
+
     protected static ?string $navigationLabel = 'Устройства сотрудников';
+
     protected static ?string $modelLabel = 'Устройство';
+
     protected static ?string $pluralModelLabel = 'Устройства';
 
     public static function form(Form $form): Form
@@ -119,12 +119,11 @@ class UserDeviceResource extends Resource
     public static function canViewAny(): bool
     {
         $user = auth()->user();
-        if (!$user) return false;
+        if (! $user) {
+            return false;
+        }
 
-        // Безопасно достаем текстовую роль
-        $role = strtolower((string)($user->role->value ?? $user->role));
-
-        // Доступ имеют ТОЛЬКО супер-админы и админы
-        return in_array($role, ['super_admin', 'student']);
+        // Исторически: супер-админ и student (инструктор по обучению)
+        return $user->isSuperAdmin() || $user->isStudent();
     }
 }

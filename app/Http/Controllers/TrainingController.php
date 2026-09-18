@@ -2,20 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActionLog;
 use App\Models\TrainingMaterial;
 use App\Models\TrainingTopic;
+use App\Services\ClickHouseService;
+use App\Services\FileProxyService;
 use App\Services\Training\TrainingContentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class TrainingController extends Controller
 {
-    protected TrainingContentService $service;
-
-    public function __construct(TrainingContentService $service)
-    {
-        $this->service = $service;
-    }
+    public function __construct(
+        protected TrainingContentService $service,
+        protected FileProxyService $files,
+    ) {}
 
     /**
      * Список тем обучения (дублирует /training из бота)
@@ -112,32 +113,31 @@ class TrainingController extends Controller
 
     private function streamMedia(TrainingMaterial $material)
     {
-        $disk = \Illuminate\Support\Facades\Storage::disk('s3');
         $path = $material->file_path;
 
-        if (empty($path) || !$disk->exists($path)) {
+        if (! $this->files->exists($path)) {
             abort(404, 'Файл не найден');
         }
 
         // Log the view
-        \App\Models\ActionLog::log('training_material_viewed', [
+        ActionLog::log('training_material_viewed', [
             'material_id' => $material->id,
             'title' => $material->title,
             'type' => $material->type,
         ]);
 
         // Also to ClickHouse
-        \App\Services\ClickHouseService::log('training_material_viewed', $material->id, [
+        ClickHouseService::log('training_material_viewed', $material->id, [
             'title' => $material->title,
             'type' => $material->type,
         ]);
 
         $filename = $material->file_name ?: basename($path);
-        $mime = $material->mime_type ?: $disk->mimeType($path) ?: ($material->type === 'video' ? 'video/mp4' : 'audio/mpeg');
+        $mime = $material->mime_type ?: $this->files->disk()->mimeType($path) ?: ($material->type === 'video' ? 'video/mp4' : 'audio/mpeg');
 
-        return $disk->response($path, $filename, [
+        return $this->files->respond($path, $filename, [
             'Content-Type' => $mime,
-            'Content-Disposition' => 'inline; filename="' . addslashes($filename) . '"',
+            'Content-Disposition' => 'inline; filename="'.addslashes($filename).'"',
             'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
             'Pragma' => 'no-cache',
             'Expires' => '0',
@@ -206,24 +206,21 @@ class TrainingController extends Controller
         }
 
         $user = auth()->user();
-        $userRole = strtolower((string)($user?->role->value ?? $user?->role));
 
-        if (!in_array($userRole, ['super_admin', 'admin'])) {
+        if (! $user?->isAdmin()) {
             abort(403);
         }
 
-        $disk = \Illuminate\Support\Facades\Storage::disk('s3');
-
-        if (!$disk->exists($path)) {
+        if (! $this->files->exists($path)) {
             abort(404, 'Файл не найден');
         }
 
         $filename = basename($path);
-        $mime = $disk->mimeType($path) ?: ($path ? (str_contains($path, 'video') ? 'video/mp4' : 'audio/mpeg') : 'application/octet-stream');
+        $mime = $this->files->disk()->mimeType($path) ?: ($path ? (str_contains($path, 'video') ? 'video/mp4' : 'audio/mpeg') : 'application/octet-stream');
 
-        return $disk->response($path, $filename, [
+        return $this->files->respond($path, $filename, [
             'Content-Type' => $mime,
-            'Content-Disposition' => 'inline; filename="' . addslashes($filename) . '"',
+            'Content-Disposition' => 'inline; filename="'.addslashes($filename).'"',
             'Accept-Ranges' => 'bytes',
             'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
             'X-Content-Type-Options' => 'nosniff',
