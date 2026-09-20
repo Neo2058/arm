@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Naryad\BreakdownsController;
 use App\Http\Controllers\Naryad\CatalogsController;
+use App\Http\Controllers\Naryad\PersonnelController;
 use App\Http\Controllers\Naryad\PlanningController;
 use App\Http\Controllers\Naryad\SetkaController;
 use App\Http\Middleware\EnsureDispatcher;
@@ -54,6 +56,20 @@ Route::prefix('naryad')->middleware(EnsureDispatcher::class)->group(function () 
 
     Route::post('/norms', [CatalogsController::class, 'updateNorm'])->name('naryad.norms.update');
     Route::post('/extra-conditions', [CatalogsController::class, 'storeExtraCondition'])->name('naryad.extra_conditions.store');
+
+    Route::get('/partial/breakdowns', [BreakdownsController::class, 'partialBreakdowns'])->name('naryad.partial.breakdowns');
+    Route::put('/breakdowns/{breakdown}', [BreakdownsController::class, 'updateBreakdown'])->name('naryad.breakdowns.update');
+    Route::get('/partial/holidays', [BreakdownsController::class, 'partialHolidays'])->name('naryad.partial.holidays');
+    Route::post('/holidays', [BreakdownsController::class, 'storeHoliday'])->name('naryad.holidays.store');
+    Route::delete('/holidays/{holiday}', [BreakdownsController::class, 'destroyHoliday'])->name('naryad.holidays.destroy');
+
+    Route::get('/partial/personnel', [PersonnelController::class, 'partialPersonnel'])->name('naryad.partial.personnel');
+    Route::get('/partial/appointments', [PersonnelController::class, 'partialAppointments'])->name('naryad.partial.appointments');
+    Route::post('/appointments', [PersonnelController::class, 'storeAppointment'])->name('naryad.appointments.store');
+    Route::delete('/appointments/{appointment}', [PersonnelController::class, 'destroyAppointment'])->name('naryad.appointments.destroy');
+    Route::get('/partial/absences', [PersonnelController::class, 'partialAbsences'])->name('naryad.partial.absences');
+    Route::post('/absences', [PersonnelController::class, 'storeAbsence'])->name('naryad.absences.store');
+    Route::delete('/absences/{absence}', [PersonnelController::class, 'destroyAbsence'])->name('naryad.absences.destroy');
     Route::put('/extra-conditions/{extra}', [CatalogsController::class, 'updateExtraCondition'])->name('naryad.extra_conditions.update');
     Route::delete('/extra-conditions/{extra}', [CatalogsController::class, 'destroyExtraCondition'])->name('naryad.extra_conditions.destroy');
 });

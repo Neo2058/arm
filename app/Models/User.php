@@ -18,11 +18,17 @@ class User extends Authenticatable implements FilamentUser
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'role' => UserRole::class,
+        'is_active' => 'boolean',
     ];
 
     public function profile()
     {
         return $this->hasOne(UserProfile::class);
+    }
+
+    public function personnel()
+    {
+        return $this->hasOne(ArmPersonnel::class);
     }
 
     public function roleEnum(): UserRole

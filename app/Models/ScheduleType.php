@@ -8,6 +8,7 @@ class ScheduleType extends Model
 {
     protected $fillable = [
         'name',
+        'foxpro_code',
         'routes_count',       // сколько маршрутов в сутки по этому типу
         'people_per_route',   // сколько человек на один маршрут
         'description',

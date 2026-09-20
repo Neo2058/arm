@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccessRequestController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\InstallController;
 use App\Http\Middleware\CheckDeviceBinding;
 use App\Http\Middleware\CheckDynamicBarrier;
 use App\Http\Middleware\CheckUserExistence;
@@ -16,6 +17,12 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('main.welcome');
 });
+
+Route::get('/install', [InstallController::class, 'show'])->name('install');
+Route::get('/install/android', [InstallController::class, 'android'])->name('install.android');
+Route::get('/install/ios', [InstallController::class, 'ios'])->name('install.ios');
+Route::get('/install/ios.plist', [InstallController::class, 'iosPlist'])->name('install.ios.plist');
+Route::get('/install/ios.ipa', [InstallController::class, 'iosIpa'])->name('install.ios.ipa');
 
 Route::get('/about', [AccessRequestController::class, 'show'])->name('about');
 Route::post('/about/request', [AccessRequestController::class, 'submit'])

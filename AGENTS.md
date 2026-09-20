@@ -75,12 +75,21 @@
 - Стрим файлов: signed URL (`mobile.files.documents` / `mobile.files.training`) + `FileProxyService`, без сессии и без MinIO URL.
 - Клиент: каталог `mobile/` (Expo). Не путать с web-группой (CSRF / device / barrier).
 - Привязка устройства на мобильном прототипе **не** включена.
+- Установщики (не браузер): `eas.json` профиль `preview` → APK/IPA с вшитым `EXPO_PUBLIC_API_URL`. Артефакты класть в `public/downloads/tch15-android.apk` и `tch15-ios.ipa`, страница `/install`.
+
+### Клон АРМ-ЛБ
+Схемы таблиц и шаги переноса FoxPro — **`armd.md`**. Не заводить параллельные таблицы учёта в обход этой схемы.
 
 ### Планирование наряда
 Контроллеры в `App\Http\Controllers\Naryad\`:
 - `PlanningController` — оболочка `/naryad`
 - `SetkaController` — сетка, assign/unassign, лимиты подстроек
 - `CatalogsController` — справочники
+- `BreakdownsController` — разбивки смен (`RAZBSM`) и праздники (`PRAZD`)
+- `App\Services\Arm\ShiftHoursService` — часы назначения из разбивки
+- `App\Services\Arm\PersonnelImporter` — картотека `LKM`, назначения `NAZN`, периоды `OTVM`
+- `PersonnelController` — картотека / назначения / отвлечения
+- импорт DBF: `php artisan arm:import-dbf {path}` (`--only=personnel,appointments,absences`)
 
 Доступ: `EnsureDispatcher` (роль `dispatcher`).
 

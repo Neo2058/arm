@@ -3,7 +3,9 @@ import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
 
 export const API_URL =
-  Constants.expoConfig?.extra?.apiUrl || 'http://127.0.0.1:8000/api/mobile';
+  process.env.EXPO_PUBLIC_API_URL ||
+  Constants.expoConfig?.extra?.apiUrl ||
+  'https://xn---15-7edz.xn--p1ai/api/mobile';
 
 export const client = axios.create({
   baseURL: API_URL,

@@ -12,6 +12,9 @@ class WebRoutesSplitTest extends TestCase
         $expected = [
             'about',
             'about.request',
+            'install',
+            'install.android',
+            'install.ios',
             'login',
             'login.post',
             'logout',

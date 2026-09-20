@@ -33,7 +33,7 @@ class NaryadHoursCalculator
         $deviationNames = DeviationsCatalog::pluck('name')->toArray();
 
         foreach ($assignments as $a) {
-            $h = $this->getHoursFromRouteKey($a->route_number, $deviationNames);
+            $h = $this->getHoursForAssignment($a, $deviationNames);
             $total += $h;
         }
 
@@ -133,6 +133,10 @@ class NaryadHoursCalculator
 
     public function getHoursForAssignment($assignment, $deviationNames = [], array $precomputedHours = [], array $routeDetails = [])
     {
+        if (! empty($assignment->hours_total) && (float) $assignment->hours_total > 0) {
+            return round((float) $assignment->hours_total, 1);
+        }
+
         $key = $assignment->route_number ?? null;
         if (empty($key)) {
             return 0;
@@ -155,8 +159,7 @@ class NaryadHoursCalculator
             if ($to && $a->plan_date->gt($to)) {
                 continue;
             }
-            $key = $a->route_number ?? '';
-            $total += $this->getHoursFromRouteKey($key, $deviationNames, $precomputedHours, $routeDetails);
+            $total += $this->getHoursForAssignment($a, $deviationNames, $precomputedHours, $routeDetails);
         }
 
         return round($total, 1);

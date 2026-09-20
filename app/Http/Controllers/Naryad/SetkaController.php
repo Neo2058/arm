@@ -13,6 +13,7 @@ use App\Models\Podstroika;
 use App\Models\RoutesCatalog;
 use App\Models\RouteVariant;
 use App\Models\User;
+use App\Services\Arm\ShiftHoursService;
 use App\Services\ClickHouseService;
 use App\Services\Naryad\NaryadHoursCalculator;
 use Carbon\Carbon;
@@ -24,7 +25,10 @@ class SetkaController extends Controller implements HasMiddleware
 {
     use EnsuresDispatcher;
 
-    public function __construct(private NaryadHoursCalculator $hours) {}
+    public function __construct(
+        private NaryadHoursCalculator $hours,
+        private ShiftHoursService $shiftHours,
+    ) {}
 
     public function partialSetka()
     {
@@ -453,8 +457,9 @@ class SetkaController extends Controller implements HasMiddleware
             $deviationNames = DeviationsCatalog::pluck('name')->toArray();
             $isDeviation = in_array($data['route_number'], $deviationNames);
 
-            // Estimate work hours for this assignment (shift-aware to pick correct duration e.g. 3.8 not 7.2)
-            $estimatedHours = $this->hours->getHoursFromRouteKey($data['route_number'], $deviationNames);
+            // Оценка часов: разбивка RAZBSM, иначе длительность маршрута
+            $estimatedHours = $this->shiftHours->hoursForRouteOnDate($planDate, $data['route_number'])
+                ?? $this->hours->getHoursFromRouteKey($data['route_number'], $deviationNames);
 
             // Week (Mon-Sun)
             $weekStart = $planDate->copy()->startOfWeek(Carbon::MONDAY);
@@ -569,6 +574,7 @@ class SetkaController extends Controller implements HasMiddleware
                 'assigned_by' => Auth::id(),
             ]
         );
+        $this->shiftHours->applyToAssignment($assignment);
 
         // Логируем действие (как требует AGENTS.md)
         ClickHouseService::log('naryad.assign', $assignment->id, [
@@ -613,7 +619,7 @@ class SetkaController extends Controller implements HasMiddleware
                     // Полная расшифровка (времена, места) будет взята через plain key в $routeDetails.
                     $contKey = $fromNightNum;
 
-                    NaryadAssignment::updateOrCreate(
+                    $continuation = NaryadAssignment::updateOrCreate(
                         [
                             'user_id' => $data['user_id'],
                             'plan_date' => $nextDate,
@@ -623,6 +629,7 @@ class SetkaController extends Controller implements HasMiddleware
                             'assigned_by' => Auth::id(),
                         ]
                     );
+                    $this->shiftHours->applyToAssignment($continuation);
                 }
             }
         } catch (\Exception $e) {

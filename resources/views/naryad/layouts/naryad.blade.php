@@ -86,8 +86,13 @@
                         ['key' => 'variants', 'label' => 'Варианты маршрутов', 'icon' => '🚂', 'route' => 'naryad.partial.variants'],
                         ['key' => 'calendar', 'label' => 'Календарь (кол-во составов)', 'icon' => '📅', 'route' => 'naryad.partial.calendar'],
                         ['key' => 'types', 'label' => 'Типы графиков', 'icon' => '📊', 'route' => 'naryad.partial.types'],
+                        ['key' => 'breakdowns', 'label' => 'Разбивки смен', 'icon' => '⏱️', 'route' => 'naryad.partial.breakdowns'],
+                        ['key' => 'holidays', 'label' => 'Праздники', 'icon' => '🎉', 'route' => 'naryad.partial.holidays'],
                         ['key' => 'deviations', 'label' => 'Отвлечения', 'icon' => '🚫', 'route' => 'naryad.partial.deviations'],
                         ['key' => 'norms', 'label' => 'Начальные условия', 'icon' => '⏱️', 'route' => 'naryad.partial.norms'],
+                        ['key' => 'personnel', 'label' => 'Картотека', 'icon' => '📇', 'route' => 'naryad.partial.personnel'],
+                        ['key' => 'appointments', 'label' => 'Назначения', 'icon' => '📌', 'route' => 'naryad.partial.appointments'],
+                        ['key' => 'absences', 'label' => 'Отвлечения (периоды)', 'icon' => '🛌', 'route' => 'naryad.partial.absences'],
                         ['key' => 'users', 'label' => 'Пользователи (планирование)', 'icon' => '👤', 'route' => 'naryad.partial.users'],
                     ];
                     $current = request()->routeIs('naryad.index') ? 'setka' : (explode('.', request()->route()->getName())[2] ?? 'setka');

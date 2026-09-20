@@ -184,6 +184,7 @@
 
         <div class="mt-8 text-center text-xs text-[#a3a29e]">
             Для уже зарегистрированных сотрудников — <a href="{{ route('login') }}" class="underline hover:text-[#1b1b18] dark:hover:text-white">войти в систему</a>
+            · <a href="{{ route('install') }}" class="underline hover:text-[#1b1b18] dark:hover:text-white">установить приложение</a>
         </div>
     </div>
 </body>

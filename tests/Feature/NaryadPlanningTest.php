@@ -52,6 +52,18 @@ class NaryadPlanningTest extends TestCase
             'naryad.norms.update',
             'naryad.extra_conditions.store',
             'naryad.user-profile.update-flags',
+            'naryad.partial.breakdowns',
+            'naryad.partial.holidays',
+            'naryad.breakdowns.update',
+            'naryad.holidays.store',
+            'naryad.holidays.destroy',
+            'naryad.partial.personnel',
+            'naryad.partial.appointments',
+            'naryad.partial.absences',
+            'naryad.appointments.store',
+            'naryad.appointments.destroy',
+            'naryad.absences.store',
+            'naryad.absences.destroy',
         ];
 
         foreach ($expected as $name) {
