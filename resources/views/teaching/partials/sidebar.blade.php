@@ -236,6 +236,11 @@
             'icon' => 'results',
         ],
         [
+            'title' => 'Поиск по нарядам',
+            'route' => 'journal.naryad-search',
+            'icon' => 'documents',
+        ],
+        [
             'title' => 'Документы',
             'route' => 'documents.index',
             'active' => 'documents.*',

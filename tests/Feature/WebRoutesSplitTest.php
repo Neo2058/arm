@@ -68,6 +68,8 @@ class WebRoutesSplitTest extends TestCase
             'journal.report',
             'journal.report.vacation.add',
             'journal.report.vacation.delete',
+            'journal.naryad-search',
+            'journal.naryad-search.run',
             'naryad.index',
             'naryad.partial.setka',
             'naryad.assign',

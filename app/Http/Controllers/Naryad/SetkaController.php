@@ -13,6 +13,7 @@ use App\Models\Podstroika;
 use App\Models\RoutesCatalog;
 use App\Models\RouteVariant;
 use App\Models\User;
+use App\Services\Arm\PlanirRulesService;
 use App\Services\Arm\ShiftHoursService;
 use App\Services\ClickHouseService;
 use App\Services\Naryad\NaryadHoursCalculator;
@@ -28,6 +29,7 @@ class SetkaController extends Controller implements HasMiddleware
     public function __construct(
         private NaryadHoursCalculator $hours,
         private ShiftHoursService $shiftHours,
+        private PlanirRulesService $planir,
     ) {}
 
     public function partialSetka()
@@ -447,121 +449,24 @@ class SetkaController extends Controller implements HasMiddleware
             // crew_id, notes — позже
         ]);
 
-        // Overlay checks based on initial conditions (начальные условия)
-        $norm = NaryadNorm::first();
-        if ($norm) {
-            $planDate = Carbon::parse($data['plan_date']);
-            $userId = $data['user_id'];
-
-            // Determine if deviation (does not count as work hours)
-            $deviationNames = DeviationsCatalog::pluck('name')->toArray();
-            $isDeviation = in_array($data['route_number'], $deviationNames);
-
-            // Оценка часов: разбивка RAZBSM, иначе длительность маршрута
-            $estimatedHours = $this->shiftHours->hoursForRouteOnDate($planDate, $data['route_number'])
-                ?? $this->hours->getHoursFromRouteKey($data['route_number'], $deviationNames);
-
-            // Week (Mon-Sun)
-            $weekStart = $planDate->copy()->startOfWeek(Carbon::MONDAY);
-            $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
-            $currentWeek = $this->hours->getUserPlannedWorkHours($userId, $weekStart, $weekEnd, $data['plan_date'], $estimatedHours, $isDeviation);
-            $weekLimit = $norm->week_hours;
-            if ($currentWeek > $weekLimit) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Превышен лимит часов в неделю: {$currentWeek} > {$weekLimit}",
-                ], 422);
-            }
-
-            // Month (use monthly override if set)
-            $monthStart = $planDate->copy()->startOfMonth();
-            $monthEnd = $planDate->copy()->endOfMonth();
-            $monthKey = $planDate->format('Y-m');
-            $monthLimit = $norm->monthly_hours[$monthKey] ?? $norm->month_hours;
-            $currentMonth = $this->hours->getUserPlannedWorkHours($userId, $monthStart, $monthEnd, $data['plan_date'], $estimatedHours, $isDeviation);
-            if ($currentMonth > $monthLimit) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Превышен лимит часов в месяц ({$monthKey}): {$currentMonth} > {$monthLimit}",
-                ], 422);
-            }
-
-            // Year
-            $yearStart = $planDate->copy()->startOfYear();
-            $yearEnd = $planDate->copy()->endOfYear();
-            $currentYear = $this->hours->getUserPlannedWorkHours($userId, $yearStart, $yearEnd, $data['plan_date'], $estimatedHours, $isDeviation);
-            if ($currentYear > $norm->year_hours) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Превышен лимит часов в год: {$currentYear} > {$norm->year_hours}",
-                ], 422);
-            }
-
-            // Basic min rest check (if times provided in future)
-            $prev = NaryadAssignment::where('user_id', $userId)
-                ->where('plan_date', '<', $data['plan_date'])
-                ->orderBy('plan_date', 'desc')
-                ->first();
-            if ($prev && $prev->end_time && ! empty($data['start_time'])) {
-                $prevEnd = Carbon::parse($prev->end_time);
-                $newStart = Carbon::parse($data['start_time']);
-                $restHours = $prevEnd->diffInHours($newStart);
-                if ($restHours < $norm->min_rest_hours) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "Недостаточно отдыха: требуется минимум {$norm->min_rest_hours} ч между сменами.",
-                    ], 422);
-                }
-            }
-
-            // Smarter extra conditions validators
-            $extras = $norm->extraConditions()->where('is_active', true)->get();
-            foreach ($extras as $extra) {
-                $val = (int) $extra->value;
-                if ($extra->name == 'max_days_in_row') {
-                    $streak = $isDeviation ? 0 : 1;
-                    $checkDate = $planDate->copy()->subDay();
-                    while (true) {
-                        $prevAss = NaryadAssignment::where('user_id', $userId)
-                            ->where('plan_date', $checkDate->format('Y-m-d'))
-                            ->first();
-                        if (! $prevAss) {
-                            break;
-                        }
-                        $isDev = in_array($prevAss->route_number, $deviationNames);
-                        if ($isDev) {
-                            break;
-                        }
-                        $streak++;
-                        if ($streak > $val) {
-                            return response()->json([
-                                'success' => false,
-                                'message' => "Превышен макс. дней подряд: {$streak} > {$val}",
-                            ], 422);
-                        }
-                        $checkDate->subDay();
-                    }
-                } elseif ($extra->name == 'max_night_shifts') {
-                    $periodStart = $planDate->copy()->subDays(30);
-                    $nightCount = NaryadAssignment::where('user_id', $userId)
-                        ->whereBetween('plan_date', [$periodStart, $planDate])
-                        ->get()
-                        ->filter(function ($a) {
-                            return stripos($a->route_number, 'ночь') !== false;
-                        })->count();
-                    $thisIsNight = stripos($data['route_number'], 'ночь') !== false;
-                    if ($thisIsNight) {
-                        $nightCount++;
-                    }
-                    if ($nightCount > $val) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => "Превышен макс. ночных смен: {$nightCount} > {$val}",
-                        ], 422);
-                    }
-                }
-                // add max_consecutive_nights etc as needed
-            }
+        $norm = NaryadNorm::firstOrCreate([], [
+            'year_hours' => 2000,
+            'month_hours' => 166,
+            'week_hours' => 48,
+            'min_rest_hours' => 8,
+        ]);
+        $violations = $this->planir->validateAssign(
+            (int) $data['user_id'],
+            Carbon::parse($data['plan_date']),
+            $data['route_number'],
+            $norm
+        );
+        if ($violations !== []) {
+            return response()->json([
+                'success' => false,
+                'message' => implode("\n", $violations),
+                'violations' => $violations,
+            ], 422);
         }
 
         $assignment = NaryadAssignment::updateOrCreate(

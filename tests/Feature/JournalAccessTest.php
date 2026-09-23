@@ -32,6 +32,7 @@ class JournalAccessTest extends TestCase
             'standards' => ['get', '/journal/standards'],
             'history' => ['get', '/journal/history'],
             'report' => ['get', '/journal/report'],
+            'naryad-search' => ['get', '/journal/naryad-search'],
             'todo.add' => ['post', '/journal/todo', ['title' => 'Тестовая задача']],
             'todo.complete' => ['post', '/journal/todo/1/complete'],
             'todo.update' => ['post', '/journal/todo/1/update', ['title' => 'Обновлённая']],
@@ -77,6 +78,10 @@ class JournalAccessTest extends TestCase
 
         $this->actingAs($instructor)
             ->get('/journal/settings')
+            ->assertOk();
+
+        $this->actingAs($instructor)
+            ->get('/journal/naryad-search')
             ->assertOk();
 
         $this->actingAs($instructor)

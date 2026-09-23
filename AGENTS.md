@@ -87,9 +87,10 @@
 - `CatalogsController` — справочники
 - `BreakdownsController` — разбивки смен (`RAZBSM`) и праздники (`PRAZD`)
 - `App\Services\Arm\ShiftHoursService` — часы назначения из разбивки
-- `App\Services\Arm\PersonnelImporter` — картотека `LKM`, назначения `NAZN`, периоды `OTVM`
+- `App\Services\Arm\PlanirRulesService` — контроли сетки PLANIR (assign блокирует нарушения)
+- `App\Services\Arm\PersonnelImporter` — картотека `LKM`, назначения `NAZN`, периоды `OTVM`, подстройки `POZEL`
 - `PersonnelController` — картотека / назначения / отвлечения
-- импорт DBF: `php artisan arm:import-dbf {path}` (`--only=personnel,appointments,absences`)
+- импорт DBF: `php artisan arm:import-dbf {path}` (`--only=personnel,appointments,absences,adjustments`)
 
 Доступ: `EnsureDispatcher` (роль `dispatcher`).
 
@@ -146,6 +147,7 @@
 - Проверки в PHP: `User::isAdmin()`, `isSuperAdmin()`, `isInstructor()`, `isDispatcher()`, `isDriver()`, `isStudent()`, `canBypassAccessBarriers()`, `canViewRospisiStatistics()`, `canAccessByRoles()`.
 - Filament (`canAccessPanel`): только `SUPER_ADMIN` и `ADMIN`.
 - Журнал ТЧМ: только `instructor` — `EnsureInstructor` на всех `/journal*` (не дублировать проверку в каждом методе).
+- Поиск по выданным нарядам для инструктора: `/journal/naryad-search`. Файлы (наряды, разбивка, ФИО) принадлежат `user_id`. Логика в `App\Services\InstructorNaryad\` (порт прототипа searching). Не смешивать с планированием `/naryad` нарядчика.
 - Планирование наряда: только `dispatcher` — `EnsureDispatcher`.
 - Не пиши `in_array($role, ['super_admin', 'admin'])` и не вводи роль `naryadchik` в enum/БД.
 

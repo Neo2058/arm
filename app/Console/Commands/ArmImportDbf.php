@@ -16,7 +16,7 @@ class ArmImportDbf extends Command
 {
     protected $signature = 'arm:import-dbf
                             {path? : Каталог с DBF (Datanrd) или путь к ARMNRD}
-                            {--only= : graphs,breakdowns,holidays,calendar,personnel,appointments,absences}';
+                            {--only= : graphs,breakdowns,holidays,calendar,personnel,appointments,absences,adjustments}';
 
     protected $description = 'Импорт справочников АРМ-ЛБ из FoxPro DBF';
 
@@ -32,7 +32,7 @@ class ArmImportDbf extends Command
         $only = $this->option('only');
         $targets = $only
             ? array_filter(array_map('trim', explode(',', strtolower((string) $only))))
-            : ['graphs', 'breakdowns', 'holidays', 'calendar', 'personnel', 'appointments', 'absences'];
+            : ['graphs', 'breakdowns', 'holidays', 'calendar', 'personnel', 'appointments', 'absences', 'adjustments'];
 
         $this->info('Источник: '.$path);
 
@@ -56,6 +56,9 @@ class ArmImportDbf extends Command
         }
         if (in_array('absences', $targets, true)) {
             $this->importAbsences($path);
+        }
+        if (in_array('adjustments', $targets, true)) {
+            $this->importAdjustments($path);
         }
 
         $this->info('Готово. Схема — armd.md');
@@ -325,6 +328,18 @@ class ArmImportDbf extends Command
         }
         $count = (new PersonnelImporter)->importAbsences($file);
         $this->info("Отвлечения: {$count}");
+    }
+
+    private function importAdjustments(string $dir): void
+    {
+        $file = $this->dbfPath($dir, 'POZEL');
+        if (! $file) {
+            $this->warn('POZEL.DBF не найден');
+
+            return;
+        }
+        $count = (new PersonnelImporter)->importDayAdjustments($file);
+        $this->info("Подстройки дней: {$count}");
     }
 
     private function nullableString(mixed $value): ?string

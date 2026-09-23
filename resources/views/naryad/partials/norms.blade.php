@@ -31,6 +31,33 @@
             <textarea id="monthly-json" class="w-full border rounded-2xl px-3 py-2 text-sm" rows="3" placeholder='{"2026-06":160,"2026-07":155}'>{{ json_encode($norm->monthly_hours ?? []) }}</textarea>
             <div class="text-[10px] text-orange-600 dark:text-orange-300 mt-1">Используется для расчёта лимитов по месяцам вместо базового month_hours. Дни с отвлечениями (больничный и т.д.) не учитываются в рабочих часах.</div>
         </div>
+
+        <div class="mt-6">
+            <div class="text-sm mb-2 font-medium text-orange-600 dark:text-orange-400">Правила PLANIR (сетка)</div>
+            <p class="text-[11px] text-orange-500 mb-3">Блокируют назначение в клетке. Схема — <code>armd.md</code>, шаг 3.</p>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                <div>
+                    <label class="block text-xs mb-1">Интервал смен, ч</label>
+                    <input id="planir-interval" type="number" class="w-full border rounded-2xl px-3 py-2" value="{{ $planir['interval_hours'] }}">
+                </div>
+                <div>
+                    <label class="block text-xs mb-1">Выходной, ч</label>
+                    <input id="planir-rest" type="number" class="w-full border rounded-2xl px-3 py-2" value="{{ $planir['rest_day_hours'] }}">
+                </div>
+                <div>
+                    <label class="block text-xs mb-1">Два выходных, ч</label>
+                    <input id="planir-two-rest" type="number" class="w-full border rounded-2xl px-3 py-2" value="{{ $planir['two_rest_days_hours'] }}">
+                </div>
+                <div>
+                    <label class="block text-xs mb-1">Дней между выходными</label>
+                    <input id="planir-gap" type="number" class="w-full border rounded-2xl px-3 py-2" value="{{ $planir['min_days_between_rests'] }}">
+                </div>
+                <div>
+                    <label class="block text-xs mb-1">Макс. дней без выходного</label>
+                    <input id="planir-max-work" type="number" class="w-full border rounded-2xl px-3 py-2" value="{{ $planir['max_days_without_rest'] }}">
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="mt-6 bg-white dark:bg-[#0b1018] border border-gray-200 dark:border-white/10 rounded-3xl p-6">
@@ -96,6 +123,13 @@
                         return;
                     }
                 }
+                payload.planir = {
+                    interval_hours: Number(document.getElementById('planir-interval')?.value || 12),
+                    rest_day_hours: Number(document.getElementById('planir-rest')?.value || 42),
+                    two_rest_days_hours: Number(document.getElementById('planir-two-rest')?.value || 66),
+                    min_days_between_rests: Number(document.getElementById('planir-gap')?.value || 3),
+                    max_days_without_rest: Number(document.getElementById('planir-max-work')?.value || 12)
+                };
 
                 const original = normBtn.textContent;
                 normBtn.disabled = true;

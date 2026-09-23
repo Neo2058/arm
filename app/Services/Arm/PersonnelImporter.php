@@ -5,6 +5,7 @@ namespace App\Services\Arm;
 use App\Enums\UserRole;
 use App\Models\ArmAbsence;
 use App\Models\ArmAppointment;
+use App\Models\ArmDayAdjustment;
 use App\Models\ArmPersonnel;
 use App\Models\User;
 use App\Models\UserProfile;
@@ -102,6 +103,33 @@ class PersonnelImporter
         if ($chunk !== []) {
             $this->upsertAbsences($chunk);
             $count += count($chunk);
+        }
+
+        return $count;
+    }
+
+    public function importDayAdjustments(string $dbfPath): int
+    {
+        $users = ArmPersonnel::query()->pluck('user_id', 'tab_number');
+        $count = 0;
+        foreach ((new DbfReader($dbfPath))->records() as $row) {
+            if ($this->isDeleted($row['UDAL'] ?? '')) {
+                continue;
+            }
+            $tab = $this->tab($row['TABNOM'] ?? '');
+            $date = $row['DTP'] ?? null;
+            if ($tab === '' || ! $date) {
+                continue;
+            }
+            ArmDayAdjustment::updateOrCreate(
+                ['tab_number' => $tab, 'plan_date' => $date],
+                [
+                    'user_id' => $users[$tab] ?? null,
+                    'route_code' => trim((string) ($row['NM'] ?? '')),
+                    'shift_code' => trim((string) ($row['SM'] ?? '')),
+                ]
+            );
+            $count++;
         }
 
         return $count;

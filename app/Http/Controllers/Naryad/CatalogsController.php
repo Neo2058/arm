@@ -14,6 +14,7 @@ use App\Models\RouteVariant;
 use App\Models\ScheduleType;
 use App\Models\User;
 use App\Models\UserProfile;
+use App\Services\Arm\PlanirRulesService;
 use App\Services\ClickHouseService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -117,6 +118,7 @@ class CatalogsController extends Controller implements HasMiddleware
         return view('naryad.partials.norms', [
             'norm' => $norm,
             'extras' => $extras,
+            'planir' => app(PlanirRulesService::class)->settings($norm),
         ]);
     }
 
@@ -413,6 +415,7 @@ class CatalogsController extends Controller implements HasMiddleware
             'week_hours' => 'required|integer|min:0',
             'min_rest_hours' => 'required|integer|min:0',
             'monthly_hours' => 'nullable|array',
+            'planir' => 'nullable|array',
         ]);
 
         $norm = NaryadNorm::firstOrCreate([]);
