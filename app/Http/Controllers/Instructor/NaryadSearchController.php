@@ -8,6 +8,7 @@ use App\Models\InstructorNaryadFile;
 use App\Models\InstructorQueryList;
 use App\Models\InstructorShiftTable;
 use App\Services\ClickHouseService;
+use App\Services\InstructorNaryad\BreakdownPdfExtractor;
 use App\Services\InstructorNaryad\NaryadParser;
 use App\Services\InstructorNaryad\SearchEngine;
 use App\Services\InstructorNaryad\ShiftCatalog;
@@ -93,8 +94,27 @@ class NaryadSearchController extends Controller implements HasMiddleware
         $count = 0;
         foreach ($request->file('shifts', []) as $file) {
             $path = $file->store('instructor-naryads/'.$user->id.'/shifts', 'local');
-            $utf8 = Text::toUtf8Auto(Storage::disk('local')->get($path));
-            $kind = $kindPref === 'auto' ? (ShiftCatalog::detectKind($utf8) ?? 'work') : $kindPref;
+            $absolute = Storage::disk('local')->path($path);
+            $original = $file->getClientOriginalName();
+            try {
+                if (BreakdownPdfExtractor::isPdf($absolute, $original)) {
+                    $kindHint = $kindPref === 'auto'
+                        ? (BreakdownPdfExtractor::inferKindFromName($original) ?? 'auto')
+                        : $kindPref;
+                    $utf8 = BreakdownPdfExtractor::extract($absolute, $kindHint);
+                } else {
+                    $utf8 = Text::toUtf8Auto(Storage::disk('local')->get($path));
+                }
+            } catch (\Throwable $e) {
+                Storage::disk('local')->delete($path);
+
+                return back()->withErrors(['shifts' => $original.': '.$e->getMessage()]);
+            }
+            $kind = $kindPref === 'auto'
+                ? (ShiftCatalog::detectKind($utf8)
+                    ?? BreakdownPdfExtractor::inferKindFromName($original)
+                    ?? 'work')
+                : $kindPref;
             InstructorShiftTable::create([
                 'user_id' => $user->id,
                 'kind' => $kind,

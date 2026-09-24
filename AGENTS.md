@@ -148,6 +148,7 @@
 - Filament (`canAccessPanel`): только `SUPER_ADMIN` и `ADMIN`.
 - Журнал ТЧМ: только `instructor` — `EnsureInstructor` на всех `/journal*` (не дублировать проверку в каждом методе).
 - Поиск по выданным нарядам для инструктора: `/journal/naryad-search`. Файлы (наряды, разбивка, ФИО) принадлежат `user_id`. Логика в `App\Services\InstructorNaryad\` (порт прототипа searching). Не смешивать с планированием `/naryad` нарядчика.
+- PDF разбивки: `scripts/extract_shifts.py` (pdfplumber) вызывается из `BreakdownPdfExtractor`. Нужны python3 + pdfplumber в образе (`Dockerfile`).
 - Планирование наряда: только `dispatcher` — `EnsureDispatcher`.
 - Не пиши `in_array($role, ['super_admin', 'admin'])` и не вводи роль `naryadchik` в enum/БД.
 

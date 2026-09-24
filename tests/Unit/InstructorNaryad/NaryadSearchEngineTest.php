@@ -94,4 +94,12 @@ TXT);
         $this->assertTrue($q['ok']);
         $this->assertSame('БОБРОВ|В|А', $q['key']);
     }
+
+    public function test_breakdown_kind_from_pdf_filename(): void
+    {
+        $this->assertSame('work', \App\Services\InstructorNaryad\BreakdownPdfExtractor::inferKindFromName('Рабочие 2025 (улучш.) v.6.pdf'));
+        $this->assertSame('weekend', \App\Services\InstructorNaryad\BreakdownPdfExtractor::inferKindFromName('Выходные 2025 (улучш.) v.7.pdf'));
+        $this->assertTrue(\App\Services\InstructorNaryad\BreakdownPdfExtractor::isPdf('/tmp/x.pdf', 'график.pdf'));
+        $this->assertFalse(\App\Services\InstructorNaryad\BreakdownPdfExtractor::isPdf('/tmp/x.txt', 'shifts_work.txt'));
+    }
 }

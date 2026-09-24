@@ -12,7 +12,10 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip3 install --break-system-packages --no-cache-dir pdfplumber
 
 # Устанавливаем расширения PHP
 # intl — для локализации, gd — для работы с изображениями

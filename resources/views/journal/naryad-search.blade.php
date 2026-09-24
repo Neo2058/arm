@@ -43,10 +43,11 @@
         </div>
 
         <div class="bg-white dark:bg-gray-800 rounded-2xl border p-4">
-            <h2 class="font-semibold mb-2">Разбивка смен (.txt)</h2>
+            <h2 class="font-semibold mb-2">Разбивка смен (PDF или .txt)</h2>
+            <p class="text-xs text-gray-500 mb-2">PDF «Рабочие…» / «Выходные…» разбирается сам, как в прототипе.</p>
             <form action="{{ route('journal.naryad-search.shifts') }}" method="POST" enctype="multipart/form-data" class="space-y-2">
                 @csrf
-                <input type="file" name="shifts[]" multiple accept=".txt,.TXT,text/plain" required
+                <input type="file" name="shifts[]" multiple accept=".pdf,.txt,.TXT,application/pdf,text/plain" required
                        class="block w-full text-sm">
                 <select name="kind" class="w-full border rounded-xl px-2 py-1 text-sm bg-white dark:bg-gray-900">
                     <option value="auto">Определить автоматически</option>
