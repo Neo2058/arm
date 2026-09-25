@@ -46,6 +46,12 @@ class UserRoleAccessTest extends TestCase
         $this->assertTrue($admin->canViewRospisiStatistics());
         $this->assertFalse($driver->canViewRospisiStatistics());
         $this->assertTrue($driver->isDriver());
+
+        $operator = User::factory()->operator()->make();
+        $this->assertTrue($operator->isOperator());
+        $this->assertTrue($operator->isUchetStaff());
+        $this->assertFalse($operator->isDispatcher());
+        $this->assertTrue($dispatcher->isUchetStaff());
     }
 
     public function test_dispatcher_can_access_legacy_naryadchik_allowed_roles(): void

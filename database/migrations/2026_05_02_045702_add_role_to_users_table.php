@@ -19,6 +19,7 @@ return new class extends Migration
                 'driver',
                 'dispatcher',
                 'super_admin',
+                'operator',
             ])->default('student');
             $table->boolean('is_active')->default(true);
         });

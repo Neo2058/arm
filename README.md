@@ -23,6 +23,8 @@
 - **Планирование нарядов** (Naryad) — полноценная система с сеткой, бригадами, вариантами, календарём
 - Справочник телефонов + Расшифровка смен
 - Система обучения, тесты, росписи
+- Учёт / лицевые счета (`/uchet`, роль `operator`)
+- Мобильное приложение (документы, обучение, комментарии) — **[mobile/README.md](./mobile/README.md)**
 - Backstage + приём платежей (ЮKassa)
 - Форма заявок на регистрацию с защитой и уведомлениями в Telegram
 
@@ -38,7 +40,9 @@
 
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** — архитектура, файловый прокси, доступ, маршруты
 - **[AGENTS.md](./AGENTS.md)** — соглашения для разработки (роли, наряд, файлы)
-- **[TECHNICAL_DEBT.md](./TECHNICAL_DEBT.md)** — только **открытый** долг; закрытое в 2026-09 там перечислено отдельно
+- **[TECHNICAL_DEBT.md](./TECHNICAL_DEBT.md)** — открытый долг и снимок того, что уже закрыто
+- **[mobile/README.md](./mobile/README.md)** — что умеет мобильное приложение и как собрать APK/IPA
+- **[armd.md](./armd.md)** — учёт АРМ-ЛБ / FoxPro
 - **[DEPLOY_SUMMARY.md](./DEPLOY_SUMMARY.md)** — описание функционала журнала и модулей
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)** — план развёртывания
 
@@ -58,6 +62,7 @@ docker compose exec app php artisan migrate --seed
 ## Роли
 - `instructor` — полный доступ к Журналу ТЧМ своей колонны (`EnsureInstructor` на всех `/journal*`)
 - `dispatcher` — планирование наряда (`/naryad`). Legacy-имя `naryadchik` в коде не используется
+- `operator` — оператор учёта (`/uchet`); нарядчик и админы тоже проходят
 - `driver` — просмотр нарядов и другие разделы
 - `student` — обучение (в Filament не пускаем)
 - `admin`, `super_admin` — административный доступ / Filament

@@ -64,6 +64,13 @@ class UserFactory extends Factory
         ]);
     }
 
+    public function operator(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::OPERATOR,
+        ]);
+    }
+
     public function student(): static
     {
         return $this->state(fn (array $attributes) => [

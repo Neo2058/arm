@@ -12,7 +12,7 @@
 
 | FoxPro | Уже в `arm/` | Комментарий |
 |---|---|---|
-| `USERS` / роли нарядчик | `users.role = dispatcher` | Оператор учёта ЛС ещё не заведён |
+| `USERS` / роли | `dispatcher` + **шаг 5:** `operator` | Нарядчик — сетка; оператор — `/uchet` |
 | `LKM` | `users` + `user_profiles` + **шаг 2:** `arm_personnel` | Карточка АРМ отдельно от профиля портала |
 | `GRAF` | `schedule_types` | С шага 1: колонка `foxpro_code` |
 | `KALEND` | `naryad_quotas` | Дата + тип графика + квота составов; окно не ограничено 90 днями |
@@ -22,7 +22,9 @@
 | `NARJAD` | `naryad_assignments` | До шага 1 — только номер маршрута, без нарезки часов |
 | `RAZBSM` | **шаг 1:** `arm_shift_breakdowns` | Разбивка смены |
 | `PRAZD` | **шаг 1:** `arm_holidays` | Праздничные дни |
-| `CHAS2`, `LSH`, `FLSM`, `LSBUH` | нет | Следующие шаги |
+| `CHAS2` | **шаг 4:** поля `*_2` на `naryad_assignments` | Часы 2 лица на той же клетке |
+| `LSH` / `FLSM` / `FLSP` | **шаг 6:** `arm_accounts` + `arm_pay_formulas` | Итоги месяца + интерпретатор `IIF` |
+| `LSBUH` | **шаг 7:** `/uchet/lsbuh.csv` | Выгрузка бухгалтерии |
 
 Сетка уже рисуется на **календарный месяц** (28–31 день). Календарь графиков пишется **кнопкой**, без дискеты.
 
@@ -232,9 +234,73 @@
 
 ---
 
-## Следующие шаги (ещё не в коде)
+## Шаг 4 — часы 2 лица (`CHAS2`)
 
-4. Часы 2 лица (`CHAS2`) на том же назначении.
-5. Учётные карточки и рабочее место оператора.
-6. Лицевые счета и формулы `FLSM`/`FLSP`.
-7. Выгрузка `LSBUH`, отчёты `DOKMENU`, закрытие месяца.
+На том же `naryad_assignments`, не отдельная строка сетки.
+
+| Колонка | FoxPro `C2ммгг` / `CHAS2` |
+|---|---|
+| `two_person` | `REZM2L` |
+| `hours_line_2`, `hours_night_2`, `hours_evening_2`, `hours_break_2`, `hours_holiday_2` | `LIN2` `NOCH2` `VECH2` `RAZR2` `PRAZD2` |
+| `hours_*_2_reserve` | `LIN2P` `NOCH2P` … |
+| `hours_total_2` | `CHAS` файла `CHAS2.DBF` |
+
+Если в разбивке `RAZBSM` заполнены `LIN2`/`NOCH2`, `ShiftHoursService` ставит `two_person` и копирует 2 лицо при назначении. Импорт: `php artisan arm:import-dbf --only=chas2`.
+
+---
+
+## Шаг 5 — учётные карточки и оператор
+
+Роль `users.role = operator` (оператор учёта). Нарядчик и админ тоже ходят в `/uchet`. Сетку `/naryad` оператор не открывает.
+
+Учётная карточка — не отдельная таблица, а наряды сотрудника за месяц: линия, 2 лицо, ночь, резерв. Оператор может править часы, пока месяц открыт.
+
+---
+
+## Шаг 6 — лицевые счета и формулы
+
+### `arm_pay_formulas` ← `FLSM` / `FLSP`
+
+Уникальность `(kind, nom)`. `kind`: `machinist` (`FLSM`) или `assistant` (`FLSP`).
+
+| Колонка | FoxPro |
+|---|---|
+| `nom` | `NOM` |
+| `name` | `NAZV` |
+| `percent` | `PROCR` |
+| `pay_code` | `VIDOPL` |
+| `tariff_code` / `tariff` | `TARIF` / `N_TARIF` |
+| `cost_code` | `SHZAT` |
+| `formula` | `FORMULA` (`IIF`, `.AND.`, сравнения) |
+
+Интерпретатор: `App\Services\Arm\FormulaInterpreter`. Переменные — поля ЛС в нижнем регистре (`vchas1`, `vc1`, `per1`, `dob1`, `nvih`, …). Нет поля → 0.
+
+### `arm_accounts` + `arm_account_lines`
+
+Сборка: `AccountBuilder` суммирует наряды за `YYYY-MM` в `totals` (как `LSH.VCHAS1/VC1/…`) и для каждой формулы считает часы строки. `МШ` → `FLSM`, должность с «П» → `FLSP`.
+
+Импорт формул: `php artisan arm:import-dbf --only=formulas`.
+
+---
+
+## Шаг 7 — `LSBUH`, отчёты, закрытие месяца
+
+### `arm_periods`
+
+| Колонка | Смысл |
+|---|---|
+| `year_month` unique | `YYYY-MM` |
+| `status` | `open` / `closed` |
+| `closed_at`, `closed_by` | кто закрыл |
+
+Закрытый месяц: сетка не назначает и не снимает смены, карточки не правятся. Открыть снова может нарядчик или админ.
+
+Выгрузка `/uchet/lsbuh.csv?month=YYYY-MM` — колонки как `LSBUH`: `GODMES,TABN,VOPL,TARST,PROCNT,VROTR,ZAKAZ,PROF,NOMLS,DDE,OSN_PROF,TABN_OLD,DEPO,DEPOKOM`.
+
+Отчёты `/uchet/reports`: затраты времени (линия / 2 лицо / ночь / вечер / праздник) и отвлечения за месяц (`OTVM`).
+
+---
+
+## Следующие шаги (уточнение паритета)
+
+Полный набор справок `DOKMENU` (классность, переработка, комната отдыха) и повторный ЛС (`NOMLS=1`) можно наращивать поверх `arm_accounts` без новой модели.

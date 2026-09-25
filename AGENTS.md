@@ -90,7 +90,9 @@
 - `App\Services\Arm\PlanirRulesService` — контроли сетки PLANIR (assign блокирует нарушения)
 - `App\Services\Arm\PersonnelImporter` — картотека `LKM`, назначения `NAZN`, периоды `OTVM`, подстройки `POZEL`
 - `PersonnelController` — картотека / назначения / отвлечения
-- импорт DBF: `php artisan arm:import-dbf {path}` (`--only=personnel,appointments,absences,adjustments`)
+- `App\Services\Arm\FormulaInterpreter` / `AccountBuilder` — ЛС
+- роль `operator`, рабочее место `/uchet` (карточки, ЛС, LSBUH, закрытие месяца)
+- импорт DBF: `php artisan arm:import-dbf {path}` (`--only=…,formulas,chas2`)
 
 Доступ: `EnsureDispatcher` (роль `dispatcher`).
 

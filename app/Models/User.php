@@ -75,6 +75,16 @@ class User extends Authenticatable implements FilamentUser
         return $this->roleEnum() === UserRole::DISPATCHER;
     }
 
+    public function isOperator(): bool
+    {
+        return $this->roleEnum() === UserRole::OPERATOR;
+    }
+
+    public function isUchetStaff(): bool
+    {
+        return $this->isOperator() || $this->isDispatcher() || $this->isAdmin();
+    }
+
     public function isDriver(): bool
     {
         return $this->roleEnum() === UserRole::DRIVER;

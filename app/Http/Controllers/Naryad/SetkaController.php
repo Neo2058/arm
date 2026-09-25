@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Naryad;
 
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Models\ArmPeriod;
 use App\Models\DeviationsCatalog;
 use App\Models\NaryadAssignment;
 use App\Models\NaryadNorm;
@@ -566,6 +567,13 @@ class SetkaController extends Controller implements HasMiddleware
             'user_id' => 'required|exists:users,id',
             'plan_date' => 'required|date',
         ]);
+
+        if (ArmPeriod::closedMonth(Carbon::parse($data['plan_date'])->format('Y-m'))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Месяц закрыт. Назначения менять нельзя.',
+            ], 422);
+        }
 
         $assignment = NaryadAssignment::where('user_id', $data['user_id'])
             ->whereDate('plan_date', $data['plan_date'])

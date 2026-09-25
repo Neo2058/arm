@@ -111,6 +111,9 @@
             </nav>
 
             <div class="mt-auto p-4 border-t border-gray-100 dark:border-white/10 text-xs">
+                <a href="{{ route('uchet.index') }}" class="block mb-2 px-4 py-2 rounded-2xl hover:bg-gray-100 dark:hover:bg-white/5 text-orange-500 dark:text-orange-400">
+                    → Учёт / ЛС
+                </a>
                 <a href="{{ route('podstroiki.index') }}" class="block mb-2 px-4 py-2 rounded-2xl hover:bg-gray-100 dark:hover:bg-white/5 text-orange-500 dark:text-orange-400">
                     → Подстройки (заявки)
                 </a>

@@ -4,6 +4,7 @@ namespace App\Services\Arm;
 
 use App\Models\ArmAbsence;
 use App\Models\ArmDayAdjustment;
+use App\Models\ArmPeriod;
 use App\Models\ArmPersonnel;
 use App\Models\DeviationsCatalog;
 use App\Models\NaryadAssignment;
@@ -25,6 +26,14 @@ class PlanirRulesService
      */
     public function validateAssign(int $userId, CarbonInterface $date, string $routeKey, NaryadNorm $norm): array
     {
+        $errors = [];
+        $yearMonth = $date->format('Y-m');
+        if (ArmPeriod::closedMonth($yearMonth)) {
+            $errors[] = 'Месяц '.$yearMonth.' закрыт. Назначения менять нельзя.';
+
+            return $errors;
+        }
+
         $planir = $this->settings($norm);
         $deviationNames = DeviationsCatalog::query()->pluck('name')->all();
         $restCodes = $planir['rest_codes'];
@@ -34,7 +43,6 @@ class PlanirRulesService
         $isNight = $this->isNight($routeKey, $shiftCode, $planir['night_shift_codes']);
         $isFirst = $this->isFirstShift($shiftCode, $routeKey);
 
-        $errors = [];
         $errors = array_merge($errors, $this->checkHours($userId, $date, $routeKey, $norm, $deviationNames, $isDeviation || $isRest));
         $errors = array_merge($errors, $this->checkExtras($userId, $date, $routeKey, $norm, $deviationNames, $isDeviation || $isRest, $isNight));
 

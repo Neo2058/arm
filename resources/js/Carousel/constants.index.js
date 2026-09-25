@@ -119,7 +119,25 @@ export const imagesArray = [
                 name: "Печать наряда",
             },
             {
-                name: "",
+                name: "Учёт / лицевые счета",
+            },
+        ],
+    },
+    {
+        name: "Оператор учёта",
+        src: "/images/professionalDriver.jpg",
+        role: ['operator', 'dispatcher', 'admin', 'super_admin'],
+        logo: "/assets/packaging.svg",
+        link: '/uchet',
+        details: [
+            {
+                name: "Учётные карточки и ЛС",
+            },
+            {
+                name: "Выгрузка в бухгалтерию",
+            },
+            {
+                name: "Закрытие месяца",
             },
         ],
     },

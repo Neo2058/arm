@@ -6,6 +6,7 @@ use App\Models\ArmHoliday;
 use App\Models\ArmShiftBreakdown;
 use App\Models\NaryadQuota;
 use App\Models\ScheduleType;
+use App\Services\Arm\AccountingImporter;
 use App\Services\Arm\DbfReader;
 use App\Services\Arm\PersonnelImporter;
 use Illuminate\Console\Command;
@@ -16,7 +17,7 @@ class ArmImportDbf extends Command
 {
     protected $signature = 'arm:import-dbf
                             {path? : Каталог с DBF (Datanrd) или путь к ARMNRD}
-                            {--only= : graphs,breakdowns,holidays,calendar,personnel,appointments,absences,adjustments}';
+                            {--only= : graphs,breakdowns,holidays,calendar,personnel,appointments,absences,adjustments,formulas,chas2}';
 
     protected $description = 'Импорт справочников АРМ-ЛБ из FoxPro DBF';
 
@@ -32,7 +33,7 @@ class ArmImportDbf extends Command
         $only = $this->option('only');
         $targets = $only
             ? array_filter(array_map('trim', explode(',', strtolower((string) $only))))
-            : ['graphs', 'breakdowns', 'holidays', 'calendar', 'personnel', 'appointments', 'absences', 'adjustments'];
+            : ['graphs', 'breakdowns', 'holidays', 'calendar', 'personnel', 'appointments', 'absences', 'adjustments', 'formulas', 'chas2'];
 
         $this->info('Источник: '.$path);
 
@@ -59,6 +60,14 @@ class ArmImportDbf extends Command
         }
         if (in_array('adjustments', $targets, true)) {
             $this->importAdjustments($path);
+        }
+        if (in_array('formulas', $targets, true)) {
+            $count = (new AccountingImporter)->importFormulas($path);
+            $this->info("Формулы ЛС: {$count}");
+        }
+        if (in_array('chas2', $targets, true)) {
+            $count = (new AccountingImporter)->importSecondPersonHours($path);
+            $this->info("Часы 2 лица: {$count}");
         }
 
         $this->info('Готово. Схема — armd.md');

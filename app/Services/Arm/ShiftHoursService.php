@@ -65,7 +65,12 @@ class ShiftHoursService
             return false;
         }
 
-        $assignment->fill($breakdown->toAssignmentHours());
+        $hours = $breakdown->toAssignmentHours();
+        if ($breakdown->hasSecondPersonHours()) {
+            $hours = array_merge($hours, $breakdown->toSecondPersonHours());
+            $hours['two_person'] = true;
+        }
+        $assignment->fill($hours);
         $assignment->save();
 
         return true;

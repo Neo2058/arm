@@ -16,6 +16,8 @@ enum UserRole: string
 
     case DISPATCHER = 'dispatcher';
 
+    case OPERATOR = 'operator';
+
     public function label(): string
     {
         return match ($this) {
@@ -31,6 +33,8 @@ enum UserRole: string
             self::DRIVER => 'Машинист',
 
             self::DISPATCHER => 'Нарядчик',
+
+            self::OPERATOR => 'Оператор учёта',
 
             default => 'Неизвестная роль',
         };
@@ -49,6 +53,8 @@ enum UserRole: string
             self::DRIVER => 'info',
 
             self::DISPATCHER => 'danger',
+
+            self::OPERATOR => 'warning',
         };
     }
 
@@ -69,6 +75,11 @@ enum UserRole: string
     public function isDispatcher(): bool
     {
         return $this === self::DISPATCHER;
+    }
+
+    public function isOperator(): bool
+    {
+        return $this === self::OPERATOR;
     }
 
     public static function safeFrom(self|string|null $value): self

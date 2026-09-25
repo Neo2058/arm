@@ -34,6 +34,17 @@ class NaryadAssignment extends Model
         'hours_holiday_reserve',
         'hours_overtime',
         'two_person',
+        'hours_total_2',
+        'hours_line_2',
+        'hours_reserve_2',
+        'hours_night_2',
+        'hours_night_2_reserve',
+        'hours_evening_2',
+        'hours_evening_2_reserve',
+        'hours_break_2',
+        'hours_break_2_reserve',
+        'hours_holiday_2',
+        'hours_holiday_2_reserve',
     ];
 
     protected $casts = [
@@ -51,6 +62,17 @@ class NaryadAssignment extends Model
         'hours_holiday_reserve' => 'float',
         'hours_overtime' => 'float',
         'two_person' => 'boolean',
+        'hours_total_2' => 'float',
+        'hours_line_2' => 'float',
+        'hours_reserve_2' => 'float',
+        'hours_night_2' => 'float',
+        'hours_night_2_reserve' => 'float',
+        'hours_evening_2' => 'float',
+        'hours_evening_2_reserve' => 'float',
+        'hours_break_2' => 'float',
+        'hours_break_2_reserve' => 'float',
+        'hours_holiday_2' => 'float',
+        'hours_holiday_2_reserve' => 'float',
     ];
 
     public function user()

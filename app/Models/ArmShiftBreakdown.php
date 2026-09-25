@@ -95,4 +95,29 @@ class ArmShiftBreakdown extends Model
             'hours_break_reserve' => $this->hours_break_reserve,
         ];
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toSecondPersonHours(): array
+    {
+        return [
+            'hours_line_2' => $this->hours_line_2,
+            'hours_reserve_2' => $this->hours_reserve_2,
+            'hours_night_2' => $this->hours_night_2,
+            'hours_night_2_reserve' => $this->hours_night_2_reserve,
+            'hours_evening_2' => $this->hours_evening_2,
+            'hours_evening_2_reserve' => $this->hours_evening_2_reserve,
+            'hours_break_2' => $this->hours_break_2,
+            'hours_break_2_reserve' => $this->hours_break_2_reserve,
+            'hours_total_2' => (float) $this->hours_line_2 + (float) $this->hours_reserve_2,
+        ];
+    }
+
+    public function hasSecondPersonHours(): bool
+    {
+        return (float) $this->hours_line_2 > 0
+            || (float) $this->hours_night_2 > 0
+            || (float) $this->hours_reserve_2 > 0;
+    }
 }
