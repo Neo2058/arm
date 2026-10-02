@@ -17,7 +17,7 @@ class ArmImportDbf extends Command
 {
     protected $signature = 'arm:import-dbf
                             {path? : Каталог с DBF (Datanrd) или путь к ARMNRD}
-                            {--only= : graphs,breakdowns,holidays,calendar,personnel,appointments,absences,adjustments,formulas,chas2}';
+                            {--only= : graphs,breakdowns,holidays,calendar,personnel,appointments,absences,adjustments,formulas,chas2,nrchas,prem,visl,extras,spprem,tariffs}';
 
     protected $description = 'Импорт справочников АРМ-ЛБ из FoxPro DBF';
 
@@ -33,7 +33,7 @@ class ArmImportDbf extends Command
         $only = $this->option('only');
         $targets = $only
             ? array_filter(array_map('trim', explode(',', strtolower((string) $only))))
-            : ['graphs', 'breakdowns', 'holidays', 'calendar', 'personnel', 'appointments', 'absences', 'adjustments', 'formulas', 'chas2'];
+            : ['graphs', 'breakdowns', 'holidays', 'calendar', 'personnel', 'appointments', 'absences', 'adjustments', 'formulas', 'chas2', 'nrchas', 'prem', 'visl', 'extras', 'spprem', 'tariffs'];
 
         $this->info('Источник: '.$path);
 
@@ -69,6 +69,31 @@ class ArmImportDbf extends Command
             $count = (new AccountingImporter)->importSecondPersonHours($path);
             $this->info("Часы 2 лица: {$count}");
         }
+        $importer = new AccountingImporter;
+        if (in_array('nrchas', $targets, true) || in_array('norms', $targets, true)) {
+            $count = $importer->importMonthNorms($path);
+            $this->info("Нормы часов NRCHAS: {$count}");
+        }
+        if (in_array('prem', $targets, true)) {
+            $count = $importer->importPremiumRates($path);
+            $this->info("Проценты премии PREM: {$count}");
+        }
+        if (in_array('visl', $targets, true)) {
+            $count = $importer->importSeniorityBands($path);
+            $this->info("Выслуга VISL: {$count}");
+        }
+        if (in_array('extras', $targets, true) || in_array('tehuch', $targets, true)) {
+            $count = $importer->importExtraPays($path);
+            $this->info("Доплаты TEHUCH: {$count}");
+        }
+        if (in_array('spprem', $targets, true)) {
+            $count = $importer->importMonthPremiums($path);
+            $this->info("Премия месяца SPPREM: {$count}");
+        }
+        if (in_array('tariffs', $targets, true)) {
+            $count = $importer->importTariffs($path);
+            $this->info("Тарифы и виды выплат ELKODIF: {$count}");
+        }
 
         $this->info('Готово. Схема — armd.md');
 
@@ -77,9 +102,16 @@ class ArmImportDbf extends Command
 
     private function resolveDataDir(?string $path): ?string
     {
+        if ($path) {
+            if (is_dir($path.DIRECTORY_SEPARATOR.'Datanrd')) {
+                return $path.DIRECTORY_SEPARATOR.'Datanrd';
+            }
+            if (is_dir($path)) {
+                return $path;
+            }
+        }
+
         $candidates = array_filter([
-            $path,
-            $path ? $path.DIRECTORY_SEPARATOR.'Datanrd' : null,
             config('arm.dbf_path'),
             env('ARM_DBF_PATH'),
             '/Users/vyacheslavandreevich/Downloads/ARMNRD/Datanrd',

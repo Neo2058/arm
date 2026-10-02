@@ -6,7 +6,18 @@
     </div>
     @forelse($accounts as $a)
         <div class="mb-6 bg-white dark:bg-[#0b1018] border rounded-3xl p-5">
-            <div class="font-semibold mb-2">{{ $a->user?->name }} · таб. {{ $a->user?->personnel?->tab_number }} · {{ $a->position_code }} · {{ $a->formula_kind }}</div>
+            @php $t = $a->totals ?? []; @endphp
+            <div class="font-semibold mb-1">{{ $a->user?->name }} · таб. {{ $a->user?->personnel?->tab_number }} · {{ $a->position_code }} · {{ $a->formula_kind }}</div>
+            <div class="text-xs text-orange-500 mb-2">
+                линия {{ $t['vchas1'] ?? 0 }}
+                · dob1 {{ $t['dob1'] ?? 0 }}
+                · nvih {{ $t['nvih'] ?? 0 }}
+                · teh {{ $t['teh'] ?? 0 }}
+                · медк {{ $t['medk'] ?? 0 }}
+                · прем {{ $t['prem'] ?? 0 }}%
+                · выслуга {{ $t['visl'] ?? 0 }} ({{ $t['vislp'] ?? 0 }}%)
+                · норма {{ $t['tek_nr'] ?? 0 }}
+            </div>
             <table class="min-w-full text-xs">
                 <thead class="text-orange-600"><tr>
                     <th class="text-left py-1">Статья</th><th>Код</th><th class="text-right">Тариф</th><th class="text-right">%</th><th class="text-right">Часы</th><th>Шифр</th>

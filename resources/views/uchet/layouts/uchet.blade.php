@@ -18,6 +18,7 @@
         <nav class="p-3 space-y-1 text-sm">
             <a href="{{ route('uchet.index', ['month' => $month ?? date('Y-m')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Учётные карточки</a>
             <a href="{{ route('uchet.accounts', ['month' => $month ?? date('Y-m')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Лицевые счета</a>
+            <a href="{{ route('uchet.extras', ['month' => $month ?? date('Y-m')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Доплаты и премия</a>
             <a href="{{ route('uchet.reports', ['month' => $month ?? date('Y-m')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Отчёты</a>
             <a href="{{ route('uchet.lsbuh', ['month' => $month ?? date('Y-m')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Выгрузка LSBUH</a>
             @if(auth()->user()?->isDispatcher())

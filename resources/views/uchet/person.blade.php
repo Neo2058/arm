@@ -4,6 +4,22 @@
     <h1 class="text-2xl font-bold mt-2 mb-1">{{ $personnel?->full_name ?? 'Сотрудник' }}</h1>
     <p class="text-sm text-orange-600 mb-4">Таб. {{ $personnel?->tab_number }} · {{ $month }}</p>
 
+    @if($personnel)
+        <div class="bg-white dark:bg-[#0b1018] border rounded-3xl p-4 mb-6 text-sm">
+            <div class="font-semibold mb-3">Доплаты месяца (TEHUCH / SPPREM)</div>
+            <div class="flex flex-wrap gap-3 items-end">
+                <label>техучёба, ч <input id="p-teh" type="number" step="0.01" class="border rounded-2xl px-2 py-1 w-24" value="{{ $extra?->hours_tech }}" {{ $period->isClosed() ? 'disabled' : '' }}></label>
+                <label>медк., ч <input id="p-med" type="number" step="0.01" class="border rounded-2xl px-2 py-1 w-24" value="{{ $extra?->hours_med }}" {{ $period->isClosed() ? 'disabled' : '' }}></label>
+                <label>вых. дни <input id="p-nvih" type="number" class="border rounded-2xl px-2 py-1 w-16" value="{{ $extra?->extra_days_off }}" {{ $period->isClosed() ? 'disabled' : '' }}></label>
+                <label>вых. часы <input id="p-nvihh" type="number" step="0.01" class="border rounded-2xl px-2 py-1 w-24" value="{{ $extra?->extra_hours_off }}" {{ $period->isClosed() ? 'disabled' : '' }}></label>
+                <label>премия % <input id="p-prem" type="number" step="0.01" class="border rounded-2xl px-2 py-1 w-24" value="{{ $premium?->percent_fact }}" {{ $period->isClosed() ? 'disabled' : '' }}></label>
+                @unless($period->isClosed())
+                    <button id="p-ex-save" class="px-4 py-2 bg-orange-600 text-white rounded-2xl">Сохранить доплаты</button>
+                @endunless
+            </div>
+        </div>
+    @endif
+
     <div class="bg-white dark:bg-[#0b1018] border rounded-3xl overflow-x-auto">
         <table class="min-w-full text-xs">
             <thead class="border-b text-orange-600">
@@ -53,6 +69,30 @@
             const data = await res.json();
             if (!data.success) alert(data.message || 'Ошибка');
         });
+    });
+    document.getElementById('p-ex-save')?.addEventListener('click', async () => {
+        const headers = {'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'};
+        const month = '{{ $month }}';
+        const userId = '{{ $personnel?->user_id }}';
+        const extraRes = await fetch('{{ url('/uchet/extras') }}/' + userId + '?month=' + month, {
+            method:'PUT', headers, body: JSON.stringify({
+                hours_tech: document.getElementById('p-teh').value,
+                hours_med: document.getElementById('p-med').value,
+                extra_days_off: document.getElementById('p-nvih').value,
+                extra_hours_off: document.getElementById('p-nvihh').value,
+            })
+        });
+        const extraData = await extraRes.json();
+        if (!extraData.success) { alert(extraData.message || 'Ошибка доплат'); return; }
+        const premRes = await fetch('{{ url('/uchet/premiums') }}/' + userId + '?month=' + month, {
+            method:'PUT', headers, body: JSON.stringify({
+                percent_fact: document.getElementById('p-prem').value,
+                percent_plan: document.getElementById('p-prem').value,
+            })
+        });
+        const premData = await premRes.json();
+        if (!premData.success) { alert(premData.message || 'Ошибка премии'); return; }
+        location.reload();
     });
     </script>
 @endsection

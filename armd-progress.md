@@ -45,11 +45,11 @@
 | Контур | Оценка | Состояние |
 |---|---|---|
 | Планирование / сетка `PLANIR` | ~70–80% | Назначение блокируется правилами; сетка — календарный месяц |
-| Учёт / лицевые счета | ~40–50% | Карточки, формулы, закрытие месяца, CSV `LSBUH` |
+| Учёт / лицевые счета | ~60–70% | Карточки, формулы, входы `RAS1LS`, закрытие месяца, CSV `LSBUH` |
 | Отчёты `DOKMENU` | ~15% | Только затраты времени и отвлечения за месяц |
-| НСИ | ~30% | Графики, разбивки, праздники, календарь, нормы; нет кодификаторов и тарифов |
+| НСИ | ~40% | Графики, разбивки, праздники, календарь, `NRCHAS`/`PREM`/`VISL`/тарифы; нет экранов кодификаторов |
 
-Пока `dob1` / `nvih` / `teh` / `medk` / `prem` остаются 0, копейки ЛС **не совпадут** с FoxPro.
+Входы `dob1` / `nvih` / `teh` / `medk` / `prem` / `visl` / `tek_nr` заполняются из TEHUCH/SPPREM/VISL/NRCHAS. Совпадение копеек с FoxPro — шаг B (эталонный месяц).
 
 ---
 
@@ -119,9 +119,9 @@
 
 - `arm_pay_formulas` ← `FLSM`/`FLSP` (`kind`: machinist / assistant).
 - `FormulaInterpreter`: `IIF`, `.AND.`, сравнения. Формулы **не хардкодить**.
-- `AccountBuilder` суммирует наряды за `YYYY-MM` в `totals` и считает строки.
+- `AccountBuilder` + `LsTotalsCalculator` (как `RAS1LS.PRG`) суммируют наряды за `YYYY-MM` в `totals` и считают строки.
 - `МШ` → FLSM, должность с «П» → FLSP.
-- Нет поля в totals → 0. Сейчас нули: `dob1`, `nvih`, `teh`, `medk`, `prem` и родственные.
+- Нет поля в totals → 0. Входы `dob*` / `nvih` / `teh` / `medk` / `prem*` / `visl*` / `tek_nr` / `kl*` заполняются (шаг A).
 
 ### 4.8. Шаг 7 — закрытие месяца и выгрузка
 
@@ -153,6 +153,8 @@
 | `tests/Unit/Arm/FormulaInterpreterTest.php` | IIF |
 | `tests/Unit/Arm/ShiftHoursServiceTest.php` | подстановка часов |
 | `tests/Unit/Arm/DbfReaderTest.php` | CP866 DBF |
+| `tests/Feature/ArmFormulaInputsTest.php` | импорт NRCHAS/PREM/VISL/TEHUCH/SPPREM, totals, `/uchet/extras` |
+| `tests/Unit/Arm/LsTotalsCalculatorTest.php` | `vc1`, `nvih` из дней × `dnnr` |
 
 После правок доступа/маршрутов дополнительно: `JournalAccessTest`, `NaryadPlanningTest`, `WebRoutesSplitTest`, `UserRoleAccessTest`.
 
@@ -164,26 +166,11 @@
 
 Не начинать шаг N+1, пока N не даёт проверяемый результат. Иначе снова размажется.
 
-### Шаг A — входы формул (сейчас главный пробел)
+### Шаг A — входы формул — **сделано 2026-10-02**
 
-Пока эти поля 0, ЛС никогда не совпадёт с FoxPro.
+Импорт `NRCHAS`/`PREM`/`VISL`/`TEHUCH`/`SPPREM`/`ELKODIF` 41 и 50. `LsTotalsCalculator` заполняет `dob*`/`nvih`/`teh`/`medk`/`prem*`/`visl*`/`tek_nr`/`kl*`/`per1`/`brig*` как `RAS1LS`. Оператор: `/uchet/extras` (техучёба, медк., выходной, % премии). `FPROC` → `percent_source` строки ЛС.
 
-Нужно завести данные и заполнять `AccountBuilder::sumTotals()`:
-
-| Вход | Откуда в FoxPro | Зачем |
-|---|---|---|
-| `dob1` / `dob2` / `dobr` / … | доплаты, `DOPVIPL` | часы доплаты в формуле |
-| `nvih` / `dobnv` | работа в выходной/праздник | отдельные виды оплаты |
-| `teh` / `medk` | техосмотр / медкомиссия | отдельные строки ЛС |
-| `prem` | `PREM`, отбор `OTB_PREM` | премия |
-| выслуга | `VISL`, `LKM.DTVISL` / `VISLP` | пороги в `IIF` |
-| норма месяца | `NRCHAS` × рабочие дни (минус `PRAZD` и воскресенья) | `nonorm` и недоработка |
-| тариф | кодификатор «Тарифные ставки» + `FLSM.N_TARIF` | сумма строки |
-
-Импорт: `NRCHAS`, `PREM`, `VISL`, тарифы из `ELKODIF` (kodspr=41), виды выплат (50).
-Экран оператора: ввод доплат по человеку/дню, не только правка часов линии.
-
-**Готово, когда:** для одного человека за тестовый месяц totals содержат ненулевые `dob*`/`prem`, если они есть в эталоне.
+Не в этом шаге: два ЛС при смене должности в середине месяца (шаг C); сверка копеек с живым `LSH` (шаг B).
 
 ### Шаг B — золотой месяц
 
@@ -292,7 +279,7 @@ CSV — временный контракт. Бухгалтерия 1С ждал
 | 5. Технические функции | не нужно 1:1 (дискеты, индекс, отказы) | бэкап Postgres / MinIO |
 | 0. Конец работы | выход из портала | — |
 
-`UCHMENU`: планирование ✓, учётные карточки ✓, лицевые счета ✓, маршрутные листы ✗, доп. выплаты ✗, архив УК ✗.
+`UCHMENU`: планирование ✓, учётные карточки ✓, лицевые счета ✓, маршрутные листы ✗, доп. выплаты ✓ (`/uchet/extras`), архив УК ✗.
 
 `KARTMENU`: ведение картотеки частично (нет полного LKM), назначения ✓, отвлечения ✓, подстройки ✓ (день + месяц раздельно), отбор ✗, архив ЛС ✗.
 
@@ -322,6 +309,7 @@ php artisan arm:import-dbf
 php artisan arm:import-dbf --only=graphs,breakdowns,holidays,calendar
 php artisan arm:import-dbf --only=personnel,appointments,absences,adjustments
 php artisan arm:import-dbf --only=formulas,chas2
+php artisan arm:import-dbf --only=nrchas,prem,visl,extras,spprem,tariffs
 ```
 
 Путь по умолчанию: `config('arm.dbf_path')` / `ARM_DBF_PATH`, иначе `~/Downloads/ARMNRD/Datanrd`.
@@ -332,20 +320,21 @@ php artisan arm:import-dbf --only=formulas,chas2
 | `/uchet` | operator + dispatcher + admin | карточки |
 | `/uchet/accounts` | то же | лицевые счета |
 | `/uchet/lsbuh.csv?month=YYYY-MM` | то же | выгрузка |
+| `/uchet/extras` | то же | доплаты TEHUCH и премия SPPREM |
 | `/uchet/reports` | то же | черновые справки |
 | `POST /uchet/generate` | то же | собрать ЛС |
 | `POST /uchet/close` / `reopen` | close — учёт; reopen — dispatcher/admin | период |
 
-Ключевые классы: `PlanirRulesService`, `ShiftHoursService`, `FoxTime`, `PersonnelImporter`, `AccountingImporter`, `FormulaInterpreter`, `AccountBuilder`, `UchetController`, `SetkaController`.
+Ключевые классы: `PlanirRulesService`, `ShiftHoursService`, `FoxTime`, `PersonnelImporter`, `AccountingImporter`, `FormulaInterpreter`, `LsTotalsCalculator`, `AccountBuilder`, `UchetController`, `SetkaController`.
 
 ---
 
 ## 9. Что делать в следующей сессии
 
 1. Прочитать этот файл и `armd.md` (не начинать с «набросать НСИ»).
-2. Взять **шаг A** — входы формул. Пока они нули, отчёты и DBF-выгрузка бессмысленны.
-3. Параллельно (это работа пользователя, не кода): выбрать эталонные табельные и месяц для шага B.
-4. Не открывать шаг D/E «чтобы было меню как в DOS».
+2. Взять **шаг B** — золотой месяц. Нужны эталонные табельные и `LSH`/`LSBUH` из дампа (это работа пользователя).
+3. Не открывать шаг D/E «чтобы было меню как в DOS».
+4. Если эталона нет — шаг C (повторный ЛС / маршрутные листы), не прыгать в отчёты.
 
 Если контекст сессии снова оборвётся: направление = этот файл, схемы = `armd.md`, эталон = `ARMNRD`.
 
@@ -358,4 +347,5 @@ php artisan arm:import-dbf --only=formulas,chas2
 | 2026-09-30 | Шаги 1–7 контура сделаны. 100% нет. Следующий код — шаг A (входы формул). |
 | 2026-09-30 | Печать нарядов / выписка: `NaryadPrintService` по `pecnar`. RASST ещё нет. |
 | 2026-09-30 | FoxPro: печать нарядов за диапазон дат → `DOC\ДД.ММ.ГГ.txt` (выписка `…v.txt`). |
-| 2026-10-02 | Документация сверена с кодом: печать в `AGENTS.md` / `armd.md`, поиск ФИО `/naryady/search-people`, `TECHNICAL_DEBT.md`. Очередь кода не сдвинулась — шаг A. |
+| 2026-10-02 | Документация сверена с кодом: печать в `AGENTS.md` / `armd.md`, поиск ФИО `/naryady/search-people`, `TECHNICAL_DEBT.md`. |
+| 2026-10-02 | Шаг A: входы формул `RAS1LS` (`NRCHAS`/`PREM`/`VISL`/`TEHUCH`/`SPPREM`/тарифы), `/uchet/extras`, `LsTotalsCalculator`. Дальше шаг B (эталонный месяц). |

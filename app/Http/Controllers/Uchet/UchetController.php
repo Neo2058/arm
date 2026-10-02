@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Uchet;
 use App\Http\Controllers\Controller;
 use App\Models\ArmAbsence;
 use App\Models\ArmAccount;
+use App\Models\ArmExtraPay;
+use App\Models\ArmMonthPremium;
 use App\Models\ArmPeriod;
 use App\Models\ArmPersonnel;
 use App\Models\NaryadAssignment;
@@ -69,12 +71,32 @@ class UchetController extends Controller
             ->whereBetween('plan_date', [$start->toDateString(), $end->toDateString()])
             ->orderBy('plan_date')
             ->get();
+        $extra = $personnel
+            ? ArmExtraPay::query()
+                ->where('year_month', $month)
+                ->where(function ($q) use ($personnel) {
+                    $q->where('tab_number', $personnel->tab_number);
+                    if ($personnel->user_id) {
+                        $q->orWhere('user_id', $personnel->user_id);
+                    }
+                })
+                ->first()
+            : null;
+        $premium = $personnel
+            ? ArmMonthPremium::query()
+                ->where('year_month', $month)
+                ->where('tab_number', $personnel->tab_number)
+                ->orderByRaw('case when position_code = ? then 0 else 1 end', [$personnel->position_code])
+                ->first()
+            : null;
 
         return view('uchet.person', [
             'month' => $month,
             'period' => $period,
             'personnel' => $personnel,
             'days' => $days,
+            'extra' => $extra,
+            'premium' => $premium,
             'user' => Auth::user(),
         ]);
     }
@@ -200,6 +222,109 @@ class UchetController extends Controller
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    public function extras(Request $request)
+    {
+        $month = $this->month($request);
+        $period = ArmPeriod::query()->firstOrCreate(['year_month' => $month], ['status' => 'open']);
+        $extras = ArmExtraPay::query()
+            ->with('user.personnel')
+            ->where('year_month', $month)
+            ->orderBy('tab_number')
+            ->get();
+        $premiums = ArmMonthPremium::query()
+            ->with('user.personnel')
+            ->where('year_month', $month)
+            ->orderBy('tab_number')
+            ->get();
+        $people = ArmPersonnel::query()->orderBy('full_name')->get(['user_id', 'tab_number', 'full_name', 'position_code']);
+
+        return view('uchet.extras', [
+            'month' => $month,
+            'period' => $period,
+            'extras' => $extras,
+            'premiums' => $premiums,
+            'people' => $people,
+            'user' => Auth::user(),
+        ]);
+    }
+
+    public function updateExtras(Request $request, int $userId)
+    {
+        $month = $this->month($request);
+        if (ArmPeriod::closedMonth($month)) {
+            return response()->json(['success' => false, 'message' => 'Месяц закрыт'], 422);
+        }
+        $personnel = ArmPersonnel::query()->where('user_id', $userId)->firstOrFail();
+        $data = $request->validate([
+            'hours_tech' => 'nullable|numeric',
+            'tech_on' => 'nullable|date',
+            'hours_accident' => 'nullable|numeric',
+            'accident_on' => 'nullable|date',
+            'hours_med' => 'nullable|numeric',
+            'med_on' => 'nullable|date',
+            'extra_days_off' => 'nullable|integer|min:0',
+            'extra_hours_off' => 'nullable|numeric',
+        ]);
+        $payload = [
+            'user_id' => $personnel->user_id,
+            'tab_number' => $personnel->tab_number,
+            'full_name' => $personnel->full_name,
+            'position_code' => $personnel->position_code,
+            'hours_tech' => (float) ($data['hours_tech'] ?? 0),
+            'tech_on' => $data['tech_on'] ?? null,
+            'hours_accident' => (float) ($data['hours_accident'] ?? 0),
+            'accident_on' => $data['accident_on'] ?? null,
+            'hours_med' => (float) ($data['hours_med'] ?? 0),
+            'med_on' => $data['med_on'] ?? null,
+            'extra_days_off' => (int) ($data['extra_days_off'] ?? 0),
+            'extra_hours_off' => (float) ($data['extra_hours_off'] ?? 0),
+        ];
+        ArmExtraPay::updateOrCreate(
+            ['year_month' => $month, 'tab_number' => $personnel->tab_number],
+            $payload
+        );
+        ClickHouseService::log('uchet.extras.updated', $personnel->user_id, ['month' => $month] + $payload);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function updatePremium(Request $request, int $userId)
+    {
+        $month = $this->month($request);
+        if (ArmPeriod::closedMonth($month)) {
+            return response()->json(['success' => false, 'message' => 'Месяц закрыт'], 422);
+        }
+        $personnel = ArmPersonnel::query()->where('user_id', $userId)->firstOrFail();
+        $data = $request->validate([
+            'percent_plan' => 'nullable|numeric',
+            'percent_fact' => 'nullable|numeric',
+            'ktu' => 'nullable|numeric',
+            'note' => 'nullable|string|max:40',
+        ]);
+        $fact = (float) ($data['percent_fact'] ?? $data['percent_plan'] ?? 0);
+        $plan = (float) ($data['percent_plan'] ?? $fact);
+        ArmMonthPremium::updateOrCreate(
+            [
+                'year_month' => $month,
+                'tab_number' => $personnel->tab_number,
+                'position_code' => $personnel->position_code ?: '',
+            ],
+            [
+                'user_id' => $personnel->user_id,
+                'percent_plan' => $plan,
+                'percent_fact' => $fact,
+                'ktu' => (float) ($data['ktu'] ?? 1),
+                'note' => $data['note'] ?? null,
+            ]
+        );
+        ClickHouseService::log('uchet.premium.updated', $personnel->user_id, [
+            'month' => $month,
+            'percent_fact' => $fact,
+        ]);
+
+        return response()->json(['success' => true]);
     }
 
     public function reports(Request $request)

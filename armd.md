@@ -25,6 +25,7 @@
 | `CHAS2` | **шаг 4:** поля `*_2` на `naryad_assignments` | Часы 2 лица на той же клетке |
 | `LSH` / `FLSM` / `FLSP` | **шаг 6:** `arm_accounts` + `arm_pay_formulas` | Итоги месяца + интерпретатор `IIF` |
 | `LSBUH` | **шаг 7:** `/uchet/lsbuh.csv` | Выгрузка бухгалтерии |
+| `NRCHAS` / `PREM` / `VISL` / `TEHUCH` / `SPPREM` | **шаг A:** нормы, премия, выслуга, доплаты | Входы формул ЛС; экран `/uchet/extras` |
 
 Сетка уже рисуется на **календарный месяц** (28–31 день). Календарь графиков пишется **кнопкой**, без дискеты.
 
@@ -324,9 +325,86 @@
 
 ---
 
+## Шаг A — входы формул ЛС (`RAS1LS`)
+
+Пока `dob1` / `nvih` / `teh` / `medk` / `prem` / `visl` / `tek_nr` нули, строки `FLSM`/`FLSP` не совпадают с FoxPro. Сервис: `LsTotalsCalculator` (как `RAS1LS.PRG`). Импорт: `php artisan arm:import-dbf --only=nrchas,prem,visl,extras,spprem,tariffs`. Экран оператора: `/uchet/extras`.
+
+`arm_pay_formulas.percent_source` ← `FLSM.FPROC` (`premm`, `vislp`, `brigp`, …). Если задан, процент строки ЛС берётся из `totals[fproc]`.
+
+### `arm_month_norms` ← `NRCHAS`
+
+Уникальность `year_month`. `MESGOD` вида `02.2021` → `2021-02`.
+
+| Колонка | FoxPro | Смысл |
+|---|---|---|
+| `year_month` | `MESGOD` | `YYYY-MM` |
+| `month_hours` | `MESNR` | норма месяца `t_nr` |
+| `day_hours` | `DNNR` | часы за рабочий день `t_dnnr` |
+
+`tek_nr = t_nr`, кроме найма/увольнения внутри месяца: тогда `min(koldn × dnnr, t_nr)`, где `koldn` — дни без воскресенья и без `PRAZD`.
+
+### `arm_premium_rates` ← `PREM`
+
+Уникальность `(position_code, is_brigadier)`.
+
+| Колонка | FoxPro |
+|---|---|
+| `position_code` | `DOLZN` (`МШ`, `П/М`) |
+| `is_brigadier` | `PBR=+` |
+| `percent` | `PROC` |
+| `name` | `NAZV` |
+
+### `arm_seniority_bands` ← `VISL`
+
+Пустые `OT=DO=PROC=0` пропускаются. Полных лет: `INT(((12*(год_месяца-1)+мес) - (12*(год_выслуги-1)+мес_выслуги))/12)` от `LKM.DTVISL` / `arm_personnel.seniority_on`.
+
+| Колонка | FoxPro |
+|---|---|
+| `years_from` / `years_to` | `OT` / `DO` |
+| `percent` | `PROC` → `vislp` |
+
+### `arm_extra_pays` ← `TEHUCH`
+
+Уникальность `(year_month, tab_number)`. `GODMES` `YYYYMM`. Оператор правит на `/uchet/extras` и на карточке человека.
+
+| Колонка | FoxPro |
+|---|---|
+| `hours_tech` | `CHAS` → `teh` |
+| `tech_on` | `DAT` |
+| `hours_accident` | `AVAR` |
+| `hours_med` | `MEDK` → `medk` |
+| `extra_days_off` | `NVIH` (если `NVIH_CH=0`, часы = `NVIH × dnnr`) |
+| `extra_hours_off` | `NVIH_CH` → `nvih` |
+
+`nvih` копируется только если `DOLZN` совпадает с должностью ЛС.
+
+### `arm_month_premiums` ← `SPPREM`
+
+Уникальность `(year_month, tab_number, position_code)`. SEEK `godmes+tabnom+dolzn`; для `МШ` запасной ключ `М2`.
+
+| Колонка | FoxPro |
+|---|---|
+| `percent_plan` | `PREMP` |
+| `percent_fact` | `PREMF` → `premm` (МШ) / разнос `premp` (П/М) |
+| `ktu` | `KTU` |
+
+### `arm_tariffs` ← `ELKODIF` kodspr=`41`
+
+`code` = `KODEL` (ставка строкой, напр. `176.81`), `rate` = `VAL(KODEL)`.
+
+### `arm_pay_kinds` ← `ELKODIF` kodspr=`50`
+
+Виды оплаты (`004`, `009`, `072`, …).
+
+### Totals `AccountBuilder`
+
+Считаются как в `RAS1LS`: `vc1 = vchas1 − prazd1`; `dob*` из недоработки относительно `tek_nr`; `per1` из `allchas − mes_nr` минус праздники и `nvih` (для цеха совместителей `11` — нули); `kl1`/`kl2`/`kl3` по классу; `visl`/`brig` по выслуге и бригадирству. Два ЛС при смене должности в середине месяца — шаг C.
+
+---
+
 ## Следующие шаги
 
 Очередь до 100% паритета, статусы и карта меню — **`armd-progress.md`**.
 Этот файл (`armd.md`) держит только схемы и маппинг полей. Не дублировать дорожную карту сюда.
 
-Кратко: шаги 1–7 контура сделаны; 100% нет. Следующий код — входы формул ЛС (`dob1`/`nvih`/`prem`/выслуга/`NRCHAS`), затем золотой месяц против `LSH`/`LSBUH`.
+Кратко: шаги 1–7 контура и шаг A (входы формул) сделаны; 100% нет. Следующий код — золотой месяц против `LSH`/`LSBUH` (нужны эталонные табельные от пользователя).

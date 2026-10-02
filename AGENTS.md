@@ -93,9 +93,9 @@
 - `App\Services\Arm\NaryadPrintService` — печать нарядов (DOKMENU pecnar); `/naryad/partial/print`, `/naryad/print`
 - `App\Services\Arm\PersonnelImporter` — картотека `LKM`, назначения `NAZN`, периоды `OTVM`, подстройки `POZEL`
 - `PersonnelController` — картотека / назначения / отвлечения
-- `App\Services\Arm\FormulaInterpreter` / `AccountBuilder` — ЛС
-- роль `operator`, рабочее место `/uchet` (карточки, ЛС, LSBUH, закрытие месяца)
-- импорт DBF: `php artisan arm:import-dbf {path}` (`--only=…,formulas,chas2`)
+- `App\Services\Arm\FormulaInterpreter` / `LsTotalsCalculator` / `AccountBuilder` — ЛС
+- роль `operator`, рабочее место `/uchet` (карточки, ЛС, доплаты `/uchet/extras`, LSBUH, закрытие месяца)
+- импорт DBF: `php artisan arm:import-dbf {path}` (`--only=…,formulas,chas2,nrchas,prem,visl,extras,spprem,tariffs`)
 
 Доступ: `EnsureDispatcher` (роль `dispatcher`).
 

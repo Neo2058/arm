@@ -14,4 +14,7 @@ Route::prefix('uchet')->middleware(EnsureUchetStaff::class)->group(function () {
     Route::post('/reopen', [UchetController::class, 'reopen'])->name('uchet.reopen');
     Route::get('/lsbuh.csv', [UchetController::class, 'lsbuh'])->name('uchet.lsbuh');
     Route::get('/reports', [UchetController::class, 'reports'])->name('uchet.reports');
+    Route::get('/extras', [UchetController::class, 'extras'])->name('uchet.extras');
+    Route::put('/extras/{userId}', [UchetController::class, 'updateExtras'])->name('uchet.extras.update');
+    Route::put('/premiums/{userId}', [UchetController::class, 'updatePremium'])->name('uchet.premiums.update');
 });

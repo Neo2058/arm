@@ -12,6 +12,7 @@ class ArmPayFormula extends Model
         'nom',
         'name',
         'percent_text',
+        'percent_source',
         'percent',
         'pay_code',
         'tariff_code',
