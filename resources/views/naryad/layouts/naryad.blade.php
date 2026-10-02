@@ -82,6 +82,7 @@
                 @php
                     $nav = [
                         ['key' => 'setka', 'label' => 'Сетка', 'icon' => '📋', 'route' => 'naryad.partial.setka'],
+                        ['key' => 'print', 'label' => 'Печать нарядов', 'icon' => '🖨', 'route' => 'naryad.partial.print'],
                         ['key' => 'crews', 'label' => 'Составы (т6 / т5)', 'icon' => '👥', 'route' => 'naryad.partial.crews'],
                         ['key' => 'variants', 'label' => 'Варианты маршрутов', 'icon' => '🚂', 'route' => 'naryad.partial.variants'],
                         ['key' => 'calendar', 'label' => 'Календарь (кол-во составов)', 'icon' => '📅', 'route' => 'naryad.partial.calendar'],

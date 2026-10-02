@@ -4,6 +4,7 @@ use App\Http\Controllers\Naryad\BreakdownsController;
 use App\Http\Controllers\Naryad\CatalogsController;
 use App\Http\Controllers\Naryad\PersonnelController;
 use App\Http\Controllers\Naryad\PlanningController;
+use App\Http\Controllers\Naryad\PrintController;
 use App\Http\Controllers\Naryad\SetkaController;
 use App\Http\Middleware\EnsureDispatcher;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,8 @@ Route::prefix('naryad')->middleware(EnsureDispatcher::class)->group(function () 
     Route::get('/', [PlanningController::class, 'index'])->name('naryad.index');
 
     Route::get('/partial/setka', [SetkaController::class, 'partialSetka'])->name('naryad.partial.setka');
+    Route::get('/partial/print', [PrintController::class, 'partial'])->name('naryad.partial.print');
+    Route::get('/print', [PrintController::class, 'sheet'])->name('naryad.print');
     Route::post('/assign', [SetkaController::class, 'assign'])->name('naryad.assign');
     Route::post('/unassign', [SetkaController::class, 'unassign'])->name('naryad.unassign');
     Route::post('/podstroika-limit', [SetkaController::class, 'savePodstroikaLimit'])->name('naryad.podstroika-limit.save');

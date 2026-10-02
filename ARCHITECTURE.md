@@ -94,6 +94,7 @@ This is one of the most important and carefully designed parts of the system.
    - `->middleware('signed')` for file routes
    - `EnsureInstructor` — all `/journal*` (`routes/journal.php` + `TCHMJournalController`)
    - `EnsureDispatcher` — all `/naryad*` (`routes/naryad.php` + Naryad controllers)
+   - `EnsureUchetStaff` — `/uchet*` (`routes/uchet.php`)
    - Filament's own `Authenticate` for `/admin`
 
 Role checks in PHP go through `User` helpers (`isAdmin()`, `isInstructor()`, `isDispatcher()`, `canBypassAccessBarriers()`, `canAccessByRoles()`). Canonical dispatcher role is `dispatcher`; `naryadchik` is only a `UserRole::safeFrom()` alias.
@@ -107,9 +108,10 @@ Role checks in PHP go through `User` helpers (`isAdmin()`, `isInstructor()`, `is
 | `account.php` | main menu, barrier, device |
 | `documents.php` | documents, signed PDF, quizzes |
 | `training.php` | training, rosisi, signed media |
-| `work.php` | naryady PDF viewer, shifts, podstroiki |
-| `journal.php` | TCHM journal |
-| `naryad.php` | dispatcher planning |
+| `work.php` | naryady viewer, `POST /naryady/search-people`, shifts, podstroiki |
+| `journal.php` | TCHM journal + instructor naryad search |
+| `naryad.php` | dispatcher planning, print (`/naryad/print`) |
+| `uchet.php` | operator accounting (cards, LS, LSBUH, period close) |
 | `support.php` | backstage, bugs, Telegram, YooKassa |
 
 ### Custom Middlewares
@@ -211,7 +213,7 @@ These are documented in code comments.
 5. **Separate middleware stack** for Filament vs user routes.
 6. **ClickHouse for analytics** — keeps PostgreSQL clean.
 7. **Role enum + User helpers** — no scattered `in_array($role, ['admin', …])`.
-8. **Naryad split** — `App\Http\Controllers\Naryad\{Planning,Setka,Catalogs}Controller`; hours in `NaryadHoursCalculator`.
+8. **Naryad split** — `App\Http\Controllers\Naryad\{Planning,Setka,Catalogs,Breakdowns,Personnel,Print}Controller`; hours in `NaryadHoursCalculator` / Arm services.
 
 ---
 
@@ -239,4 +241,4 @@ Laravel (web group)
 
 ---
 
-**Last updated:** 2026-09-17 (access guards, roles, FileProxyService, naryad/route split)
+**Last updated:** 2026-10-02 (print, naryad people search, uchet routes)

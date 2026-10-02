@@ -32,6 +32,8 @@ class NaryadPlanningTest extends TestCase
         $expected = [
             'naryad.index',
             'naryad.partial.setka',
+            'naryad.partial.print',
+            'naryad.print',
             'naryad.partial.crews',
             'naryad.partial.variants',
             'naryad.partial.calendar',
@@ -77,6 +79,8 @@ class NaryadPlanningTest extends TestCase
 
         $this->actingAs($driver)->get('/naryad')->assertForbidden();
         $this->actingAs($driver)->get('/naryad/partial/setka')->assertForbidden();
+        $this->actingAs($driver)->get('/naryad/partial/print')->assertForbidden();
+        $this->actingAs($driver)->get('/naryad/print')->assertForbidden();
         $this->actingAs($driver)->get('/naryad/partial/crews')->assertForbidden();
         $this->actingAs($driver)->get('/naryad/partial/types')->assertForbidden();
         $this->actingAs($driver)->post('/naryad/assign', [
@@ -99,6 +103,7 @@ class NaryadPlanningTest extends TestCase
         $this->actingAs($dispatcher)->get('/naryad/partial/users')->assertOk();
         $this->actingAs($dispatcher)->get('/naryad/partial/deviations')->assertOk();
         $this->actingAs($dispatcher)->get('/naryad/partial/norms')->assertOk();
+        $this->actingAs($dispatcher)->get('/naryad/partial/print')->assertOk();
     }
 
     public function test_dispatcher_can_assign_and_unassign_route(): void

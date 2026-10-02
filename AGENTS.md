@@ -65,7 +65,7 @@
 ### Маршруты
 `routes/web.php` — публичные + группа `auth` + Check-middleware. Домены:
 
-- `routes/account.php`, `documents.php`, `training.php`, `work.php`, `journal.php`, `naryad.php`, `support.php`
+- `routes/account.php`, `documents.php`, `training.php`, `work.php`, `journal.php`, `naryad.php`, `uchet.php`, `support.php`
 
 Новые URI клади в соответствующий файл. Имена маршрутов не ломай (на них завязан JS).
 
@@ -79,6 +79,7 @@
 
 ### Клон АРМ-ЛБ
 Схемы таблиц и шаги переноса FoxPro — **`armd.md`**. Не заводить параллельные таблицы учёта в обход этой схемы.
+Что сделано и что делать дальше — **`armd-progress.md`**. Не начинать отчёты/НСИ, пока не закрыт текущий шаг очереди в этом файле.
 
 ### Планирование наряда
 Контроллеры в `App\Http\Controllers\Naryad\`:
@@ -86,8 +87,10 @@
 - `SetkaController` — сетка, assign/unassign, лимиты подстроек
 - `CatalogsController` — справочники
 - `BreakdownsController` — разбивки смен (`RAZBSM`) и праздники (`PRAZD`)
+- `PrintController` — печать нарядов и выписка в комнату отдыха
 - `App\Services\Arm\ShiftHoursService` — часы назначения из разбивки
 - `App\Services\Arm\PlanirRulesService` — контроли сетки PLANIR (assign блокирует нарушения)
+- `App\Services\Arm\NaryadPrintService` — печать нарядов (DOKMENU pecnar); `/naryad/partial/print`, `/naryad/print`
 - `App\Services\Arm\PersonnelImporter` — картотека `LKM`, назначения `NAZN`, периоды `OTVM`, подстройки `POZEL`
 - `PersonnelController` — картотека / назначения / отвлечения
 - `App\Services\Arm\FormulaInterpreter` / `AccountBuilder` — ЛС
@@ -102,10 +105,15 @@
 - `general-quiz-player`
 - `work-calendar-root`
 - `document-viewer`
+- `naryad-viewer`
 - `count-down-timer`
 - `carousel-menu`
 
 Данные обычно передаются через `window.__QUIZ_DATA__`, `window.__GENERAL_QUIZ_DATA__`, `window.__DOCUMENTS_TREE__` и data-атрибуты.
+
+Просмотр выданных нарядов (`/naryady`) — React-остров `NaryadViewer`. Пакетный поиск ФИО идёт на сервер (`POST /naryady/search-people` → `NaryadDocumentLoader` + `SearchEngine`), не через pdf.js в браузере. PDF в просмотрщике по-прежнему через `Storage::temporaryUrl()` — это открытый долг, не трогать мимоходом.
+
+Стек фронта — JSX-острова без TypeScript. Не начинать массовый JS→TS до закрытия долга в `TECHNICAL_DEBT.md`: долг там PHP (CSRF, middleware, MinIO, Filament, два расчёта зарплаты).
 
 ## Правила разработки (обязательно соблюдать)
 
@@ -194,6 +202,6 @@ php artisan optimize:clear
 
 ---
 
-**Последнее обновление:** 2026-09-17 (роли, журнал, FileProxyService, split наряда и `routes/*.php`)
+**Последнее обновление:** 2026-10-02 (печать нарядов, поиск ФИО `/naryady/search-people`, `armd-progress.md`, `uchet.php`)
 
 Этот файл имеет высокий приоритет и будет автоматически подгружаться в контекст AI при работе в директории проекта.

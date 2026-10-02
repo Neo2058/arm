@@ -42,4 +42,13 @@ class FoxTime
     {
         return round(($to->getTimestamp() - $from->getTimestamp()) / 3600, 2);
     }
+
+    /** Как STR(чч.мм, 5, 2) в FoxPro: « 5.30». */
+    public static function format(float|int|string|null $value): string
+    {
+        $minutes = self::toMinutes($value);
+        $hours = intdiv($minutes, 60);
+
+        return sprintf('%2d.%02d', $hours, $minutes % 60);
+    }
 }

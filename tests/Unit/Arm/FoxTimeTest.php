@@ -15,6 +15,13 @@ class FoxTimeTest extends TestCase
         $this->assertSame(22 * 60, FoxTime::toMinutes(22.00));
     }
 
+    public function test_format_matches_foxpro_str_hh_mm(): void
+    {
+        $this->assertSame(' 5.30', FoxTime::format(5.30));
+        $this->assertSame('13.10', FoxTime::format(13.10));
+        $this->assertSame(' 0.00', FoxTime::format(0));
+    }
+
     public function test_overnight_end_moves_to_next_day(): void
     {
         $day = Carbon::parse('2026-03-10');

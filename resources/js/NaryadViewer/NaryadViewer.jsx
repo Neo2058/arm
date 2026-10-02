@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Eye, Phone, BookOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Plus, Trash2, Copy, X } from 'lucide-react';
+import { Search, Eye, Phone, BookOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Plus, Trash2, Copy } from 'lucide-react';
 
 export default function NaryadViewer({ naryads = [], isAdmin = false }) {
     // Read initial tab from query for sidebar deep links
@@ -76,13 +76,16 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
     const [editingListId, setEditingListId] = useState(null);
     const [selectedSearchListIds, setSelectedSearchListIds] = useState([]);
     const [selectedNaryadIdsForSearch, setSelectedNaryadIdsForSearch] = useState([]);
-    const [batchSearchResults, setBatchSearchResults] = useState([]);
+    const [resultText, setResultText] = useState('');
+    const [resultError, setResultError] = useState('');
+    const [resultHits, setResultHits] = useState(0);
     const [isBatchSearching, setIsBatchSearching] = useState(false);
-    const [pdfTextCache, setPdfTextCache] = useState({}); // cache extracted text {naryadId: [{page, text}, ...]}
+    const resultFieldRef = useRef(null);
 
-    // Auto-clear batch results when selections change
     useEffect(() => {
-        if (batchSearchResults.length > 0) setBatchSearchResults([]);
+        setResultText('');
+        setResultError('');
+        setResultHits(0);
     }, [selectedSearchListIds, selectedNaryadIdsForSearch]);
 
     // Log explanations searches (debounced)
@@ -318,107 +321,79 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
         );
     };
 
-    // Extract full text from a naryad PDF (client side)
-    const getNaryadText = async (naryad) => {
-        if (pdfTextCache[naryad.id]) return pdfTextCache[naryad.id];
-
-        try {
-            let url = naryad.url;
-            if (!url) {
-                const res = await fetch(`/naryady/${naryad.id}`);
-                const data = await res.json();
-                url = data.url;
-            }
-            if (!window.pdfjsLib) {
-                await new Promise((res, rej) => {
-                    const s = document.createElement('script');
-                    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-                    s.onload = () => {
-                        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                        res();
-                    };
-                    s.onerror = rej;
-                    document.head.appendChild(s);
-                });
-            }
-            const pdfjs = window.pdfjsLib;
-            const pdf = await pdfjs.getDocument(url).promise;
-            const pages = [];
-            for (let p = 1; p <= pdf.numPages; p++) {
-                const page = await pdf.getPage(p);
-                const content = await page.getTextContent();
-                const text = content.items.map(it => it.str).join(' ');
-                pages.push({ page: p, text });
-            }
-            const result = { title: naryad.title, date: naryad.naryad_date, pages };
-            setPdfTextCache(prev => ({ ...prev, [naryad.id]: result }));
-            return result;
-        } catch (e) {
-            console.error('Text extract failed', e);
-            return null;
-        }
-    };
-
-    // Main batch search - mimics the C++ logic
     const runBatchSearch = async () => {
         const lists = searchLists.filter(l => selectedSearchListIds.includes(l.id));
         const naryadsToSearch = filteredNaryads.filter(n => selectedNaryadIdsForSearch.includes(n.id));
+        const queries = lists.flatMap(l => l.queries).map(q => q.trim()).filter(Boolean);
 
         if (lists.length === 0 || naryadsToSearch.length === 0) {
             alert('Выберите хотя бы один список поиска и хотя бы один наряд');
             return;
         }
-
-        setIsBatchSearching(true);
-        const results = [];
-
-        for (const naryad of naryadsToSearch) {
-            const textData = await getNaryadText(naryad);
-            if (!textData) {
-                results.push({ naryadTitle: naryad.title, error: 'Не удалось извлечь текст' });
-                continue;
-            }
-
-            for (const list of lists) {
-                for (const query of list.queries) {
-                    let foundAny = false;
-                    textData.pages.forEach(pt => {
-                        const lower = pt.text.toLowerCase();
-                        const qlower = query.toLowerCase();
-                        if (lower.includes(qlower)) {
-                            foundAny = true;
-                            // simple context snippet
-                            const idx = lower.indexOf(qlower);
-                            const start = Math.max(0, idx - 40);
-                            const end = Math.min(pt.text.length, idx + query.length + 40);
-                            let snippet = pt.text.substring(start, end);
-                            snippet = snippet.replace(new RegExp(query, 'gi'), '***$&***');
-                            results.push({
-                                naryadTitle: naryad.title,
-                                date: naryad.naryad_date,
-                                listName: list.name,
-                                query,
-                                page: pt.page,
-                                snippet
-                            });
-                        }
-                    });
-                    if (!foundAny) {
-                        results.push({
-                            naryadTitle: naryad.title,
-                            date: naryad.naryad_date,
-                            listName: list.name,
-                            query,
-                            notFound: true
-                        });
-                    }
-                }
-            }
+        if (queries.length === 0) {
+            alert('В выбранных списках нет ФИО');
+            return;
         }
 
-        setBatchSearchResults(results);
-        setIsBatchSearching(false);
-        logAction('batch_naryad_search', { lists: lists.length, naryads: naryadsToSearch.length });
+        setIsBatchSearching(true);
+        setResultText('');
+        setResultError('');
+        setResultHits(0);
+
+        try {
+            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const res = await fetch('/naryady/search-people', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    naryad_ids: naryadsToSearch.map(n => n.id),
+                    queries,
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (typeof data.text === 'string' && data.text) {
+                setResultText(data.text);
+                setResultHits(Number(data.hits) || 0);
+            }
+            const extra = Array.isArray(data.errors) ? data.errors.filter(Boolean) : [];
+            if (!res.ok) {
+                setResultError(data.message || extra.join('\n') || 'Не удалось выполнить поиск');
+            } else if (extra.length) {
+                setResultError(extra.join('\n'));
+            }
+            requestAnimationFrame(() => {
+                resultFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+        } catch (_) {
+            setResultError('Сеть недоступна, поиск не выполнен.');
+        } finally {
+            setIsBatchSearching(false);
+        }
+    };
+
+    const copyResult = async () => {
+        if (!resultText) return;
+        try {
+            await navigator.clipboard.writeText(resultText);
+            return;
+        } catch (_) {
+            /* iOS / старый браузер: копирование через выделение поля */
+        }
+        const el = resultFieldRef.current;
+        if (!el) return;
+        el.focus();
+        el.select();
+        try {
+            document.execCommand('copy');
+        } catch (_) {
+            /* пользователь может скопировать вручную из поля */
+        }
     };
 
     // Load pdf.js from CDN + PDF (mobile friendly init)
@@ -704,13 +679,13 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
 
                     <div className="text-xs text-orange-400/60 px-1">Свайп в просмотрщике → листание страниц. Поиск внутри PDF работает.</div>
 
-                    {/* ========== НОВЫЙ ПУНКТ: Пакетный поиск по именам (аналог C++ программы) ========== */}
-                    <div className="mt-8 bg-[#0b1018] border border-white/10 rounded-3xl p-5">
+                    {/* Пакетный поиск ФИО — тот же движок, что в Qt (маршрут, состав, смена, часы) */}
+                    <div className="mt-8 bg-[#0b1018] border border-white/10 rounded-3xl p-4 sm:p-5">
                         <div className="flex items-center gap-2 text-orange-400 font-semibold mb-3">
-                            <Search size={18} /> Поиск по именам в нарядах (как в старой программе на C++)
+                            <Search size={18} /> Поиск людей в нарядах
                         </div>
                         <div className="text-xs text-orange-300/70 mb-4">
-                            Добавляйте "списки поиска" (фамилии/ФИО). Выбирайте наряды — получите текстовые результаты с совпадениями.
+                            Списки ФИО как в наряде (с инициалами). Результат — в поле ниже, как файл poisk_result.txt на станции.
                         </div>
 
                         {/* Управление списками поиска */}
@@ -793,42 +768,49 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
                             <button
                                 onClick={runBatchSearch}
                                 disabled={isBatchSearching || selectedSearchListIds.length === 0 || selectedNaryadIdsForSearch.length === 0}
-                                className="w-full h-11 rounded-2xl bg-orange-500 active:bg-orange-600 text-white font-bold text-sm disabled:opacity-50"
+                                className="w-full min-h-11 h-11 rounded-2xl bg-orange-500 active:bg-orange-600 text-white font-bold text-sm disabled:opacity-50"
                             >
-                                {isBatchSearching ? 'Идёт поиск...' : 'ЗАПУСТИТЬ ПОИСК ПО ВЫБРАННЫМ'}
+                                {isBatchSearching ? 'Идёт поиск...' : 'Найти'}
                             </button>
 
-                            {batchSearchResults.length > 0 && (
-                                <div className="mt-4">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <div className="font-semibold text-sm">Результаты ({batchSearchResults.length})</div>
-                                        <button onClick={() => {
-                                            const txt = batchSearchResults.map(r => {
-                                                if (r.notFound) return `Не найдено: ${r.query} в ${r.naryadTitle}`;
-                                                if (r.error) return `Ошибка: ${r.error}`;
-                                                return `${r.naryadTitle} (стр.${r.page}) [${r.listName}] : ${r.query} → ${r.snippet}`;
-                                            }).join('\n');
-                                            const blob = new Blob([txt], {type: 'text/plain'});
-                                            const url = URL.createObjectURL(blob);
-                                            const a = document.createElement('a');
-                                            a.href = url;
-                                            a.download = 'naryad_search_results.txt';
-                                            a.click();
-                                            URL.revokeObjectURL(url);
-                                        }} className="text-xs underline text-orange-400">Скачать .txt</button>
+                            <div className="mt-4">
+                                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                    <div className="font-semibold text-sm text-orange-300">
+                                        Результат{resultHits ? ` · совпадений ${resultHits}` : ''}
                                     </div>
-                                    <div className="max-h-64 overflow-auto text-xs bg-black/40 p-3 rounded space-y-1 font-mono">
-                                        {batchSearchResults.map((r, idx) => (
-                                            <div key={idx} className={r.notFound ? 'text-red-400/70' : ''}>
-                                                {r.error ? r.error :
-                                                r.notFound ? `✗ ${r.query} не найдено в ${r.naryadTitle}` :
-                                                `${r.naryadTitle} стр.${r.page} [${r.listName}]: ${r.snippet}`}
-                                            </div>
-                                        ))}
+                                    <div className="flex gap-3 text-xs">
+                                        <button
+                                            type="button"
+                                            onClick={copyResult}
+                                            disabled={!resultText}
+                                            className="text-orange-400 underline disabled:opacity-40"
+                                        >
+                                            Копировать
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setResultText(''); setResultError(''); setResultHits(0); }}
+                                            disabled={!resultText && !resultError}
+                                            className="text-orange-400/70 hover:text-orange-400 disabled:opacity-40"
+                                        >
+                                            Очистить
+                                        </button>
                                     </div>
-                                    <button onClick={() => setBatchSearchResults([])} className="mt-2 text-xs text-orange-400/70 hover:text-orange-400">Очистить результаты</button>
                                 </div>
-                            )}
+                                {resultError && (
+                                    <div className="mb-2 text-xs text-red-400 whitespace-pre-wrap">{resultError}</div>
+                                )}
+                                <textarea
+                                    ref={resultFieldRef}
+                                    readOnly
+                                    spellCheck={false}
+                                    autoComplete="off"
+                                    autoCorrect="off"
+                                    value={resultText}
+                                    placeholder="Здесь появится готовый текст поиска"
+                                    className="w-full min-h-[12rem] sm:min-h-[22rem] max-h-[70vh] rounded-2xl bg-black/40 border border-white/10 p-3 text-xs sm:text-sm font-mono text-orange-100 placeholder:text-orange-300/40 overflow-auto whitespace-pre leading-snug touch-pan-y"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
