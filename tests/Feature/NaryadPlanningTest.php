@@ -41,6 +41,7 @@ class NaryadPlanningTest extends TestCase
             'naryad.partial.users',
             'naryad.partial.deviations',
             'naryad.partial.norms',
+            'naryad.partial.control',
             'naryad.assign',
             'naryad.unassign',
             'naryad.podstroika-limit.save',
@@ -103,6 +104,7 @@ class NaryadPlanningTest extends TestCase
         $this->actingAs($dispatcher)->get('/naryad/partial/users')->assertOk();
         $this->actingAs($dispatcher)->get('/naryad/partial/deviations')->assertOk();
         $this->actingAs($dispatcher)->get('/naryad/partial/norms')->assertOk();
+        $this->actingAs($dispatcher)->get('/naryad/partial/control')->assertOk();
         $this->actingAs($dispatcher)->get('/naryad/partial/print')->assertOk();
     }
 

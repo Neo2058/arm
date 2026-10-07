@@ -82,6 +82,7 @@
                 @php
                     $nav = [
                         ['key' => 'setka', 'label' => 'Сетка', 'icon' => '📋', 'route' => 'naryad.partial.setka'],
+                        ['key' => 'control', 'label' => 'Контроль сетки', 'icon' => '✅', 'route' => 'naryad.partial.control'],
                         ['key' => 'print', 'label' => 'Печать нарядов', 'icon' => '🖨', 'route' => 'naryad.partial.print'],
                         ['key' => 'crews', 'label' => 'Составы (т6 / т5)', 'icon' => '👥', 'route' => 'naryad.partial.crews'],
                         ['key' => 'variants', 'label' => 'Варианты маршрутов', 'icon' => '🚂', 'route' => 'naryad.partial.variants'],
@@ -112,6 +113,9 @@
             </nav>
 
             <div class="mt-auto p-4 border-t border-gray-100 dark:border-white/10 text-xs">
+                <a href="{{ route('nsi.index') }}" class="block mb-2 px-4 py-2 rounded-2xl hover:bg-gray-100 dark:hover:bg-white/5 text-orange-500 dark:text-orange-400">
+                    → НСИ
+                </a>
                 <a href="{{ route('uchet.index') }}" class="block mb-2 px-4 py-2 rounded-2xl hover:bg-gray-100 dark:hover:bg-white/5 text-orange-500 dark:text-orange-400">
                     → Учёт / ЛС
                 </a>

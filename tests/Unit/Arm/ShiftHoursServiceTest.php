@@ -2,12 +2,14 @@
 
 namespace Tests\Unit\Arm;
 
+use App\Models\ArmHoliday;
 use App\Models\ArmShiftBreakdown;
 use App\Models\NaryadAssignment;
 use App\Models\NaryadQuota;
 use App\Models\ScheduleType;
 use App\Models\User;
 use App\Services\Arm\ShiftHoursService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -64,5 +66,25 @@ class ShiftHoursServiceTest extends TestCase
         $this->assertEquals(6.2, $assignment->hours_line);
         $this->assertEquals(1.2, $assignment->hours_night);
         $this->assertSame('1', $assignment->shift_code);
+    }
+
+    public function test_holiday_hours_cut_overnight_tail_when_only_start_day_is_holiday(): void
+    {
+        ArmHoliday::create(['holiday_date' => '2026-03-10', 'name' => 'Праздник']);
+        $breakdown = ArmShiftBreakdown::create([
+            'graph_code' => '01',
+            'route_code' => '10',
+            'shift_code' => '4+',
+            'sequence' => '1',
+            'start_hours' => 22.00,
+            'end_hours' => 3.30,
+            'hours_total' => 8,
+            'hours_line' => 6,
+            'hours_reserve' => 1,
+        ]);
+
+        $hours = (new ShiftHoursService)->holidayHours($breakdown, Carbon::parse('2026-03-10'));
+        $this->assertEquals(3.5, $hours['hours_holiday']);
+        $this->assertEquals(0.0, $hours['hours_holiday_reserve']);
     }
 }

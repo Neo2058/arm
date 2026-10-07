@@ -16,6 +16,7 @@
         </span>
         @unless($period->isClosed())
             <button id="gen-btn" class="px-4 py-2 bg-orange-600 text-white rounded-2xl">Собрать ЛС</button>
+            <button id="gen-repeat-btn" class="px-4 py-2 border rounded-2xl">Собрать повторные ЛС</button>
             <button id="close-btn" class="px-4 py-2 border rounded-2xl">Закрыть месяц</button>
         @else
             @if(auth()->user()->isDispatcher() || auth()->user()->isAdmin())
@@ -57,12 +58,13 @@
     <script>
     const month = '{{ $month }}';
     const csrf = '{{ csrf_token() }}';
-    const post = async (url) => {
-        const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':csrf}, body: JSON.stringify({month})});
+    const post = async (url, extra = {}) => {
+        const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':csrf}, body: JSON.stringify({month, ...extra})});
         const data = await res.json();
         if (data.success) location.reload(); else alert(data.message || 'Ошибка');
     };
     document.getElementById('gen-btn')?.addEventListener('click', () => post('{{ route('uchet.generate') }}'));
+    document.getElementById('gen-repeat-btn')?.addEventListener('click', () => post('{{ route('uchet.generate') }}', {kind: 'repeat'}));
     document.getElementById('close-btn')?.addEventListener('click', () => { if (confirm('Закрыть месяц? Наряды зафиксируются.')) post('{{ route('uchet.close') }}'); });
     document.getElementById('reopen-btn')?.addEventListener('click', () => post('{{ route('uchet.reopen') }}'));
     </script>

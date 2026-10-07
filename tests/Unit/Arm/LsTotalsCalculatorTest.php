@@ -63,4 +63,38 @@ class LsTotalsCalculatorTest extends TestCase
         $this->assertEqualsWithDelta(6.054, $t['nvih'], 0.0001);
         $this->assertEqualsWithDelta(6.054, $t['dobnv'], 0.0001);
     }
+
+    public function test_absence_hours_without_shift_go_to_allchas_not_vchas1(): void
+    {
+        NaryadNorm::create([
+            'year_hours' => 1, 'month_hours' => 1, 'week_hours' => 1, 'min_rest_hours' => 1,
+        ]);
+        $user = User::factory()->driver()->create();
+        $personnel = ArmPersonnel::create([
+            'user_id' => $user->id,
+            'tab_number' => '1003',
+            'full_name' => 'Т',
+            'position_code' => 'МШ',
+        ]);
+        $work = new NaryadAssignment([
+            'user_id' => $user->id,
+            'plan_date' => '2026-04-10',
+            'route_number' => '25',
+            'work_code' => '25',
+            'shift_code' => '2',
+            'hours_line' => 8,
+        ]);
+        $sick = new NaryadAssignment([
+            'user_id' => $user->id,
+            'plan_date' => '2026-04-11',
+            'route_number' => 'Б',
+            'work_code' => 'Б',
+            'hours_line' => 6.133,
+        ]);
+        $t = (new LsTotalsCalculator)->calculate($personnel, '2026-04', collect([$work, $sick]));
+        $this->assertEquals(8.0, $t['vchas1']);
+        $this->assertEquals(1.0, $t['dni']);
+        $this->assertEqualsWithDelta(14.133, $t['allchas'], 0.001);
+        $this->assertEqualsWithDelta(6.133, $t['otvl'], 0.001);
+    }
 }

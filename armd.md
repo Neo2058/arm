@@ -24,7 +24,7 @@
 | `PRAZD` | **шаг 1:** `arm_holidays` | Праздничные дни |
 | `CHAS2` | **шаг 4:** поля `*_2` на `naryad_assignments` | Часы 2 лица на той же клетке |
 | `LSH` / `FLSM` / `FLSP` | **шаг 6:** `arm_accounts` + `arm_pay_formulas` | Итоги месяца + интерпретатор `IIF` |
-| `LSBUH` | **шаг 7:** `/uchet/lsbuh.csv` | Выгрузка бухгалтерии |
+| `LSBUH` | **шаг 7 / G:** `/uchet/lsbuh.dbf` + CSV | Выгрузка бухгалтерии (DBF CP866 как `PODG_LSH`) |
 | `NRCHAS` / `PREM` / `VISL` / `TEHUCH` / `SPPREM` | **шаг A:** нормы, премия, выслуга, доплаты | Входы формул ЛС; экран `/uchet/extras` |
 
 Сетка уже рисуется на **календарный месяц** (28–31 день). Календарь графиков пишется **кнопкой**, без дискеты.
@@ -67,6 +67,7 @@
 | `content` | `SODER` | Содержание |
 | `morning_code`, `morning_shift` | `UTRO`, `SMUT` | Утренний переход |
 | `notes` | `PRIM` | Примечание |
+| `extra_mark` | `PRIM1` | Доп. признак смены (внутрисменные отвлечения, kodspr=15) |
 
 Поля 2 лица на разбивке уже хранятся; в `naryad_assignments` на этом шаге пишется только контур **1 лица** (как основная строка `NARJAD`).
 
@@ -90,6 +91,8 @@
 | `hours_holiday_reserve` | `PRAZDR1` |
 | `hours_overtime` | `PERERAB` |
 | `two_person` | `REZM2L` |
+| `registered` | `OTBOR` не пусто |
+| `mark_code` | `OTBOR` C(1) |
 
 ### `arm_holidays` ← `PRAZD`
 
@@ -191,16 +194,19 @@
 |---|---|---|
 | Пересечение с отвлечением | `nootv` / `OTVM` | Нельзя поставить рабочую смену в период `arm_absences`. Отвлечение в клетке (код из справочника) — можно. |
 | Подстройка дня | `nopoz` / `POZEL` | Если есть `arm_day_adjustments` на дату, маршрут и смена должны совпасть. |
-| После ночной — 1-я | `no56s` | Вчера ночь (`3+`,`4+`,`5+` или «ночь» в ключе) → сегодня смена `1`. |
+| После ночной — 1-я | `no56s` | Вчера ночь (`3+`,`4+`,`5+` или «ночь» в ключе) → сегодня смена `1` или ключ `from_night` ночи. |
 | После 1-й — выходной | `no1s` | Вчера смена `1` → сегодня отдых (код `В`/`Е`/`ВЫХ` или отвлечение). |
-| Интервал 12 / 42 / 66 ч | `noint`, `v42`, `v66` | Между окончанием предыдущей смены и началом этой ≥ 12 ч; если вчера выходной — 42; два выходных — 66. Время из разбивки (`NACH`/`OKON` как `чч.мм`). |
+| Интервал | `noint`, `prov_int`, `r_interval` | Если `interval_mode=formula` (Печатники, `NR_12` не `+`): минимум `max(12, часы×2)`; после n выходных `max(18+n×24, часы×2+n×24)`. Часы предыдущей смены; если она 1-я с ночи — ночь+с ночи. Фиксированный режим: 12 / 42 / 66. Смена `1` и продолжение с ночи интервал не проверяют. Сравнение в десятичных часах (строже FoxPro `f_min`). |
+| Короткие интервалы | `kolkint` / `cint13` | В месяце не больше 3 интервалов короче `short_interval_hours` (`NR_kint`). При `NR_kint=0` не срабатывает. |
 | 3 дня между выходными | `min3v` | Два одиночных выходных не ближе чем через 3 дня (подряд идущие В+В можно). |
 | Дней без выходного | `novih` | Не больше `max_days_without_rest` (12) рабочих дней подряд. |
-| Ранние подряд | `ran3` | Не больше двух смен подряд с началом в окне `early_from`…`early_to` (по умолчанию 5.00–8.00). |
+| Ранние подряд | `ran3` | Не больше двух смен подряд с началом в окне `early_from`…`early_to` (по умолчанию 5.00–8.00; нули из NRDPAR не импортируются). |
 | Смены 0–5 ч | `sm0_5` | Не больше двух смен подряд, у которых начало или конец в 0.00–5.00. |
 | Раньше раннего выхода | `noran` | Начало раньше окна из `arm_personnel.early_windows`. |
 | Позже позднего окончания | `nopozd` | Окончание позже окна из `late_windows`. |
-| Норма часов | `nonorm` + уже было | Неделя / месяц / год из `naryad_norms` (как шаг 1). |
+| Норма часов | `nonorm` | Неделя / месяц / год из `naryad_norms` **и** потолок `NRCHAS.dnnr ×` рабочие дни (без воскресений и `PRAZD`) + `NR_doppr`. Нет строки NRCHAS — норма 0 + doppr. При `NR_prazd='-'` праздничные часы вычитаются из суммы для NRCHAS. |
+| Экипаж | `ctrl_tabl` / `prov_dbl` | `line_mode=1`: второй человек на тот же маршрут+смену нельзя. `line_mode=2`: два человека, но не оба со стажем &lt; 1 года и не оба П/М без 1 класса. |
+| Продолжение с ночи | автоподстановка | Пишется только если `validateAssign` на следующий день проходит; иначе откат всей записи. |
 
 Выходной в сетке: ключ клетки есть в `deviations_catalog` **или** код смены/маршрута из `planir.rest_codes`.
 
@@ -208,16 +214,29 @@
 
 | Ключ | По умолчанию | FoxPro |
 |---|---|---|
-| `interval_hours` | 12 | `nr_12` |
-| `rest_day_hours` | 42 | `nr_1vih` |
-| `two_rest_days_hours` | 66 | `nr_2vih` |
+| `interval_mode` | `formula` | `LEFT(nr_12)`; `+` = `fixed`, иначе формула |
+| `interval_hours` | 12 | минимум / фикс. 12 |
+| `rest_day_hours` | 42 | `nr_1vih` (только `fixed`) |
+| `two_rest_days_hours` | 66 | `nr_2vih` (только `fixed`) |
 | `min_days_between_rests` | 3 | `lastvih` |
 | `max_days_without_rest` | 12 | `nr_novih` |
-| `early_from` / `early_to` | 5.00 / 8.00 | `nr_2ran1` / `nr_2ran2` |
-| `night_shift_codes` | `["3+","4+","5+"]` | `nr_nsm1` / `nr_nsm2` |
+| `early_from` / `early_to` | 5.00 / 8.00 | `nr_2ran1` / `nr_2ran2` (0 не импортировать) |
+| `night_shift_codes` | `["3+","4+","5+"]` | `nr_nsm1` / `nr_nsm2` плюс `5+` |
 | `rest_codes` | `["В","Е","ВЫХ"]` | `kodvih` |
 | `enforce_after_first` | true | |
 | `enforce_after_night` | true | |
+| `short_interval_hours` | 0 | `nr_kint` |
+| `max_short_intervals` | 3 | `kolkint` |
+| `norm_extra_hours` | 40 | `nr_doppr` |
+| `subtract_holiday_hours` | true | `nr_prazd='-'` |
+| `line_mode` | 1 | `nr_linia` |
+| `route_from` / `route_to` | 1 / 35 | `nr_nmn` / `nr_nmk` |
+
+Импорт: `php artisan arm:import-dbf --only=nrdpar` (файл `NRDPAR/NRDPAR.DBF` рядом с `Datanrd`). JSON `planir` при сохранении норм **сливается**, не заменяется целиком.
+
+Праздничные часы при назначении (`gath_ch`): `hours_holiday` / `hours_holiday_reserve` из `LIN1`/`CHASR1`, ночь через сутки обрезается по 4.00; если праздник на следующий день — хвост после полуночи добавляется.
+
+Отчёт полноты (F6 / Shift+F5): `/naryad/partial/control` — не блок клетки. Ввод готового наряда (`VVODNAR`) при `NR_linia=1` не делается.
 
 ### `arm_day_adjustments` ← `POZEL`
 
@@ -247,6 +266,8 @@
 | `hours_total_2` | `CHAS` файла `CHAS2.DBF` |
 
 Если в разбивке `RAZBSM` заполнены `LIN2`/`NOCH2`, `ShiftHoursService` ставит `two_person` и копирует 2 лицо при назначении. Импорт: `php artisan arm:import-dbf --only=chas2`.
+
+Импорт УК: `php artisan arm:import-dbf --only=naryad --month=YYYY-MM --tabs=…` читает живой `NARJAD.DBF` и архивы `NR{мм}{гг}.DBF` (`NEW_MES` / `arhnar`). Сверка эталона: `php artisan arm:golden-month 2018-11 --tabs=0321,0428,2575`.
 
 ---
 
@@ -278,7 +299,7 @@
 
 ### `arm_accounts` + `arm_account_lines`
 
-Сборка: `AccountBuilder` суммирует наряды за `YYYY-MM` в `totals` (как `LSH.VCHAS1/VC1/…`) и для каждой формулы считает часы строки. `МШ` → `FLSM`, должность с «П» → `FLSP`.
+Сборка: `AccountBuilder` суммирует наряды за `YYYY-MM` в `totals` (как `LSH.VCHAS1/VC1/…`). `VCHAS1` и дни — только строки с непустым `shift_code` (как `RAS1LS`: `!EMPTY(smena)`); часы отвлечения без смены идут в `allchas`, не в линию. Строки ЛС считаются по **обоим** наборам формул `FLSM` и `FLSP`, как `PODG_LSH` (`pdg_fl` / `sc_fls`): у П/М с часами 1 лица срабатывает FLSM.
 
 Импорт формул: `php artisan arm:import-dbf --only=formulas`.
 
@@ -296,7 +317,7 @@
 
 Закрытый месяц: сетка не назначает и не снимает смены, карточки не правятся. Открыть снова может нарядчик или админ.
 
-Выгрузка `/uchet/lsbuh.csv?month=YYYY-MM` — колонки как `LSBUH`: `GODMES,TABN,VOPL,TARST,PROCNT,VROTR,ZAKAZ,PROF,NOMLS,DDE,OSN_PROF,TABN_OLD,DEPO,DEPOKOM`.
+Выгрузка `/uchet/lsbuh.dbf?month=YYYY-MM` — dBASE III CP866, поля как дамп `LSBUH.DBF` (`GODMES,TABN,VOPL,TARST,PROCNT,VROTR,ZAKAZ,PROF,OTBOR,NOMLS,DDE,OSN_PROF,TABN_OLD,DEPO,DEPOKOM`). CSV `/uchet/lsbuh.csv` — те же строки без `OTBOR`. Artisan: `php artisan arm:export-lsbuh YYYY-MM`. Послеобработка как `PODG_LSH`: `TABN_OLD`, `TABN`←`TABNOM1`, чужое `DEPO`, `NOMLS+5`.
 
 Отчёты `/uchet/reports`: затраты времени (линия / 2 лицо / ночь / вечер / праздник) и отвлечения за месяц (`OTVM`).
 
@@ -398,7 +419,118 @@
 
 ### Totals `AccountBuilder`
 
-Считаются как в `RAS1LS`: `vc1 = vchas1 − prazd1`; `dob*` из недоработки относительно `tek_nr`; `per1` из `allchas − mes_nr` минус праздники и `nvih` (для цеха совместителей `11` — нули); `kl1`/`kl2`/`kl3` по классу; `visl`/`brig` по выслуге и бригадирству. Два ЛС при смене должности в середине месяца — шаг C.
+Считаются как в `RAS1LS`: `vc1 = vchas1 − prazd1`; `dob*` из недоработки относительно `tek_nr`; `per1` из `allchas − mes_nr` минус праздники и `nvih` (для цеха совместителей `11` — нули); `kl1`/`kl2`/`kl3` по классу; `visl`/`brig` по выслуге и бригадирству.
+
+---
+
+## Шаг C — повторный ЛС, маршрутные листы, архив УК
+
+### Два ЛС при смене должности (`podgls` / `LENA.PRG`)
+
+Если в `arm_appointments` есть назначение не 1-го числа месяца и предыдущая должность другая, `AccountBuilder` пишет **два** `arm_accounts` за месяц:
+
+| | `ls_number` | Период | Должность |
+|---|---|---|---|
+| Первый | `0` | с 1-го до дня назначения − 1 | старая |
+| Второй | `1` | с дня назначения до конца месяца | новая |
+
+`tek_nr` — норма на период ЛС. На втором ЛС `endk`: `mes_nr` и `per1` по целому месяцу. После двух расчётов `UnderworkAllocator` разносит `dob*` как `RAS1LS.prov_dobav` / `LENA.PRG`: при `per1>0` на втором ЛС обнуляет `dob1/2/r/…` (кроме `dobnv`); иначе недоработка `nor1+nor2−otrbp` сначала из праздников/nvih первого ЛС, затем второго. `otvl` — часы отвлечений без смены (не выходной, не воскресенье, не `PRAZD`).
+
+### Повторный ЛС (`LSHPOVT`)
+
+`arm_accounts.kind`: `primary` (LSH) или `repeat` (LSHPOVT). Уникальность `(user_id, year_month, kind, ls_number)`.
+
+Повторный прогон: `POST /uchet/generate` с `kind=repeat`. Не затирает первичные. У одиночного повторного ЛС `ls_number=1` (`NOMLS=1`). Выгрузка: `/uchet/lsbuh.dbf?kind=primary|repeat` и `/uchet/lsbuh.csv?kind=primary|repeat`.
+
+### Маршрутные листы (`regml`)
+
+`naryad_assignments.registered` ← `NARJAD.OTBOR` не пусто; `mark_code` ← сам символ `OTBOR`. Экран `/uchet/sheets?date=YYYY-MM-DD`: картотека на дату (все / МШ / П/М), отметка МЛ, маршрут и смена. Пустая строка без отметки удаляется, как в FoxPro после browse. Чекбокс МЛ пишет `mark_code='+'`, снятие очищает только `+`.
+
+### Копии УК (`KOP1`/`KOP2`)
+
+При `POST /uchet/close` после сборки первичных ЛС пишется снимок нарядов месяца в `arm_uk_copies`. Просмотр: `/uchet/archive`, `/uchet/archive/{userId}`. Повторное закрытие месяца перезаписывает копии. Открытие месяца копии не трогает.
+
+---
+
+## Шаг D — отчёты `DOKMENU`
+
+Сервис: `App\Services\Arm\DokmenuReportService`. Экраны: `/uchet/reports` (меню), `/uchet/reports/{kind}` (HTML + печать браузера). Печать нарядов и выписка — по-прежнему `NaryadPrintService`.
+
+Коды Печатников из `COMKOD`: выходной `Е`, больничный `Б`, травма `Т`, цех совместителей `11`. Ночные в справке — только `3+`/`4+` (`NR_nsm1`/`NR_nsm2`); `5+` остаётся ужесточением PLANIR.
+
+| kind | FoxPro | Источник |
+|---|---|---|
+| `hours` | расширение текущего | суммы часов УК + периоды `OTVM` |
+| `time-costs` | `mtrzat` | численность МШ/П/М по дням и коду; воскресенье/праздник без смены → `Е`; `ЛИН` — заполненная смена |
+| `work` | `v_sprmes` / `prev_om` | дни, часы, пер./нед. на лету, без `OTV1`/`OTV_MES` |
+| `disability` | `netrud` | дни `Б`/`Т` по месяцам, без воскресенья и `PRAZD` |
+| `marks` | `otm_uk` | `mark_code` / `OTBOR` |
+| `brigadiers` | `spbrig` | `is_brigadier`, не уволенные |
+| `classes` | `klmash` | должности×класс, совместители `shop_code=11` |
+| `personnel` | `pmash.spr` | фильтр класс/должность |
+| `nights` | `knoch1` | смены `3+`/`4+` |
+| `extra-marks` | `kdoppr` / `sppom` | `arm_shift_breakdowns.extra_mark` ← `RAZBSM.PRIM1` |
+| `overtime` | `perer1` | `arm_accounts.totals.per1` первичных ЛС |
+| `breaks` | `pereryv1` | ≥12 записей NARJAD без смены перед выходом |
+| `holidays` | `spr_przd` | праздничные часы 1/2 лица |
+| `appointments` | `nazn_per` | наряды человека за период |
+
+Не в этом шаге: бланки «приказ» (`pr_sp=2`), годовое хранение `OTV_MES`, составы `RASST`/`TEXTN`/`PODPISI` на печати, текущая численность на дату (`trzat`, пункт меню выключен).
+
+---
+
+## Шаг E — экраны НСИ (`NSIMENU`)
+
+Диспетчер: `/nsi`. Импорт: `php artisan arm:import-dbf --only=codes,signatures,rosters` (плюс уже существующие `nrchas,prem,visl,tariffs,nrdpar,formulas`).
+
+### `arm_code_books` ← `KODIF`
+
+Уникальность `kodspr`. В FoxPro всплывающий список кодификаторов фильтрует `!EMPTY(nsisr)`; в клоне видны все 23 книги.
+
+| Колонка | FoxPro |
+|---|---|
+| `kodspr` | `KODSPR` C(2) |
+| `dbfspr` | `DBFSPR` C(8), обычно `ELKODIF` |
+| `nsisr` | `NSISR` C(1) доступ |
+| `nazspr` | `NAZSPR` C(30) |
+| `dlkodel` / `dlnazel` | `DLKODEL` / `DLNAZEL` |
+
+### `arm_codes` ← `ELKODIF`
+
+Уникальность `(book_code, code, nom)`. Дубли дампа с одним ключом схлопываются (последняя запись). Пустой `KODEL` пропускается.
+
+| Колонка | FoxPro |
+|---|---|
+| `book_code` | `KODSPR` |
+| `code` | `KODEL` |
+| `name` | `NAZEL` |
+| `nom` | `NOM` (класс/бригада/признак) |
+
+При записи kodspr `41` синхронизируется `arm_tariffs`, `50` — `arm_pay_kinds`. Kodspr `52` создаёт строку `deviations_catalog` только если `short_code` ещё нет (имя планирования не перетирается).
+
+### `arm_signatures` ← `PODPISI`
+
+| Колонка | FoxPro |
+|---|---|
+| `sort_order` | `OTBOR` |
+| `position` | `DOLZN` |
+| `full_name` | `FIO` |
+
+### `arm_rosters` ← `RASST` / `RASST1`
+
+Уникальность `(roster_date, kind, route_number)`. `kind=primary` — основная таблица, `extra` — дополнительная (`NOM='2'` в kodspr 43). Кнопка «заполнить» берёт маршруты из `arm_codes` kodspr `43`.
+
+| Колонка | FoxPro |
+|---|---|
+| `roster_date` | `DAT` |
+| `route_number` | `NM` |
+| `instrument` | `INSTR` |
+
+### Форма ЛС и NRDPAR
+
+Отбор строк `FLSM`/`FLSP` — `arm_pay_formulas.selected` (`OTBOR`). Общие параметры и аванс пишутся в JSON `naryad_norms.planir` **слиянием**. Ночные коды всегда включают `5+`. Организация, аванс, вечер/ночь, техучёба, КТУ — дополнительные ключи того же JSON.
+
+Не в этом шаге: печать DOS, перекрёстные ссылки `COMKOD`, порядок полей, `TEXTN` на бланке наряда.
 
 ---
 
@@ -407,4 +539,4 @@
 Очередь до 100% паритета, статусы и карта меню — **`armd-progress.md`**.
 Этот файл (`armd.md`) держит только схемы и маппинг полей. Не дублировать дорожную карту сюда.
 
-Кратко: шаги 1–7 контура и шаг A (входы формул) сделаны; 100% нет. Следующий код — золотой месяц против `LSH`/`LSBUH` (нужны эталонные табельные от пользователя).
+Кратко: шаги 1–7, A, F, C, D, E сделаны; шаг B эталон 2018-11 таб. 0321/0428/2575 зафиксирован, паритет не полный. Очередь и расхождения — **`armd-progress.md`**.

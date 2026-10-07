@@ -65,7 +65,7 @@
 ### Маршруты
 `routes/web.php` — публичные + группа `auth` + Check-middleware. Домены:
 
-- `routes/account.php`, `documents.php`, `training.php`, `work.php`, `journal.php`, `naryad.php`, `uchet.php`, `support.php`
+- `routes/account.php`, `documents.php`, `training.php`, `work.php`, `journal.php`, `naryad.php`, `nsi.php`, `uchet.php`, `support.php`
 
 Новые URI клади в соответствующий файл. Имена маршрутов не ломай (на них завязан JS).
 
@@ -79,7 +79,7 @@
 
 ### Клон АРМ-ЛБ
 Схемы таблиц и шаги переноса FoxPro — **`armd.md`**. Не заводить параллельные таблицы учёта в обход этой схемы.
-Что сделано и что делать дальше — **`armd-progress.md`**. Не начинать отчёты/НСИ, пока не закрыт текущий шаг очереди в этом файле.
+Что сделано и что делать дальше — **`armd-progress.md`**. Не начинать следующий шаг очереди, пока не закрыт текущий.
 
 ### Планирование наряда
 Контроллеры в `App\Http\Controllers\Naryad\`:
@@ -89,13 +89,17 @@
 - `BreakdownsController` — разбивки смен (`RAZBSM`) и праздники (`PRAZD`)
 - `PrintController` — печать нарядов и выписка в комнату отдыха
 - `App\Services\Arm\ShiftHoursService` — часы назначения из разбивки
-- `App\Services\Arm\PlanirRulesService` — контроли сетки PLANIR (assign блокирует нарушения)
+- `App\Services\Arm\PlanirRulesService` — контроли сетки PLANIR (assign блокирует нарушения; правила можно ужесточать, облегчать нельзя)
+- `App\Services\Arm\PlanirControlService` — отчёт полноты сетки (F6 / Shift+F5); `/naryad/partial/control`
 - `App\Services\Arm\NaryadPrintService` — печать нарядов (DOKMENU pecnar); `/naryad/partial/print`, `/naryad/print`
 - `App\Services\Arm\PersonnelImporter` — картотека `LKM`, назначения `NAZN`, периоды `OTVM`, подстройки `POZEL`
 - `PersonnelController` — картотека / назначения / отвлечения
-- `App\Services\Arm\FormulaInterpreter` / `LsTotalsCalculator` / `AccountBuilder` — ЛС
-- роль `operator`, рабочее место `/uchet` (карточки, ЛС, доплаты `/uchet/extras`, LSBUH, закрытие месяца)
-- импорт DBF: `php artisan arm:import-dbf {path}` (`--only=…,formulas,chas2,nrchas,prem,visl,extras,spprem,tariffs`)
+- `App\Services\Arm\FormulaInterpreter` / `LsTotalsCalculator` / `AccountBuilder` / `UnderworkAllocator` / `UkCopyService` / `DokmenuReportService` / `LsbuhExportService` / `DbfWriter` — ЛС, LENA, копии УК, справки DOKMENU, `LSBUH.DBF`
+- `App\Http\Controllers\Nsi\NsiController` — НСИ `/nsi` (KODIF/ELKODIF, RASST, PODPISI, NRCHAS/PREM/VISL/тарифы, NRDPAR)
+- роль `operator`, рабочее место `/uchet` (карточки, ЛС первичные/повторные, доплаты `/uchet/extras`, МЛ `/uchet/sheets`, архив УК `/uchet/archive`, отчёты `/uchet/reports`, `LSBUH.DBF` `/uchet/lsbuh.dbf`, CSV, закрытие месяца)
+- импорт DBF: `php artisan arm:import-dbf {path}` (`--only=…,formulas,chas2,naryad,nrchas,nrdpar,prem,visl,extras,spprem,tariffs,codes,signatures,rosters`; `--month=YYYY-MM` и `--tabs=` для naryad/chas2)
+- выгрузка бухгалтерии: `php artisan arm:export-lsbuh YYYY-MM [path]` (`--kind=primary|repeat`)
+- эталонный месяц: `php artisan arm:golden-month 2018-11 --tabs=0321,0428,2575` (`GoldenMonthComparer`)
 
 Доступ: `EnsureDispatcher` (роль `dispatcher`).
 
@@ -202,6 +206,6 @@ php artisan optimize:clear
 
 ---
 
-**Последнее обновление:** 2026-10-02 (печать нарядов, поиск ФИО `/naryady/search-people`, `armd-progress.md`, `uchet.php`)
+**Последнее обновление:** 2026-10-07 (шаг G: `LSBUH.DBF` CP866)
 
 Этот файл имеет высокий приоритет и будет автоматически подгружаться в контекст AI при работе в директории проекта.

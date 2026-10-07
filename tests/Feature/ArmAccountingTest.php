@@ -101,6 +101,7 @@ class ArmAccountingTest extends TestCase
             'user_id' => $driver->id,
             'plan_date' => '2026-04-03',
             'route_number' => '25',
+            'shift_code' => '2',
             'hours_line' => 8,
             'hours_night' => 1,
         ]);

@@ -101,6 +101,20 @@ class UserRoleAccessTest extends TestCase
         $this->assertNotEquals(403, $response->status());
     }
 
+    public function test_dispatcher_can_open_nsi(): void
+    {
+        $dispatcher = User::factory()->dispatcher()->create();
+
+        $this->actingAs($dispatcher)->get('/nsi')->assertOk();
+    }
+
+    public function test_operator_cannot_open_nsi(): void
+    {
+        $operator = User::factory()->operator()->create();
+
+        $this->actingAs($operator)->get('/nsi')->assertForbidden();
+    }
+
     public function test_driver_cannot_update_podstroika_status(): void
     {
         $driver = User::factory()->driver()->create();

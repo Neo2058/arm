@@ -12,6 +12,7 @@ class ArmAccount extends Model
         'user_id',
         'year_month',
         'kind',
+        'ls_number',
         'position_code',
         'formula_kind',
         'totals',

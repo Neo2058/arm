@@ -119,7 +119,28 @@ export const imagesArray = [
                 name: "Печать наряда",
             },
             {
+                name: "НСИ / кодификаторы",
+            },
+            {
                 name: "Учёт / лицевые счета",
+            },
+        ],
+    },
+    {
+        name: "НСИ",
+        src: "/images/professionalDriver.jpg",
+        role: ['dispatcher'],
+        logo: "/assets/packaging.svg",
+        link: '/nsi',
+        details: [
+            {
+                name: "Кодификаторы",
+            },
+            {
+                name: "Нормативы",
+            },
+            {
+                name: "Настройка АРМ",
             },
         ],
     },

@@ -3,23 +3,34 @@
 namespace App\Http\Controllers\Uchet;
 
 use App\Http\Controllers\Controller;
-use App\Models\ArmAbsence;
 use App\Models\ArmAccount;
 use App\Models\ArmExtraPay;
 use App\Models\ArmMonthPremium;
 use App\Models\ArmPeriod;
 use App\Models\ArmPersonnel;
+use App\Models\ArmUkCopy;
 use App\Models\NaryadAssignment;
 use App\Services\Arm\AccountBuilder;
+use App\Services\Arm\DokmenuReportService;
+use App\Services\Arm\LsbuhExportService;
+use App\Services\Arm\ShiftHoursService;
+use App\Services\Arm\UkCopyService;
 use App\Services\ClickHouseService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class UchetController extends Controller
 {
-    public function __construct(private AccountBuilder $accounts) {}
+    public function __construct(
+        private AccountBuilder $accounts,
+        private UkCopyService $ukCopies,
+        private ShiftHoursService $shiftHours,
+        private DokmenuReportService $dokmenu,
+        private LsbuhExportService $lsbuhExport,
+    ) {}
 
     public function index(Request $request)
     {
@@ -126,11 +137,16 @@ class UchetController extends Controller
 
     public function generate(Request $request)
     {
-        $month = $request->validate(['month' => 'required|date_format:Y-m'])['month'];
+        $data = $request->validate([
+            'month' => 'required|date_format:Y-m',
+            'kind' => 'nullable|in:primary,repeat',
+        ]);
+        $month = $data['month'];
+        $kind = $data['kind'] ?? 'primary';
         if (ArmPeriod::closedMonth($month)) {
             return response()->json(['success' => false, 'message' => 'Месяц закрыт'], 422);
         }
-        $result = $this->accounts->buildMonth($month);
+        $result = $this->accounts->buildMonth($month, $kind);
         ClickHouseService::log('uchet.accounts.generated', 0, ['month' => $month] + $result);
 
         return response()->json(['success' => true] + $result);
@@ -139,15 +155,19 @@ class UchetController extends Controller
     public function accounts(Request $request)
     {
         $month = $this->month($request);
+        $kind = $request->input('kind', 'primary') === 'repeat' ? 'repeat' : 'primary';
         $period = ArmPeriod::query()->firstOrCreate(['year_month' => $month], ['status' => 'open']);
         $accounts = ArmAccount::query()
             ->with(['user.personnel', 'lines'])
             ->where('year_month', $month)
+            ->where('kind', $kind)
+            ->orderBy('ls_number')
             ->orderBy('id')
             ->get();
 
         return view('uchet.accounts', [
             'month' => $month,
+            'kind' => $kind,
             'period' => $period,
             'accounts' => $accounts,
             'user' => Auth::user(),
@@ -157,16 +177,17 @@ class UchetController extends Controller
     public function close(Request $request)
     {
         $month = $request->validate(['month' => 'required|date_format:Y-m'])['month'];
-        $this->accounts->buildMonth($month);
+        $this->accounts->buildMonth($month, 'primary');
+        $copied = $this->ukCopies->snapshotMonth($month);
         $period = ArmPeriod::query()->firstOrCreate(['year_month' => $month], ['status' => 'open']);
         $period->update([
             'status' => 'closed',
             'closed_at' => now(),
             'closed_by' => Auth::id(),
         ]);
-        ClickHouseService::log('uchet.period.closed', $period->id, ['month' => $month]);
+        ClickHouseService::log('uchet.period.closed', $period->id, ['month' => $month, 'uk_copies' => $copied]);
 
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true, 'uk_copies' => $copied]);
     }
 
     public function reopen(Request $request)
@@ -185,43 +206,31 @@ class UchetController extends Controller
     public function lsbuh(Request $request): StreamedResponse
     {
         $month = $this->month($request);
+        $kind = $this->lsbuhKind($request);
         $godmes = str_replace('-', '', $month);
-        $lines = ArmAccount::query()
-            ->with(['user.personnel', 'lines'])
-            ->where('year_month', $month)
-            ->get()
-            ->flatMap(function (ArmAccount $account) use ($godmes) {
-                $tab = $account->user?->personnel?->tab_number
-                    ?? sprintf('%04d', $account->user_id);
+        $csv = $this->lsbuhExport->csv($month, $kind);
+        ClickHouseService::log('uchet.lsbuh.csv', 0, ['month' => $month, 'kind' => $kind]);
 
-                return $account->lines->map(fn ($line) => [
-                    'godmes' => $godmes,
-                    'tabn' => $tab,
-                    'vopl' => $line->pay_code,
-                    'tarst' => number_format((float) $line->tariff, 3, '.', ''),
-                    'procnt' => number_format((float) $line->percent, 2, '.', ''),
-                    'vrotr' => number_format((float) $line->hours, 2, '.', ''),
-                    'zakaz' => $line->cost_code,
-                    'prof' => $line->profession,
-                    'nomls' => $line->ls_number,
-                    'dde' => '',
-                    'osn_prof' => $line->profession,
-                    'tabn_old' => $tab,
-                    'depo' => $account->user?->personnel?->depo_code,
-                    'depokom' => '',
-                ]);
-            });
+        return response()->streamDownload(function () use ($csv) {
+            echo $csv;
+        }, 'lsbuh_'.$godmes.'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
 
-        $filename = 'lsbuh_'.$godmes.'.csv';
+    public function lsbuhDbf(Request $request): BinaryFileResponse
+    {
+        $month = $this->month($request);
+        $kind = $this->lsbuhKind($request);
+        $base = tempnam(sys_get_temp_dir(), 'lsbuh');
+        if (is_string($base) && is_file($base)) {
+            @unlink($base);
+        }
+        $path = (is_string($base) ? $base : sys_get_temp_dir().'/lsbuh').'.dbf';
+        $this->lsbuhExport->write($path, $month, $kind);
+        ClickHouseService::log('uchet.lsbuh.dbf', 0, ['month' => $month, 'kind' => $kind]);
 
-        return response()->streamDownload(function () use ($lines) {
-            $out = fopen('php://output', 'w');
-            fputcsv($out, ['GODMES', 'TABN', 'VOPL', 'TARST', 'PROCNT', 'VROTR', 'ZAKAZ', 'PROF', 'NOMLS', 'DDE', 'OSN_PROF', 'TABN_OLD', 'DEPO', 'DEPOKOM']);
-            foreach ($lines as $row) {
-                fputcsv($out, $row);
-            }
-            fclose($out);
-        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        return response()->download($path, 'LSBUH.DBF', [
+            'Content-Type' => 'application/x-dbf',
+        ])->deleteFileAfterSend(true);
     }
 
     public function extras(Request $request)
@@ -330,39 +339,234 @@ class UchetController extends Controller
     public function reports(Request $request)
     {
         $month = $this->month($request);
+        $from = (string) $request->input('from', Carbon::createFromFormat('Y-m', $month)->startOfMonth()->toDateString());
+        $to = (string) $request->input('to', Carbon::createFromFormat('Y-m', $month)->endOfMonth()->toDateString());
+        $date = (string) $request->input('date', Carbon::now()->toDateString());
+        $people = ArmPersonnel::query()->orderBy('full_name')->get(['user_id', 'tab_number', 'full_name']);
+
+        return view('uchet.reports.index', [
+            'month' => $month,
+            'from' => $from,
+            'to' => $to,
+            'date' => $date,
+            'from_month' => (string) $request->input('from_month', $month),
+            'to_month' => (string) $request->input('to_month', $month),
+            'catalog' => $this->dokmenu->catalog(),
+            'marks' => $this->dokmenu->availableExtraMarks(),
+            'people' => $people,
+            'period' => ArmPeriod::query()->firstOrCreate(['year_month' => $month], ['status' => 'open']),
+            'user' => Auth::user(),
+        ]);
+    }
+
+    public function report(Request $request, string $kind)
+    {
+        $known = collect($this->dokmenu->catalog())->pluck('kind')->all();
+        abort_unless(in_array($kind, $known, true), 404);
+        $month = $this->month($request);
         $start = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
         $end = $start->copy()->endOfMonth();
-        $hours = NaryadAssignment::query()
-            ->with('user.personnel')
-            ->whereBetween('plan_date', [$start->toDateString(), $end->toDateString()])
-            ->get()
-            ->groupBy('user_id')
-            ->map(function ($rows) {
-                $user = $rows->first()?->user;
+        $params = [
+            'month' => $month,
+            'from_month' => (string) $request->input('from_month', $month),
+            'to_month' => (string) $request->input('to_month', $month),
+            'from' => (string) $request->input('from', $start->toDateString()),
+            'to' => (string) $request->input('to', $end->toDateString()),
+            'date' => (string) $request->input('date', Carbon::now()->toDateString()),
+            'as_of' => (string) $request->input('as_of', $request->input('date', Carbon::now()->toDateString())),
+            'user_id' => (int) $request->input('user_id', 0),
+            'mark' => (string) $request->input('mark', ''),
+            'extra_mode' => (string) $request->input('extra_mode', 'all'),
+            'order' => (string) $request->input('order', 'fio'),
+            'ms1' => $request->input('ms1', '1'),
+            'ms2' => $request->input('ms2', '1'),
+            'ms3' => $request->input('ms3', '1'),
+            'ms0' => $request->input('ms0', '1'),
+            'pm1' => $request->input('pm1', '1'),
+            'pm0' => $request->input('pm0', '1'),
+        ];
+        $report = $this->dokmenu->build($kind, $params);
 
-                return [
-                    'tab' => $user?->personnel?->tab_number,
-                    'name' => $user?->name,
-                    'line' => round($rows->sum('hours_line'), 2),
-                    'line_2' => round($rows->sum('hours_line_2'), 2),
-                    'night' => round($rows->sum(fn ($r) => (float) $r->hours_night + (float) $r->hours_night_2), 2),
-                    'evening' => round($rows->sum('hours_evening'), 2),
-                    'holiday' => round($rows->sum('hours_holiday'), 2),
-                ];
-            })->values();
+        return view('uchet.reports.show', [
+            'month' => $month,
+            'kind' => $kind,
+            'report' => $report,
+            'params' => $params,
+            'period' => ArmPeriod::query()->firstOrCreate(['year_month' => $month], ['status' => 'open']),
+            'user' => Auth::user(),
+            'print' => $request->boolean('print'),
+        ]);
+    }
 
-        $absences = ArmAbsence::query()
+    public function sheets(Request $request)
+    {
+        $date = $this->sheetDate($request);
+        $month = $date->format('Y-m');
+        $period = ArmPeriod::query()->firstOrCreate(['year_month' => $month], ['status' => 'open']);
+        $filter = $request->input('filter', 'all');
+        $people = ArmPersonnel::query()
             ->with('user')
-            ->whereDate('starts_on', '<=', $end->toDateString())
-            ->whereDate('ends_on', '>=', $start->toDateString())
-            ->orderBy('starts_on')
+            ->where(function ($q) use ($date) {
+                $q->whereNull('hired_on')->orWhereDate('hired_on', '<=', $date->toDateString());
+            })
+            ->where(function ($q) use ($date) {
+                $q->whereNull('fired_on')->orWhereDate('fired_on', '>=', $date->toDateString());
+            })
+            ->orderBy('full_name')
+            ->get();
+        if ($filter === 'mash') {
+            $people = $people->filter(fn ($p) => ! str_contains((string) $p->position_code, 'П'));
+        } elseif ($filter === 'pom') {
+            $people = $people->filter(fn ($p) => str_contains((string) $p->position_code, 'П'));
+        }
+        $assignments = NaryadAssignment::query()
+            ->whereDate('plan_date', $date->toDateString())
+            ->get()
+            ->keyBy('user_id');
+        $rows = $people->map(function (ArmPersonnel $person) use ($assignments) {
+            $assignment = $assignments->get($person->user_id);
+
+            return [
+                'user_id' => $person->user_id,
+                'tab' => $person->tab_number,
+                'name' => $person->full_name,
+                'position' => $person->position_code,
+                'assignment' => $assignment,
+            ];
+        })->values();
+
+        return view('uchet.sheets', [
+            'date' => $date->toDateString(),
+            'month' => $month,
+            'filter' => $filter,
+            'period' => $period,
+            'rows' => $rows,
+            'user' => Auth::user(),
+        ]);
+    }
+
+    public function updateSheet(Request $request, int $userId)
+    {
+        $date = $this->sheetDate($request);
+        $month = $date->format('Y-m');
+        if (ArmPeriod::closedMonth($month)) {
+            return response()->json(['success' => false, 'message' => 'Месяц закрыт'], 422);
+        }
+        $personnel = ArmPersonnel::query()->where('user_id', $userId)->firstOrFail();
+        $data = $request->validate([
+            'registered' => 'nullable|boolean',
+            'work_code' => 'nullable|string|max:8',
+            'shift_code' => 'nullable|string|max:8',
+            'hours_line' => 'nullable|numeric',
+            'hours_line_2' => 'nullable|numeric',
+            'hours_night' => 'nullable|numeric',
+        ]);
+        $assignment = NaryadAssignment::query()
+            ->where('user_id', $userId)
+            ->whereDate('plan_date', $date->toDateString())
+            ->first();
+        $registered = array_key_exists('registered', $data) ? (bool) $data['registered'] : (bool) $assignment?->registered;
+        $work = array_key_exists('work_code', $data) ? trim((string) $data['work_code']) : trim((string) ($assignment?->work_code ?? ''));
+        $shift = array_key_exists('shift_code', $data) ? trim((string) $data['shift_code']) : trim((string) ($assignment?->shift_code ?? ''));
+        $empty = $work === '' && $shift === '' && ! $registered
+            && ! filled($data['hours_line'] ?? null)
+            && ! filled($data['hours_line_2'] ?? null)
+            && ! filled($data['hours_night'] ?? null)
+            && ! filled($assignment?->hours_line)
+            && ! filled($assignment?->hours_line_2);
+        if ($empty) {
+            $assignment?->delete();
+            ClickHouseService::log('uchet.sheet.cleared', $userId, ['date' => $date->toDateString()]);
+
+            return response()->json(['success' => true, 'deleted' => true]);
+        }
+        if (! $assignment) {
+            $assignment = new NaryadAssignment([
+                'user_id' => $userId,
+                'plan_date' => $date->toDateString(),
+                'route_number' => $work !== '' ? $work : '.',
+            ]);
+        }
+        $assignment->work_code = $work !== '' ? $work : null;
+        $assignment->shift_code = $shift !== '' ? $shift : null;
+        $assignment->registered = $registered;
+        $mark = trim((string) ($assignment->mark_code ?? ''));
+        if ($registered && $mark === '') {
+            $assignment->mark_code = '+';
+        } elseif (! $registered && $mark === '+') {
+            $assignment->mark_code = null;
+        }
+        $route = trim($work.($shift !== '' ? ' '.$shift : ''));
+        $assignment->route_number = $route !== '' ? $route : '.';
+        if (array_key_exists('hours_line', $data)) {
+            $assignment->hours_line = $data['hours_line'];
+        }
+        if (array_key_exists('hours_line_2', $data)) {
+            $assignment->hours_line_2 = $data['hours_line_2'];
+        }
+        if (array_key_exists('hours_night', $data)) {
+            $assignment->hours_night = $data['hours_night'];
+        }
+        $assignment->save();
+        if ($work !== '' && $shift !== '' && ! array_key_exists('hours_line', $data)) {
+            $this->shiftHours->applyToAssignment($assignment);
+        }
+        ClickHouseService::log('uchet.sheet.updated', $assignment->id, [
+            'date' => $date->toDateString(),
+            'tab' => $personnel->tab_number,
+            'registered' => $registered,
+        ]);
+
+        return response()->json(['success' => true, 'id' => $assignment->id]);
+    }
+
+    public function archive(Request $request)
+    {
+        $month = $this->month($request);
+        $period = ArmPeriod::query()->firstOrCreate(['year_month' => $month], ['status' => 'open']);
+        $copies = ArmUkCopy::query()
+            ->with('user.personnel')
+            ->where('year_month', $month)
+            ->get()
+            ->groupBy('user_id');
+        $cards = $copies->map(function ($rows, $userId) {
+            $user = $rows->first()?->user;
+
+            return [
+                'user_id' => $userId,
+                'name' => $user?->name ?? $user?->personnel?->full_name,
+                'tab' => $user?->personnel?->tab_number,
+                'days' => $rows->count(),
+                'hours' => round($rows->sum(fn ($r) => (float) $r->hours_line + (float) $r->hours_reserve), 2),
+                'hours_2' => round($rows->sum(fn ($r) => (float) $r->hours_line_2), 2),
+                'night' => round($rows->sum(fn ($r) => (float) $r->hours_night + (float) $r->hours_night_2), 2),
+            ];
+        })->sortBy('name')->values();
+
+        return view('uchet.archive', [
+            'month' => $month,
+            'period' => $period,
+            'cards' => $cards,
+            'user' => Auth::user(),
+        ]);
+    }
+
+    public function archivePerson(Request $request, int $userId)
+    {
+        $month = $this->month($request);
+        $period = ArmPeriod::query()->firstOrCreate(['year_month' => $month], ['status' => 'open']);
+        $personnel = ArmPersonnel::query()->where('user_id', $userId)->first();
+        $days = ArmUkCopy::query()
+            ->where('user_id', $userId)
+            ->where('year_month', $month)
+            ->orderBy('plan_date')
             ->get();
 
-        return view('uchet.reports', [
+        return view('uchet.archive-person', [
             'month' => $month,
-            'hours' => $hours,
-            'absences' => $absences,
-            'period' => ArmPeriod::query()->firstOrCreate(['year_month' => $month], ['status' => 'open']),
+            'period' => $period,
+            'personnel' => $personnel,
+            'days' => $days,
             'user' => Auth::user(),
         ]);
     }
@@ -375,5 +579,22 @@ class UchetController extends Controller
         }
 
         return $month;
+    }
+
+    private function lsbuhKind(Request $request): ?string
+    {
+        $kind = $request->input('kind');
+
+        return in_array($kind, ['primary', 'repeat'], true) ? $kind : null;
+    }
+
+    private function sheetDate(Request $request): Carbon
+    {
+        $raw = (string) $request->input('date', Carbon::now()->toDateString());
+        try {
+            return Carbon::createFromFormat('Y-m-d', $raw)->startOfDay();
+        } catch (\Throwable) {
+            return Carbon::now()->startOfDay();
+        }
     }
 }

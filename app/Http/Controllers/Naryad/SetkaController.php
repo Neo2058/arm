@@ -14,6 +14,7 @@ use App\Models\Podstroika;
 use App\Models\RoutesCatalog;
 use App\Models\RouteVariant;
 use App\Models\User;
+use App\Services\Arm\PlanirControlService;
 use App\Services\Arm\PlanirRulesService;
 use App\Services\Arm\ShiftHoursService;
 use App\Services\ClickHouseService;
@@ -22,6 +23,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class SetkaController extends Controller implements HasMiddleware
 {
@@ -31,6 +33,7 @@ class SetkaController extends Controller implements HasMiddleware
         private NaryadHoursCalculator $hours,
         private ShiftHoursService $shiftHours,
         private PlanirRulesService $planir,
+        private PlanirControlService $control,
     ) {}
 
     public function partialSetka()
@@ -470,89 +473,92 @@ class SetkaController extends Controller implements HasMiddleware
             ], 422);
         }
 
-        $assignment = NaryadAssignment::updateOrCreate(
-            [
-                'user_id' => $data['user_id'],
-                'plan_date' => $data['plan_date'],
-            ],
-            [
-                'route_number' => $data['route_number'],
-                'assigned_by' => Auth::id(),
-            ]
-        );
-        $this->shiftHours->applyToAssignment($assignment);
+        $fromNightNum = null;
+        $planDate = Carbon::parse($data['plan_date']);
+        $planir = $this->planir->settings($norm);
+        $shiftCode = $this->shiftHours->parseRouteKey($data['route_number'])[1];
+        $isNight = $this->planir->isNight($data['route_number'], $shiftCode, $planir['night_shift_codes']);
+        if ($isNight) {
+            $fromNightNum = $this->shiftHours->fromNightOf($data['route_number']);
+        }
 
-        // Логируем действие (как требует AGENTS.md)
+        try {
+            $assignment = DB::transaction(function () use ($data, $fromNightNum, $planDate, $norm) {
+                $row = NaryadAssignment::updateOrCreate(
+                    [
+                        'user_id' => $data['user_id'],
+                        'plan_date' => $data['plan_date'],
+                    ],
+                    [
+                        'route_number' => $data['route_number'],
+                        'assigned_by' => Auth::id(),
+                    ]
+                );
+                $this->shiftHours->applyToAssignment($row);
+
+                if ($fromNightNum) {
+                    $nextDate = $planDate->copy()->addDay();
+                    $contViolations = $this->planir->validateAssign(
+                        (int) $data['user_id'],
+                        $nextDate,
+                        $fromNightNum,
+                        $norm
+                    );
+                    if ($contViolations !== []) {
+                        throw new \RuntimeException('PLANIR_CONTINUATION:'.implode("\n", $contViolations));
+                    }
+                    $continuation = NaryadAssignment::updateOrCreate(
+                        [
+                            'user_id' => $data['user_id'],
+                            'plan_date' => $nextDate->toDateString(),
+                        ],
+                        [
+                            'route_number' => $fromNightNum,
+                            'assigned_by' => Auth::id(),
+                        ]
+                    );
+                    $this->shiftHours->applyToAssignment($continuation);
+                }
+
+                return $row;
+            });
+        } catch (\RuntimeException $e) {
+            if (str_starts_with($e->getMessage(), 'PLANIR_CONTINUATION:')) {
+                $messages = explode("\n", substr($e->getMessage(), strlen('PLANIR_CONTINUATION:')));
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Продолжение с ночи: '.implode("\n", $messages),
+                    'violations' => $messages,
+                ], 422);
+            }
+            throw $e;
+        }
+
         ClickHouseService::log('naryad.assign', $assignment->id, [
             'user_id' => $data['user_id'],
             'plan_date' => $data['plan_date'],
             'route_number' => $data['route_number'],
         ]);
 
-        // Автоподстановка продолжения с ночи на следующий день
-        try {
-            $assignedKey = $data['route_number'];
-
-            // Парсим базовый номер (для поиска определения from_night)
-            $baseRouteNum = $assignedKey;
-            if (preg_match('/^([0-9a-zA-Z\-+]+)/', $assignedKey, $m)) {
-                $baseRouteNum = $m[1];
-            }
-
-            // Ищем from_night в catalog или в variant (поскольку может быть задано на варианте)
-            $fromNightNum = null;
-            $catRoute = RoutesCatalog::where('route_number', $baseRouteNum)->first();
-            if ($catRoute && $catRoute->from_night) {
-                $fromNightNum = $catRoute->from_night;
-            }
-            if (! $fromNightNum) {
-                $varRoute = RouteVariant::where('effective_route', $baseRouteNum)->first();
-                if ($varRoute && $varRoute->from_night) {
-                    $fromNightNum = $varRoute->from_night;
-                }
-            }
-
-            if ($fromNightNum) {
-                // Это ночная смена?
-                $isNight = stripos($assignedKey, 'ночь') !== false
-                    || ($catRoute && $catRoute->night_parity)
-                    || ($varRoute && $varRoute->night_parity);
-
-                if ($isNight) {
-                    $nextDate = Carbon::parse($data['plan_date'])->addDay()->format('Y-m-d');
-
-                    // Сохраняем raw from_night как route_number (то, что указано в "с ночи", напр. "МЗ-1").
-                    // Полная расшифровка (времена, места) будет взята через plain key в $routeDetails.
-                    $contKey = $fromNightNum;
-
-                    $continuation = NaryadAssignment::updateOrCreate(
-                        [
-                            'user_id' => $data['user_id'],
-                            'plan_date' => $nextDate,
-                        ],
-                        [
-                            'route_number' => $contKey,
-                            'assigned_by' => Auth::id(),
-                        ]
-                    );
-                    $this->shiftHours->applyToAssignment($continuation);
-                }
-            }
-        } catch (\Exception $e) {
-            \Log::warning('Auto night continuation failed: '.$e->getMessage());
-        }
-
         $response = [
             'success' => true,
             'message' => 'Маршрут назначен',
         ];
-
-        // Подсказка фронту, что мы попытались подставить продолжение (для логов/дебага)
-        if (isset($fromNightNum) && $fromNightNum) {
+        if ($fromNightNum) {
             $response['auto_continuation'] = $fromNightNum;
         }
 
         return response()->json($response);
+    }
+
+    public function partialControl()
+    {
+        $this->abortIfNotDispatcher();
+
+        $month = request('month', Carbon::now()->format('Y-m'));
+
+        return view('naryad.partials.control', $this->control->report($month));
     }
 
     /**

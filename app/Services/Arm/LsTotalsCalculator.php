@@ -23,12 +23,16 @@ class LsTotalsCalculator
 {
     /**
      * @param  iterable<NaryadAssignment>  $assignments
+     * @param  array{from?: CarbonInterface, to?: CarbonInterface, endk?: bool}  $options
      * @return array<string, float>
      */
-    public function calculate(?ArmPersonnel $personnel, string $yearMonth, iterable $assignments): array
+    public function calculate(?ArmPersonnel $personnel, string $yearMonth, iterable $assignments, array $options = []): array
     {
         $start = Carbon::createFromFormat('Y-m', $yearMonth)->startOfMonth();
         $end = $start->copy()->endOfMonth();
+        $from = $options['from'] ?? $start;
+        $to = $options['to'] ?? $end;
+        $endk = (bool) ($options['endk'] ?? false);
         $personnel ??= new ArmPersonnel([
             'position_code' => 'МШ',
             'tab_number' => '',
@@ -37,7 +41,12 @@ class LsTotalsCalculator
         $position = trim((string) ($personnel->position_code ?: 'МШ'));
         $isAssistant = $this->isAssistant($position);
         $planir = $this->planir();
-        $rows = $assignments instanceof Collection ? $assignments : collect($assignments);
+        $allMonthRows = $assignments instanceof Collection ? $assignments : collect($assignments);
+        $rows = $allMonthRows->filter(function ($row) use ($from, $to) {
+            $date = $row->plan_date instanceof CarbonInterface ? $row->plan_date : Carbon::parse($row->plan_date);
+
+            return $date->between($from, $to);
+        })->values();
 
         $t = $this->emptyTotals();
         $allchas = 0.0;
@@ -53,7 +62,7 @@ class LsTotalsCalculator
             $line2 = (float) $row->hours_line_2;
             $line2p = (float) $row->hours_line_2_reserve;
             $isRest = $this->isRestRow($row, $planir['rest_codes']);
-            $hasShift = $this->isWorkShift($row, $isRest);
+            $hasShift = $this->isWorkShift($row);
             $allchas += $line + $reserve + $line2 + $line2p;
 
             if ($hasShift) {
@@ -80,6 +89,11 @@ class LsTotalsCalculator
                 }
             } elseif ($isRest) {
                 $t['vyh'] += 1.0;
+            } elseif ($line + $reserve + $line2 + $line2p > 0) {
+                $date = $row->plan_date instanceof CarbonInterface ? $row->plan_date : Carbon::parse($row->plan_date);
+                if (! $date->isSunday() && ! $this->isHolidayDate($date)) {
+                    $t['otvl'] += $line + $reserve + $line2 + $line2p;
+                }
             }
 
             $t['vchas2'] += $line2;
@@ -125,9 +139,11 @@ class LsTotalsCalculator
         $norm = ArmMonthNorm::query()->where('year_month', $yearMonth)->first();
         $tNr = (float) ($norm?->month_hours ?? 0);
         $dNr = (float) ($norm?->day_hours ?? 0);
-        $tekNr = $this->monthNormHours($personnel, $start, $end, $tNr, $dNr);
+        $tekNr = $this->monthNormHours($personnel, $from, $to, $tNr, $dNr);
         $t['tek_nr'] = $tekNr;
-        $t['mes_nr'] = $tekNr;
+        $t['mes_nr'] = $endk
+            ? $this->monthNormHours($personnel, $start, $end, $tNr, $dNr)
+            : $tekNr;
         $t['t_nr'] = $tNr;
         $t['t_dnnr'] = $dNr;
 
@@ -164,9 +180,14 @@ class LsTotalsCalculator
             $t['dobrp'] = min($t['prazdrp'], $nehv);
         }
 
-        $this->fillClassHours($t, $personnel, $isAssistant, $start, $end, $rows);
-        $this->fillOvertime($t, $personnel, $allchas, $planir);
-        $this->fillSeniority($t, $personnel, $start, $allchas, $tekNr, $planir);
+        $this->fillClassHours($t, $personnel, $isAssistant, $from, $to, $rows);
+        $monthAllchas = $allchas;
+        $monthHolidays = $t['prazd1'] + $t['prazd2'] + $t['prazdr'] + $t['prazdr2'] + $t['prazd2p'] + $t['prazdrp'];
+        if ($endk) {
+            [$monthAllchas, $monthHolidays] = $this->monthAllchasAndHolidays($allMonthRows);
+        }
+        $this->fillOvertime($t, $personnel, $monthAllchas, $planir, $monthHolidays, $endk);
+        $this->fillSeniority($t, $personnel, $from, $allchas, $tekNr, $planir);
         $this->fillPremium($t, $personnel, $yearMonth, $position, $planir);
         $this->fillBrigadier($t, $personnel, $start, $end, $rows, $planir);
 
@@ -194,7 +215,7 @@ class LsTotalsCalculator
             'razr1' => 0.0, 'razr2' => 0.0, 'razrr' => 0.0, 'razr2p' => 0.0, 'razrrp' => 0.0,
             'vech1' => 0.0, 'vech2' => 0.0, 'vechr' => 0.0, 'vech2p' => 0.0, 'vechrp' => 0.0,
             'prazd1' => 0.0, 'prazd2' => 0.0, 'prazdr' => 0.0, 'prazdr2' => 0.0, 'prazd2p' => 0.0, 'prazdrp' => 0.0,
-            'per1' => 0.0, 'realper' => 0.0, 'nvih' => 0.0, 'dobnv' => 0.0,
+            'per1' => 0.0, 'realper' => 0.0, 'nvih' => 0.0, 'dobnv' => 0.0, 'otvl' => 0.0,
             'dob1' => 0.0, 'dob2' => 0.0, 'dobr' => 0.0, 'dobr2' => 0.0, 'dob2p' => 0.0, 'dobrp' => 0.0,
             'teh' => 0.0, 'medk' => 0.0, 'avar' => 0.0,
             'premm' => 0.0, 'premp' => 0.0, 'prem2' => 0.0, 'prem' => 0.0,
@@ -246,15 +267,9 @@ class LsTotalsCalculator
             && ! str_contains((string) $row->route_number, '1-с');
     }
 
-    private function isWorkShift(NaryadAssignment $row, bool $isRest): bool
+    private function isWorkShift(NaryadAssignment $row): bool
     {
-        if (filled($row->shift_code)) {
-            return true;
-        }
-        $hours = (float) $row->hours_line + (float) $row->hours_reserve
-            + (float) $row->hours_line_2 + (float) $row->hours_line_2_reserve;
-
-        return $hours > 0 && ! $isRest;
+        return filled($row->shift_code);
     }
 
     /**
@@ -424,7 +439,7 @@ class LsTotalsCalculator
         $new2 = 0.0;
         $new2p = 0.0;
         foreach ($rows as $row) {
-            if (! $this->isWorkShift($row, false)) {
+            if (! $this->isWorkShift($row)) {
                 continue;
             }
             $date = $row->plan_date instanceof CarbonInterface ? $row->plan_date : Carbon::parse($row->plan_date);
@@ -515,7 +530,7 @@ class LsTotalsCalculator
      * @param  array<string, float>  $t
      * @param  array<string, mixed>  $planir
      */
-    private function fillOvertime(array &$t, ArmPersonnel $personnel, float $allchas, array $planir): void
+    private function fillOvertime(array &$t, ArmPersonnel $personnel, float $allchas, array $planir, float $holidaySum, bool $endk): void
     {
         $shop = trim((string) ($personnel->shop_code ?? ''));
         $combined = trim((string) $planir['shop_combined']);
@@ -531,8 +546,36 @@ class LsTotalsCalculator
             $real = 0.0;
         }
         $t['realper'] = $real;
-        $per = $real - $t['prazd1'] - $t['prazdr'] - $t['prazd2'] - $t['prazdr2'] - $t['prazd2p'] - $t['prazdrp'] - $t['nvih'];
+        $holidays = $endk
+            ? $holidaySum
+            : $t['prazd1'] + $t['prazdr'] + $t['prazd2'] + $t['prazdr2'] + $t['prazd2p'] + $t['prazdrp'];
+        $per = $real - $holidays - $t['nvih'];
         $t['per1'] = $per <= 0.01 ? 0.0 : $per;
+    }
+
+    /**
+     * @param  Collection<int, NaryadAssignment>  $rows
+     * @return array{0: float, 1: float}
+     */
+    private function monthAllchasAndHolidays(Collection $rows): array
+    {
+        $allchas = 0.0;
+        $holidays = 0.0;
+        foreach ($rows as $row) {
+            $allchas += (float) $row->hours_line + (float) $row->hours_reserve
+                + (float) $row->hours_line_2 + (float) $row->hours_line_2_reserve;
+            $holidays += (float) $row->hours_holiday
+                + (float) $row->hours_holiday_reserve
+                + (float) $row->hours_holiday_2
+                + (float) $row->hours_holiday_2_reserve;
+        }
+
+        return [$allchas, $holidays];
+    }
+
+    private function isHolidayDate(CarbonInterface $date): bool
+    {
+        return ArmHoliday::query()->whereDate('holiday_date', $date->toDateString())->exists();
     }
 
     /**
@@ -681,7 +724,7 @@ class LsTotalsCalculator
             $dk = $to ? $to->copy()->min($end) : $end->copy();
             $sum = 0.0;
             foreach ($rows as $row) {
-                if (! $this->isWorkShift($row, false)) {
+                if (! $this->isWorkShift($row)) {
                     continue;
                 }
                 $date = $row->plan_date instanceof CarbonInterface ? $row->plan_date : Carbon::parse($row->plan_date);

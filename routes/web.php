@@ -47,6 +47,7 @@ Route::middleware(['auth', CheckUserExistence::class, CheckDeviceBinding::class,
     require __DIR__.'/work.php';
     require __DIR__.'/journal.php';
     require __DIR__.'/naryad.php';
+    require __DIR__.'/nsi.php';
     require __DIR__.'/uchet.php';
     require __DIR__.'/support.php';
 });

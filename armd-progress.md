@@ -1,6 +1,6 @@
 # Направление клона АРМ-ЛБ
 
-Снимок: **2026-10-02**.
+Снимок: **2026-10-07**.
 
 Этот файл — дорожная карта: что уже сделано и что делать дальше.
 Схемы таблиц и маппинг полей FoxPro живут в **`armd.md`**. Схемы сюда не копировать.
@@ -44,10 +44,10 @@
 
 | Контур | Оценка | Состояние |
 |---|---|---|
-| Планирование / сетка `PLANIR` | ~70–80% | Назначение блокируется правилами; сетка — календарный месяц |
-| Учёт / лицевые счета | ~60–70% | Карточки, формулы, входы `RAS1LS`, закрытие месяца, CSV `LSBUH` |
-| Отчёты `DOKMENU` | ~15% | Только затраты времени и отвлечения за месяц |
-| НСИ | ~40% | Графики, разбивки, праздники, календарь, `NRCHAS`/`PREM`/`VISL`/тарифы; нет экранов кодификаторов |
+| Планирование / сетка `PLANIR` | ~95% | Назначение блокируется правилами Печатников (формула интервала, NRCHAS, экипаж); отчёт полноты отдельно |
+| Учёт / лицевые счета | ~85% | Карточки, формулы, входы `RAS1LS`, два ЛС при смене должности, повторный ЛС, МЛ, архив УК, `LSBUH.DBF`+CSV; эталон 2018-11: линия `VCHAS1` совпадает, ночь/выслуга/премия ещё нет |
+| Отчёты `DOKMENU` | ~90% | Меню справок на `/uchet/reports`; нет бланков «приказ», `OTV_MES`, `RASST` |
+| НСИ | ~90% | `/nsi`: KODIF/ELKODIF, RASST, PODPISI, NRCHAS/PREM/VISL/тарифы/форма ЛС, NRDPAR; нет DOS-печати и COMKOD |
 
 Входы `dob1` / `nvih` / `teh` / `medk` / `prem` / `visl` / `tek_nr` заполняются из TEHUCH/SPPREM/VISL/NRCHAS. Совпадение копеек с FoxPro — шаг B (эталонный месяц).
 
@@ -92,14 +92,18 @@
 - подстройка дня `POZEL` (`arm_day_adjustments`, маршрут+смена должны совпасть);
 - после ночи (`3+`/`4+`/`5+` или «ночь») → смена 1;
 - после 1-й → выходной (`В`/`Е`/`ВЫХ` или отвлечение);
-- интервал 12 / 42 / 66 ч из `NACH`/`OKON` разбивки;
+- интервал: формула `часы×2` (Печатники, `NR_12='-+'`), либо фикс. 12/42/66; смена 1 и продолжение с ночи — пропуск;
+- не больше 3 коротких интервалов (`kolkint`, `NR_kint`; в Печатниках 0 — не стреляет);
 - минимум 3 дня между одиночными выходными;
 - не больше 12 рабочих дней без выходного;
 - не больше двух ранних подряд и двух смен 0–5 ч подряд;
 - окна раннего/позднего из карточки;
-- нормы часов неделя/месяц/год из `naryad_norms`.
+- нормы недели/месяца/года из `naryad_norms` **и** `NRCHAS.dnnr ×` рабочие дни + `NR_doppr=40`;
+- `line_mode=1`: второй на ту же смену нельзя; `line_mode=2`: нельзя пару оба &lt; 1 года / оба П/М без 1 кл.;
+- праздничные часы `PRAZD1` при назначении (`gath_ch`);
+- автопродолжение с ночи проходит `validateAssign` (иначе откат).
 
-Пороги — JSON `naryad_norms.planir` (по умолчанию как `NRDPAR`: 12/42/66/3/12).
+Пороги — JSON `naryad_norms.planir` (импорт `NRDPAR`, по умолчанию Печатники: формула, doppr 40, линия 1, kint 0). Окно ранних 5–8 сохраняется, если в NRDPAR нули.
 
 ### 4.5. Шаг 4 — часы 2 лица
 
@@ -127,7 +131,7 @@
 
 - `arm_periods` (`open` / `closed`). Закрытый месяц: нельзя назначать, снимать, править часы.
 - Открыть снова может нарядчик или админ.
-- `/uchet/lsbuh.csv?month=YYYY-MM` — колонки как `LSBUH`, формат **CSV, не DBF**.
+- `/uchet/lsbuh.dbf?month=YYYY-MM` — бинарный `LSBUH.DBF` CP866 как `PODG_LSH`; CSV `/uchet/lsbuh.csv` остаётся.
 - `/uchet/reports` — затраты времени и отвлечения за месяц.
 
 ### 4.9. Патч живого FoxPro (отдельная ветка, не Laravel)
@@ -147,14 +151,20 @@
 |---|---|
 | `tests/Feature/ArmImportAndPlanningHoursTest.php` | импорт + часы из разбивки |
 | `tests/Feature/ArmPersonnelImportTest.php` | LKM/NAZN/OTVM, пароль, dispatcher |
-| `tests/Feature/ArmPlanirRulesTest.php` | блок assign; смотреть `$response->json('message')`, не `assertSee` JSON |
+| `tests/Feature/ArmPlanirRulesTest.php` | блок assign: формула интервала, NRCHAS, kolkint, экипаж, продолжение ночи, PRAZD1 |
 | `tests/Feature/ArmAccountingTest.php` | 2 лицо, `/uchet`, закрытие, CSV |
 | `tests/Unit/Arm/FoxTimeTest.php` | `чч.мм` |
 | `tests/Unit/Arm/FormulaInterpreterTest.php` | IIF |
 | `tests/Unit/Arm/ShiftHoursServiceTest.php` | подстановка часов |
 | `tests/Unit/Arm/DbfReaderTest.php` | CP866 DBF |
 | `tests/Feature/ArmFormulaInputsTest.php` | импорт NRCHAS/PREM/VISL/TEHUCH/SPPREM, totals, `/uchet/extras` |
-| `tests/Unit/Arm/LsTotalsCalculatorTest.php` | `vc1`, `nvih` из дней × `dnnr` |
+| `tests/Unit/Arm/LsTotalsCalculatorTest.php` | `vc1`, `nvih` из дней × `dnnr`, отвлечение без смены не в `vchas1` |
+| `tests/Feature/ArmGoldenMonthTest.php` | импорт NARJAD/`NR*`, эталон 2018-11 `VCHAS1` против дампа |
+| `tests/Feature/ArmStepCTest.php` | два ЛС при смене должности, повторный `kind`, МЛ `registered`, архив УК |
+| `tests/Unit/Arm/UnderworkAllocatorTest.php` | разнос `dob*` как LENA |
+| `tests/Feature/ArmStepDTest.php` | справки DOKMENU: mtrzat, netrud, ночные 3+/4+, PRIM1, per1, перерыв 12 дней |
+| `tests/Feature/ArmStepETest.php` | `/nsi`, импорт KODIF/ELKODIF, `5+` в ночных |
+| `tests/Feature/ArmStepGTest.php` | `LSBUH.DBF` CP866, TABN_OLD/TABNOM1, чужое депо, artisan |
 
 После правок доступа/маршрутов дополнительно: `JournalAccessTest`, `NaryadPlanningTest`, `WebRoutesSplitTest`, `UserRoleAccessTest`.
 
@@ -172,97 +182,103 @@
 
 Не в этом шаге: два ЛС при смене должности в середине месяца (шаг C); сверка копеек с живым `LSH` (шаг B).
 
-### Шаг B — золотой месяц
+### Шаг B — золотой месяц — **эталон зафиксирован 2026-10-02, паритет не полный**
 
-Зафиксировать 2–3 табельных и 1–2 закрытых месяца Печатников.
+Дамп `~/Downloads/ARMNRD/Datanrd` содержит живые `NARJAD.DBF` / `LSH.DBF` / `LSBUH.DBF` и архивы `NR{мм}{гг}` / `C2{мм}{гг}` / `LS{мм}{гг}` (LSARH). `NR1118.DBF` пустой: ноябрь 2018 остался в живом `NARJAD` (2018-11…2020-10). `NRCHAS` в дампе с 02.2021.
 
-Сравнить:
+**Эталон**
 
-1. часы УК (`NARJAD` + `CHAS2`) с `naryad_assignments`;
-2. итоги `LSH` с `arm_accounts.totals`;
-3. строки `LSBUH` с `/uchet/lsbuh.csv`.
+| | |
+|---|---|
+| Месяц 1 | **2018-11** — `NARJAD` + `LSH` + `LSBUH` |
+| Месяц 2 | **2018-12** — `NARJAD` + `LSH` (массового `LSBUH` нет) |
+| Табельные | **0321** МШ, **0428** МШ 1 кл. бригадир, **2575** П/М |
+| Команда | `php artisan arm:golden-month 2018-11 --tabs=0321,0428,2575` |
+| Импорт УК | `php artisan arm:import-dbf --only=naryad --month=2018-11 --tabs=0321,0428,2575` |
 
-Расхождения писать в этот файл (табельный, поле, FoxPro, клон, причина).
-Пока нет золотого месяца, «паритет» нельзя объявлять.
+В текущем `LKM` нет 0321 и 0428 (ушли). Команда ставит карточку из `LSH`/`TEHUCH`. Норма месяца без `NRCHAS` 2018 берётся из `LSH.TEK_NR` (151.2 / 26 дн.).
 
-Нужны эталонные `LSH`/`LSBUH`/`NARJADммгг` из дампа. Без них шаг B блокирован пользователем, не кодом.
+**Сходится (порог 0.015)**
 
-### Шаг C — повторный ЛС и маршрутные листы
+- `NARJAD.LIN1` при `!EMPTY(SMENA)` = `LSH.VCHAS1` = клон `hours_line` / `totals.vchas1` на всех трёх табельных.
+- `DNI`, `VYH`, `VC1` с линией.
+- Импорт `NR*.DBF` + живой `NARJAD` (пути на macOS через `realpath`, день не суммируется дважды).
 
-- Повторный ЛС (`LSHPOVT`, `NOMLS=1`), разнос недоработки как `LENA.PRG`.
-- Регистрация маршрутных листов (пункт учёта FoxPro).
-- Копии УК после закрытия ЛС (`UCHMENU` → Архив).
-- `kind=repeat` на `arm_accounts` уже заложен смыслом `NOMLS`; отдельная модель не нужна, пока хватает поля `ls_number`.
+**Расхождения**
 
-### Шаг D — отчёты `DOKMENU`
+| Таб | Срез | Поле | FoxPro | Клон | Причина |
+|---|---|---|---|---|---|
+| 0428, 2575 | NARJAD↔LSH | `NOCH1` / `VECH1` | LSH ниже/иначе | SUM `NARJAD` как `RAS1LS` | Клон = исходник `SUM … FOR !EMPTY(smena)`. Живой `NARJAD` после закрытия ЛС, видимо, правили. Клон не подгонять под LSH. |
+| 2575 | LSH↔клон | `KN` | 6 | 7 | FoxPro `KN` только `NR_nsm1`/`NR_nsm2` (`3+`/`4+`). Клон ещё считает `5+`. |
+| все | LSH↔клон | `VISL` | 112 / 151.2 | 0 | Нет `LKM.DTVISL` у 0321/0428; `SPPREM`/`VISL` на дату ЛС не восстановить из текущего дампа. |
+| все | LSH↔клон | `PREMM` | 24 / −21 | 0 | В `SPPREM.DBF` нет строк `201811`. `RAS1LS` без SPPREM оставляет 0. |
+| МШ | LSBUH | `077` | visl | нет строки | Нет `visl` в totals. |
+| МШ | LSBUH | `078` `СМН` `ВЫХ` | tarst 9.302 / 1, % 100 | tarst 0 | В `FLSM` у этих строк пустой `TARIF`; FoxPro всё равно пишет ставку. |
+| все | LSBUH | `009` | VROTR=0 | 1 | Формула премии `1`; FoxPro не пишет `VROTR` без тарифа. |
+| 2575 | LSBUH | 004 и др. | FLSM | раньше пусто | Закрыто: `PODG_LSH` гоняет **и FLSM, и FLSP**. Клон теперь тоже. |
 
-Сейчас есть только затраты времени и отвлечения.
+`VCHAS1` в ЛС больше не включает часы отвлечений без смены (`ОТ`/`Б` с `CHAS` и пустым `SMENA`) — как `RAS1LS`.
 
-Не хватает (имена как в меню FoxPro):
+Шаг B **не закрывать**, пока не сойдутся `NOCH1` (если это не правка архива), `VISL`/`PREMM` (нужны LKM+SPPREM на 2018) и тарифы справочных строк LSBUH.
 
-**Наряды и отчёты**
+### Шаг C — повторный ЛС и маршрутные листы — **сделано 2026-10-05**
 
-- печать нарядов — **сделано 2026-09-30** (`NaryadPrintService`, `/naryad/partial/print`, `/naryad/print`). Нет составов `RASST`, `TEXTN`, `PODPISI`;
-- затраты рабочего времени (расширить текущий);
-- отчёт о нетрудоспособности;
-- выписка в комнату отдыха — **сделано** тем же сервисом, `kind=extract`.
+- Повторный ЛС: `arm_accounts.kind=repeat` (`LSHPOVT`), `ls_number=1` (`NOMLS=1`). `POST /uchet/generate` с `kind=repeat` не затирает первичные. Экран `/uchet/accounts?kind=repeat`.
+- Смена должности не 1-го числа: два ЛС `ls_number` 0 и 1, периоды как `podgls`. Разнос `dob*` — `UnderworkAllocator` как `LENA.PRG` / `RAS1LS.prov_dobav`.
+- Маршрутные листы: `/uchet/sheets`, `naryad_assignments.registered` ← `OTBOR`.
+- Копии УК: `arm_uk_copies` при закрытии месяца (`KOP1`/`KOP2`). `/uchet/archive`.
+- Уникальность ЛС: `(user_id, year_month, kind, ls_number)`.
 
-**Справки**
+Не в этом шаге: полный BROW часов МЛ как учётная карточка (часы правятся на карточке человека); чай/булочки `NR_schai`; выгрузка `LSBUHP.DBF`.
 
-- особые пометки У/К;
-- список бригадиров;
-- классность машинистов;
-- список машинистов;
-- отработанные ночные смены;
-- внутрисменные отвлечения;
-- справка о переработке;
-- перерывы в работе;
-- праздничные часы;
-- назначения за период.
+### Шаг D — отчёты `DOKMENU` — **сделано 2026-10-05**
 
-Печать — HTML/PDF из тех же таблиц, без DBF-принтера.
+`DokmenuReportService`, `/uchet/reports` + `/uchet/reports/{kind}`. Печать HTML из тех же таблиц.
 
-### Шаг E — экраны НСИ (`NSIMENU`)
+- печать нарядов / выписка — как раньше (`NaryadPrintService`);
+- затраты рабочего времени — сетка дней × код (`mtrzat`) и расширенные часы УК;
+- отчёт о работе машинистов — на лету, без `OTV1`;
+- нетрудоспособность — дни `Б`/`Т` (`netrud`);
+- справки: пометки У/К, бригадиры, классность, список, ночные `3+`/`4+`, PRIM1, переработка `per1`, перерывы ≥12 записей без смены, праздничные часы, назначения за период.
 
-Импорт и CRUD, не только «лежит в Postgres с сетки».
+Импорт: `RAZBSM.PRIM1` → `extra_mark`, `NARJAD.OTBOR` → `mark_code` + `registered`.
 
-**Кодификаторы** (`KODIF` + `ELKODIF`, 23 справочника), в том числе:
+Не в этом шаге: бланки «приказ», годовой `OTV_MES`, `RASST`/`TEXTN`/`PODPISI`, пункт «текущая численность» (в FoxPro выключен).
 
-- подразделения, пункты заступления, должности, классы;
-- виды затрат времени, цеха, составы, нормы времени, маршруты, бригады, смены;
-- тарифные ставки, виды выплат, профессии;
-- отвлечения для печати в наряд, категории, доп. признаки смен;
-- месяцы, дни недели, цвета графиков, признаки перехода.
+### Шаг E — экраны НСИ (`NSIMENU`) — **сделано 2026-10-05**
 
-**Справочники меню:** составы, типы графиков, разбивка смен, праздники, должности и классы
-(часть уже есть как экраны нарядчика — связать с кодификаторами, не плодить вторые таблицы).
+`NsiController`, `/nsi`. Импорт всех `KODIF`/`ELKODIF` (не только 41 и 50), `PODPISI`, `RASST`/`RASST1`. CRUD кодификаторов; 41/50 пишут `arm_tariffs`/`arm_pay_kinds`; 52 создаёт `deviations_catalog` только для нового `short_code`.
 
-**Нормативы:** нормы времени (`NRCHAS`), календарь, расстановка составов, форма ЛС (отбор формул), процент премии, выслуга, тарифные ставки.
+Справочники меню ведут на существующие экраны нарядчика (графики, разбивки, праздники, календарь, экипажи т6/т5) и на kodspr 03/05/06/51. Нормативы: NRCHAS, PREM, VISL, тарифы, отбор FLSM/FLSP, расстановка. Настройка АРМ: пользователи портала (список), NRDPAR+аванс в `naryad_norms.planir` (слияние, `5+` всегда в ночных), названия KODIF.
 
-**Настройка АРМ:** пользователи АРМ, общие параметры (`NRDPAR` → расширить `naryad_norms.planir`), аванс, названия справочников.
-Печать DOS, перекрёстные ссылки, порядок полей — низкий приоритет (это оболочка FoxPro).
+Не в этом шаге: печать DOS, перекрёстные ссылки `COMKOD`, порядок полей.
 
-### Шаг F — остаток `PLANIR`
+### Шаг F — остаток `PLANIR` — **сделано 2026-10-02**
 
-Уже блокируем назначение. Ещё нет:
+Правила не мягче FoxPro (ужесточать можно).
 
-- на линии в 2 лица не ставить МШ и П/М вместе, если оба со стажем &lt; 1 года;
-- в месяце не больше 3 межсменных интервалов короче `NR_kint` (`kolkint`);
-- норма часов из `NRCHAS.dnnr ×` число рабочих дней (воскресенья и `PRAZD` вычитать), а не только потолок `naryad_norms`;
-- праздничные часы в разбивке (`PRAZD1` и флаг `NR_prazd`);
-- отчёт «все ли люди расставлены / все ли смены назначены» (в DOS это пункты 8–9 контроля, не блок клетки);
-- ввод готового наряда (пункт меню, если `NR_linia=2`).
+- формула интервала `часы×2` при `NR_12` не `+` (главное послабление, которое закрыли);
+- `kolkint`, NRCHAS-потолок, пара со стажем &lt; 1 года при `line_mode=2`, дубль при `line_mode=1`;
+- праздничные часы `gath_ch` в `naryad_assignments.hours_holiday*`;
+- импорт `NRDPAR` → `naryad_norms.planir` (merge; раннее окно 0,0 не выключает `ran3`);
+- отчёт полноты `/naryad/partial/control` (F6 / Shift+F5);
+- автопродолжение с ночи валидируется.
 
-### Шаг G — формат для бухгалтерии
+Не в этом шаге: ввод готового наряда (`VVODNAR`) — в Печатниках `NR_linia=1`, пункт выключен. Категории МШ vs `RAZBSM.prim1` (Jauza) — отчёт, не блок; можно добавить в контроль позже.
 
-CSV — временный контракт. Бухгалтерия 1С ждала `LSBUH.DBF` (поля `GODMES,TABN,VOPL,TARST,PROCNT,VROTR,ZAKAZ,PROF,NOMLS,DDE,OSN_PROF,TABN_OLD,DEPO,DEPOKOM`).
+### Шаг G — формат для бухгалтерии — **код 2026-10-07, 1С не подтверждала**
 
-Нужно:
+Бинарный dBASE III CP866 как дамп `LSBUH.DBF` / `PODG_LSH`: поля `GODMES,TABN,VOPL,TARST,PROCNT,VROTR,ZAKAZ,PROF,OTBOR,NOMLS,DDE,OSN_PROF,TABN_OLD,DEPO,DEPOKOM`.
 
-- либо бинарный DBF CP866 как в `PODG_LSH`;
-- либо подтверждённый CSV/обмен, который 1С реально ест.
+- `/uchet/lsbuh.dbf?month=YYYY-MM` (имя файла `LSBUH.DBF`), `kind=primary|repeat`;
+- CSV `/uchet/lsbuh.csv` те же строки;
+- `php artisan arm:export-lsbuh YYYY-MM [path]`;
+- после строк: `TABN_OLD` = табельный, `TABN` ← `LKM.TABNOM1` если заполнен, `DEPO` если не своё (`own_depo` по умолчанию `ТЧ15` = COMKOD 0101), `NOMLS+5` при TABNOM1 или чужом депо, `DDE='1'` только при `NR_dde='+'` (у Печатников пусто).
+- `OSN_PROF` — `ELKODIF` kodspr=05 `NOM` по должности.
 
-Не объявлять шаг закрытым без живой выгрузки на стороне бухгалтерии.
+Не в этом шаге: нарезка `DepoXX.dbf` / `DEPOKOM`, копия на `F:\BUH`, `LSBUHP.DBF`.
+
+Шаг **не закрывать как принятый бухгалтерией**, пока 1С не съест живой файл. Паритет B не объявлять.
 
 ---
 
@@ -272,14 +288,14 @@ CSV — временный контракт. Бухгалтерия 1С ждал
 
 | FoxPro | Сейчас | Дальше |
 |---|---|---|
-| 1. НСИ | частично (графики, разбивки, праздники, календарь, нормы) | шаг E |
+| 1. НСИ | `/nsi` + экраны нарядчика | DOS-печать / COMKOD |
 | 2. Картотека | список + назначения + отвлечения + POZEL | полный редактор LKM, отбор, архив ЛС |
-| 3. Планирование и учёт | `/naryad` + `/uchet` | МЛ, доплаты, архив УК, повторный ЛС |
-| 4. Отчёты и справки | `/uchet/reports` + печать наряда | шаг D (остальные справки) |
+| 3. Планирование и учёт | `/naryad` + `/uchet` | повторный ЛС / МЛ / архив УК — шаг C |
+| 4. Отчёты и справки | `/uchet/reports` + печать наряда | бланки приказа / RASST — позже |
 | 5. Технические функции | не нужно 1:1 (дискеты, индекс, отказы) | бэкап Postgres / MinIO |
 | 0. Конец работы | выход из портала | — |
 
-`UCHMENU`: планирование ✓, учётные карточки ✓, лицевые счета ✓, маршрутные листы ✗, доп. выплаты ✓ (`/uchet/extras`), архив УК ✗.
+`UCHMENU`: планирование ✓, учётные карточки ✓, лицевые счета ✓ (первичные и повторные), маршрутные листы ✓, доп. выплаты ✓ (`/uchet/extras`), архив УК ✓. `DOKMENU` ✓ (`/uchet/reports`).
 
 `KARTMENU`: ведение картотеки частично (нет полного LKM), назначения ✓, отвлечения ✓, подстройки ✓ (день + месяц раздельно), отбор ✗, архив ЛС ✗.
 
@@ -309,7 +325,10 @@ php artisan arm:import-dbf
 php artisan arm:import-dbf --only=graphs,breakdowns,holidays,calendar
 php artisan arm:import-dbf --only=personnel,appointments,absences,adjustments
 php artisan arm:import-dbf --only=formulas,chas2
-php artisan arm:import-dbf --only=nrchas,prem,visl,extras,spprem,tariffs
+php artisan arm:import-dbf --only=nrchas,nrdpar,prem,visl,extras,spprem,tariffs
+php artisan arm:import-dbf --only=codes,signatures,rosters
+php artisan arm:import-dbf --only=naryad --month=2018-11 --tabs=0321,0428,2575
+php artisan arm:golden-month 2018-11 --tabs=0321,0428,2575
 ```
 
 Путь по умолчанию: `config('arm.dbf_path')` / `ARM_DBF_PATH`, иначе `~/Downloads/ARMNRD/Datanrd`.
@@ -317,24 +336,30 @@ php artisan arm:import-dbf --only=nrchas,prem,visl,extras,spprem,tariffs
 | URL | Кто | Зачем |
 |---|---|---|
 | `/naryad` | dispatcher | сетка, справочники, картотека |
+| `/nsi` | dispatcher | NSIMENU: кодификаторы, нормативы, NRDPAR |
+| `/naryad/partial/control` | dispatcher | полнота сетки (F6) |
 | `/uchet` | operator + dispatcher + admin | карточки |
 | `/uchet/accounts` | то же | лицевые счета |
-| `/uchet/lsbuh.csv?month=YYYY-MM` | то же | выгрузка |
+| `/uchet/lsbuh.dbf?month=YYYY-MM` | то же | `LSBUH.DBF` CP866 |
+| `/uchet/lsbuh.csv?month=YYYY-MM` | то же | тот же состав, CSV |
 | `/uchet/extras` | то же | доплаты TEHUCH и премия SPPREM |
-| `/uchet/reports` | то же | черновые справки |
-| `POST /uchet/generate` | то же | собрать ЛС |
-| `POST /uchet/close` / `reopen` | close — учёт; reopen — dispatcher/admin | период |
+| `/uchet/sheets` | то же | регистрация маршрутных листов |
+| `/uchet/archive` | то же | копии УК после закрытия ЛС |
+| `/uchet/reports` | то же | меню DOKMENU |
+| `/uchet/reports/{kind}` | то же | справка (hours, time-costs, work, disability, marks, …) |
+| `POST /uchet/generate` | то же | собрать ЛС (`kind=primary\|repeat`) |
+| `POST /uchet/close` / `reopen` | close — учёт; reopen — dispatcher/admin | период + снимок УК |
 
-Ключевые классы: `PlanirRulesService`, `ShiftHoursService`, `FoxTime`, `PersonnelImporter`, `AccountingImporter`, `FormulaInterpreter`, `LsTotalsCalculator`, `AccountBuilder`, `UchetController`, `SetkaController`.
+Ключевые классы: `PlanirRulesService`, `PlanirControlService`, `ShiftHoursService`, `FoxTime`, `PersonnelImporter`, `AccountingImporter`, `FormulaInterpreter`, `LsTotalsCalculator`, `AccountBuilder`, `UnderworkAllocator`, `UkCopyService`, `DokmenuReportService`, `LsbuhExportService`, `DbfWriter`, `GoldenMonthComparer`, `UchetController`, `SetkaController`, `NsiController`.
 
 ---
 
 ## 9. Что делать в следующей сессии
 
-1. Прочитать этот файл и `armd.md` (не начинать с «набросать НСИ»).
-2. Взять **шаг B** — золотой месяц. Нужны эталонные табельные и `LSH`/`LSBUH` из дампа (это работа пользователя).
-3. Не открывать шаг D/E «чтобы было меню как в DOS».
-4. Если эталона нет — шаг C (повторный ЛС / маршрутные листы), не прыгать в отчёты.
+1. Прочитать этот файл и `armd.md` (не начинать с «набросать бухгалтерию»).
+2. Эталон шага B зафиксирован (2018-11, таб. 0321/0428/2575). Дальше по B: выслуга/премия с живого LKM+SPPREM, тарифы строк `078`/`СМН`/`ВЫХ`, решить `NOCH1` (архив vs `SUM NARJAD`). Пока B не зелёный целиком — не объявлять паритет.
+3. Шаг G: бинарный `LSBUH.DBF` в коде. Не закрывать G как «1С приняла» без живой выгрузки. Не объявлять паритет B.
+4. Шаги C/D/E закрыты. Остаток B: `NOCH1`, `VISL`/`PREMM` на LKM+SPPREM 2018, тарифы `078`/`СМН`/`ВЫХ`.
 
 Если контекст сессии снова оборвётся: направление = этот файл, схемы = `armd.md`, эталон = `ARMNRD`.
 
@@ -348,4 +373,10 @@ php artisan arm:import-dbf --only=nrchas,prem,visl,extras,spprem,tariffs
 | 2026-09-30 | Печать нарядов / выписка: `NaryadPrintService` по `pecnar`. RASST ещё нет. |
 | 2026-09-30 | FoxPro: печать нарядов за диапазон дат → `DOC\ДД.ММ.ГГ.txt` (выписка `…v.txt`). |
 | 2026-10-02 | Документация сверена с кодом: печать в `AGENTS.md` / `armd.md`, поиск ФИО `/naryady/search-people`, `TECHNICAL_DEBT.md`. |
-| 2026-10-02 | Шаг A: входы формул `RAS1LS` (`NRCHAS`/`PREM`/`VISL`/`TEHUCH`/`SPPREM`/тарифы), `/uchet/extras`, `LsTotalsCalculator`. Дальше шаг B (эталонный месяц). |
+| 2026-10-02 | Шаг A: входы формул `RAS1LS` (`NRCHAS`/`PREM`/`VISL`/`TEHUCH`/`SPPREM`/тарифы), `/uchet/extras`, `LsTotalsCalculator`. |
+| 2026-10-02 | Шаг F: PLANIR доведён (формула интервала, NRCHAS, kolkint, экипаж, PRAZD1, контроль сетки, NRDPAR). Эталонный месяц — шаг B, не раньше. |
+| 2026-10-02 | Шаг B: эталон 2018-11 таб. 0321/0428/2575. Импорт `NARJAD`/`NR*`, `arm:golden-month`. `VCHAS1`/`DNI`/`VYH` сходятся. Ночь LSH≠NARJAD, visl/premm без карточки 2018. |
+| 2026-10-05 | Шаг C: два ЛС при смене должности + `LENA`, повторный ЛС `kind=repeat`, `/uchet/sheets`, архив УК `arm_uk_copies` при закрытии. |
+| 2026-10-05 | Шаг D: справки DOKMENU на `/uchet/reports/{kind}`, `PRIM1`/`OTBOR`, ночные только 3+/4+. |
+| 2026-10-05 | Шаг E: `/nsi` кодификаторы KODIF/ELKODIF, RASST, PODPISI, нормативы, NRDPAR/аванс. |
+| 2026-10-07 | Шаг G: `LSBUH.DBF` CP866 (`LsbuhExportService` / `arm:export-lsbuh`). Живая 1С не подтверждала. |

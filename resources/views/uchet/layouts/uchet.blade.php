@@ -18,11 +18,15 @@
         <nav class="p-3 space-y-1 text-sm">
             <a href="{{ route('uchet.index', ['month' => $month ?? date('Y-m')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Учётные карточки</a>
             <a href="{{ route('uchet.accounts', ['month' => $month ?? date('Y-m')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Лицевые счета</a>
+            <a href="{{ route('uchet.sheets', ['date' => $date ?? date('Y-m-d')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Маршрутные листы</a>
             <a href="{{ route('uchet.extras', ['month' => $month ?? date('Y-m')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Доплаты и премия</a>
+            <a href="{{ route('uchet.archive', ['month' => $month ?? date('Y-m')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Архив УК</a>
             <a href="{{ route('uchet.reports', ['month' => $month ?? date('Y-m')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Отчёты</a>
-            <a href="{{ route('uchet.lsbuh', ['month' => $month ?? date('Y-m')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Выгрузка LSBUH</a>
+            <a href="{{ route('uchet.lsbuh.dbf', ['month' => $month ?? date('Y-m')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Выгрузка LSBUH.DBF</a>
+            <a href="{{ route('uchet.lsbuh', ['month' => $month ?? date('Y-m')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">CSV LSBUH</a>
             @if(auth()->user()?->isDispatcher())
                 <a href="{{ route('naryad.index') }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">← Сетка наряда</a>
+                <a href="{{ route('nsi.index') }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">НСИ</a>
             @endif
         </nav>
         <div class="mt-auto p-4 text-xs text-orange-400">

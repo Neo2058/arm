@@ -40,6 +40,7 @@ class ArmShiftBreakdown extends Model
         'morning_code',
         'morning_shift',
         'notes',
+        'extra_mark',
     ];
 
     protected $casts = [

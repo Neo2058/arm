@@ -33,6 +33,7 @@ Route::prefix('naryad')->middleware(EnsureDispatcher::class)->group(function () 
     Route::get('/partial/users', [CatalogsController::class, 'partialUsers'])->name('naryad.partial.users');
     Route::get('/partial/deviations', [CatalogsController::class, 'partialDeviations'])->name('naryad.partial.deviations');
     Route::get('/partial/norms', [CatalogsController::class, 'partialNorms'])->name('naryad.partial.norms');
+    Route::get('/partial/control', [SetkaController::class, 'partialControl'])->name('naryad.partial.control');
 
     Route::post('/user-profile/{profile}/flags', [CatalogsController::class, 'updateUserFlags'])
         ->name('naryad.user-profile.update-flags');

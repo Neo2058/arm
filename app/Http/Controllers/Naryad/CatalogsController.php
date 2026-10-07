@@ -419,6 +419,12 @@ class CatalogsController extends Controller implements HasMiddleware
         ]);
 
         $norm = NaryadNorm::firstOrCreate([]);
+        if (isset($data['planir']) && is_array($data['planir'])) {
+            $data['planir'] = array_replace(
+                app(PlanirRulesService::class)->settings($norm),
+                $data['planir']
+            );
+        }
         $norm->update($data);
 
         ClickHouseService::log('naryad.norm.updated', $norm->id, $data);

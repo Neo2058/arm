@@ -37,15 +37,22 @@
             <p class="text-[11px] text-orange-500 mb-3">Блокируют назначение в клетке. Схема — <code>armd.md</code>, шаг 3.</p>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                 <div>
-                    <label class="block text-xs mb-1">Интервал смен, ч</label>
+                    <label class="block text-xs mb-1">Режим интервала</label>
+                    <select id="planir-interval-mode" class="w-full border rounded-2xl px-3 py-2">
+                        <option value="formula" @selected(($planir['interval_mode'] ?? 'formula') === 'formula')>формула часы×2 (NR_12 −)</option>
+                        <option value="fixed" @selected(($planir['interval_mode'] ?? '') === 'fixed')>фиксированные 12/42/66 (NR_12 +)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs mb-1">Мин. интервал смен, ч</label>
                     <input id="planir-interval" type="number" class="w-full border rounded-2xl px-3 py-2" value="{{ $planir['interval_hours'] }}">
                 </div>
                 <div>
-                    <label class="block text-xs mb-1">Выходной, ч</label>
+                    <label class="block text-xs mb-1">Выходной, ч (фикс. режим)</label>
                     <input id="planir-rest" type="number" class="w-full border rounded-2xl px-3 py-2" value="{{ $planir['rest_day_hours'] }}">
                 </div>
                 <div>
-                    <label class="block text-xs mb-1">Два выходных, ч</label>
+                    <label class="block text-xs mb-1">Два выходных, ч (фикс. режим)</label>
                     <input id="planir-two-rest" type="number" class="w-full border rounded-2xl px-3 py-2" value="{{ $planir['two_rest_days_hours'] }}">
                 </div>
                 <div>
@@ -55,6 +62,31 @@
                 <div>
                     <label class="block text-xs mb-1">Макс. дней без выходного</label>
                     <input id="planir-max-work" type="number" class="w-full border rounded-2xl px-3 py-2" value="{{ $planir['max_days_without_rest'] }}">
+                </div>
+                <div>
+                    <label class="block text-xs mb-1">NR_kint, ч (короткий интервал)</label>
+                    <input id="planir-kint" type="number" step="0.01" class="w-full border rounded-2xl px-3 py-2" value="{{ $planir['short_interval_hours'] }}">
+                </div>
+                <div>
+                    <label class="block text-xs mb-1">Макс. коротких интервалов</label>
+                    <input id="planir-max-kint" type="number" class="w-full border rounded-2xl px-3 py-2" value="{{ $planir['max_short_intervals'] }}">
+                </div>
+                <div>
+                    <label class="block text-xs mb-1">Допуск сверх NRCHAS, ч</label>
+                    <input id="planir-doppr" type="number" step="0.01" class="w-full border rounded-2xl px-3 py-2" value="{{ $planir['norm_extra_hours'] }}">
+                </div>
+                <div>
+                    <label class="block text-xs mb-1">Линия (лиц на смену)</label>
+                    <select id="planir-line-mode" class="w-full border rounded-2xl px-3 py-2">
+                        <option value="1" @selected((int) $planir['line_mode'] === 1)>1 (Печатники)</option>
+                        <option value="2" @selected((int) $planir['line_mode'] === 2)>2</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <label class="inline-flex items-center gap-2 text-xs mb-2">
+                        <input id="planir-subtract-holiday" type="checkbox" @checked($planir['subtract_holiday_hours'])>
+                        Вычитать праздничные из нормы (NR_prazd −)
+                    </label>
                 </div>
             </div>
         </div>
@@ -124,11 +156,17 @@
                     }
                 }
                 payload.planir = {
+                    interval_mode: document.getElementById('planir-interval-mode')?.value || 'formula',
                     interval_hours: Number(document.getElementById('planir-interval')?.value || 12),
                     rest_day_hours: Number(document.getElementById('planir-rest')?.value || 42),
                     two_rest_days_hours: Number(document.getElementById('planir-two-rest')?.value || 66),
                     min_days_between_rests: Number(document.getElementById('planir-gap')?.value || 3),
-                    max_days_without_rest: Number(document.getElementById('planir-max-work')?.value || 12)
+                    max_days_without_rest: Number(document.getElementById('planir-max-work')?.value || 12),
+                    short_interval_hours: Number(document.getElementById('planir-kint')?.value || 0),
+                    max_short_intervals: Number(document.getElementById('planir-max-kint')?.value || 3),
+                    norm_extra_hours: Number(document.getElementById('planir-doppr')?.value || 40),
+                    line_mode: Number(document.getElementById('planir-line-mode')?.value || 1),
+                    subtract_holiday_hours: !!document.getElementById('planir-subtract-holiday')?.checked
                 };
 
                 const original = normBtn.textContent;

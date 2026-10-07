@@ -17,7 +17,9 @@ class ArmImportDbf extends Command
 {
     protected $signature = 'arm:import-dbf
                             {path? : Каталог с DBF (Datanrd) или путь к ARMNRD}
-                            {--only= : graphs,breakdowns,holidays,calendar,personnel,appointments,absences,adjustments,formulas,chas2,nrchas,prem,visl,extras,spprem,tariffs}';
+                            {--only= : graphs,breakdowns,holidays,calendar,personnel,appointments,absences,adjustments,formulas,chas2,naryad,nrchas,nrdpar,prem,visl,extras,spprem,tariffs,codes,signatures,rosters}
+                            {--month= : YYYY-MM, фильтр для naryad/chas2}
+                            {--tabs= : табельные через запятую, фильтр для naryad/chas2}';
 
     protected $description = 'Импорт справочников АРМ-ЛБ из FoxPro DBF';
 
@@ -33,7 +35,7 @@ class ArmImportDbf extends Command
         $only = $this->option('only');
         $targets = $only
             ? array_filter(array_map('trim', explode(',', strtolower((string) $only))))
-            : ['graphs', 'breakdowns', 'holidays', 'calendar', 'personnel', 'appointments', 'absences', 'adjustments', 'formulas', 'chas2', 'nrchas', 'prem', 'visl', 'extras', 'spprem', 'tariffs'];
+            : ['graphs', 'breakdowns', 'holidays', 'calendar', 'personnel', 'appointments', 'absences', 'adjustments', 'formulas', 'chas2', 'nrchas', 'nrdpar', 'prem', 'visl', 'extras', 'spprem', 'tariffs', 'codes', 'signatures', 'rosters'];
 
         $this->info('Источник: '.$path);
 
@@ -66,13 +68,25 @@ class ArmImportDbf extends Command
             $this->info("Формулы ЛС: {$count}");
         }
         if (in_array('chas2', $targets, true)) {
-            $count = (new AccountingImporter)->importSecondPersonHours($path);
+            $count = (new AccountingImporter)->importSecondPersonHours($path, $this->monthFilter(), $this->tabsFilter());
             $this->info("Часы 2 лица: {$count}");
+        }
+        if (in_array('naryad', $targets, true) || in_array('narjad', $targets, true)) {
+            $count = (new AccountingImporter)->importNaryad($path, $this->monthFilter(), $this->tabsFilter());
+            $this->info("Наряды NARJAD: {$count}");
         }
         $importer = new AccountingImporter;
         if (in_array('nrchas', $targets, true) || in_array('norms', $targets, true)) {
             $count = $importer->importMonthNorms($path);
             $this->info("Нормы часов NRCHAS: {$count}");
+        }
+        if (in_array('nrdpar', $targets, true) || in_array('norms', $targets, true)) {
+            $count = $importer->importNrdpar($path);
+            if ($count > 0) {
+                $this->info('NRDPAR: параметры PLANIR и организации записаны в naryad_norms.planir');
+            } else {
+                $this->warn('NRDPAR.DBF не найден или пуст');
+            }
         }
         if (in_array('prem', $targets, true)) {
             $count = $importer->importPremiumRates($path);
@@ -90,9 +104,18 @@ class ArmImportDbf extends Command
             $count = $importer->importMonthPremiums($path);
             $this->info("Премия месяца SPPREM: {$count}");
         }
-        if (in_array('tariffs', $targets, true)) {
-            $count = $importer->importTariffs($path);
-            $this->info("Тарифы и виды выплат ELKODIF: {$count}");
+        if (in_array('tariffs', $targets, true) || in_array('codes', $targets, true) || in_array('kodif', $targets, true)) {
+            $books = $importer->importCodeBooks($path);
+            $codes = $importer->importCodes($path);
+            $this->info("Кодификаторы KODIF: {$books}, элементы ELKODIF: {$codes}");
+        }
+        if (in_array('signatures', $targets, true) || in_array('podpisi', $targets, true)) {
+            $count = $importer->importSignatures($path);
+            $this->info("Подписи PODPISI: {$count}");
+        }
+        if (in_array('rosters', $targets, true) || in_array('rasst', $targets, true)) {
+            $count = $importer->importRosters($path);
+            $this->info("Расстановка RASST: {$count}");
         }
 
         $this->info('Готово. Схема — armd.md');
@@ -128,6 +151,34 @@ class ArmImportDbf extends Command
         }
 
         return null;
+    }
+
+    private function monthFilter(): ?string
+    {
+        $month = trim((string) $this->option('month'));
+        if ($month === '') {
+            return null;
+        }
+        if (! preg_match('/^\d{4}-\d{2}$/', $month)) {
+            $this->warn('--month должен быть YYYY-MM, фильтр пропущен.');
+
+            return null;
+        }
+
+        return $month;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function tabsFilter(): array
+    {
+        $raw = trim((string) $this->option('tabs'));
+        if ($raw === '') {
+            return [];
+        }
+
+        return array_values(array_filter(array_map('trim', explode(',', $raw))));
     }
 
     /**
@@ -246,6 +297,7 @@ class ArmImportDbf extends Command
                 'morning_code' => $this->nullableString($row['UTRO'] ?? null),
                 'morning_shift' => $this->nullableString($row['SMUT'] ?? null),
                 'notes' => $this->nullableString(mb_substr((string) ($row['PRIM'] ?? ''), 0, 255)),
+                'extra_mark' => $this->nullableString($row['PRIM1'] ?? null),
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
@@ -278,7 +330,7 @@ class ArmImportDbf extends Command
                 'hours_evening', 'hours_evening_reserve', 'hours_evening_2', 'hours_evening_2_reserve',
                 'hours_break', 'hours_break_reserve', 'hours_break_2', 'hours_break_2_reserve',
                 'appearance_start', 'appearance_end', 'content', 'morning_code', 'morning_shift',
-                'notes', 'updated_at',
+                'notes', 'extra_mark', 'updated_at',
             ]
         );
     }

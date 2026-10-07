@@ -7,6 +7,7 @@ use App\Http\Middleware\CheckDynamicBarrier;
 use App\Models\ArmHoliday;
 use App\Models\ArmShiftBreakdown;
 use App\Models\NaryadAssignment;
+use App\Models\NaryadNorm;
 use App\Models\NaryadQuota;
 use App\Models\ScheduleType;
 use App\Models\User;
@@ -114,6 +115,68 @@ class ArmImportAndPlanningHoursTest extends TestCase
             'shift_code' => '1',
             'hours_total' => 7.4,
         ]);
+    }
+
+    public function test_import_nrdpar_merges_planir_and_keeps_early_window(): void
+    {
+        NaryadNorm::create([
+            'year_hours' => 2000,
+            'month_hours' => 166,
+            'week_hours' => 48,
+            'min_rest_hours' => 8,
+        ]);
+        $dir = sys_get_temp_dir().'/arm_nrdpar_'.uniqid();
+        mkdir($dir);
+        DbfWriter::write($dir.'/NRDPAR.DBF', [
+            ['name' => 'NR_12', 'type' => 'C', 'length' => 2],
+            ['name' => 'NR_1VIH', 'type' => 'N', 'length' => 3],
+            ['name' => 'NR_2VIH', 'type' => 'N', 'length' => 3],
+            ['name' => 'NR_MINV', 'type' => 'N', 'length' => 3],
+            ['name' => 'NR_NOVIH', 'type' => 'N', 'length' => 3],
+            ['name' => 'NR_DOPPR', 'type' => 'N', 'length' => 5, 'decimal' => 2],
+            ['name' => 'NR_LINIA', 'type' => 'N', 'length' => 1],
+            ['name' => 'NR_PRAZD', 'type' => 'C', 'length' => 1],
+            ['name' => 'NR_KINT', 'type' => 'N', 'length' => 5, 'decimal' => 2],
+            ['name' => 'NR_NMN', 'type' => 'N', 'length' => 3],
+            ['name' => 'NR_NMK', 'type' => 'N', 'length' => 3],
+            ['name' => 'NR_NSM1', 'type' => 'C', 'length' => 2],
+            ['name' => 'NR_NSM2', 'type' => 'C', 'length' => 2],
+            ['name' => 'NR_2RAN1', 'type' => 'N', 'length' => 5, 'decimal' => 2],
+            ['name' => 'NR_2RAN2', 'type' => 'N', 'length' => 5, 'decimal' => 2],
+            ['name' => 'NR_BRIG', 'type' => 'C', 'length' => 2],
+            ['name' => 'NR_P1L', 'type' => 'L', 'length' => 1],
+        ], [[
+            'NR_12' => '-+',
+            'NR_1VIH' => 42,
+            'NR_2VIH' => 66,
+            'NR_MINV' => 3,
+            'NR_NOVIH' => 12,
+            'NR_DOPPR' => '40.00',
+            'NR_LINIA' => 1,
+            'NR_PRAZD' => '-',
+            'NR_KINT' => '0.00',
+            'NR_NMN' => 1,
+            'NR_NMK' => 35,
+            'NR_NSM1' => '3+',
+            'NR_NSM2' => '4+',
+            'NR_2RAN1' => '0.00',
+            'NR_2RAN2' => '0.00',
+            'NR_BRIG' => '10',
+            'NR_P1L' => false,
+        ]]);
+
+        $code = Artisan::call('arm:import-dbf', ['path' => $dir, '--only' => 'nrdpar']);
+        $this->assertSame(0, $code);
+
+        $planir = NaryadNorm::query()->first()->planir;
+        $this->assertSame('formula', $planir['interval_mode']);
+        $this->assertEquals(40, $planir['norm_extra_hours']);
+        $this->assertTrue($planir['subtract_holiday_hours']);
+        $this->assertSame(1, $planir['line_mode']);
+        $this->assertContains('5+', $planir['night_shift_codes']);
+        $this->assertEquals(5.0, $planir['early_from']);
+        $this->assertEquals(8.0, $planir['early_to']);
+        $this->assertEquals(10, $planir['brigadier_percent']);
     }
 
     public function test_assign_writes_hours_from_breakdown(): void
