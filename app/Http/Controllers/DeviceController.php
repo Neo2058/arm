@@ -26,7 +26,7 @@ class DeviceController extends Controller
     public function registerDevice(Request $request)
     {
         $request->validate([
-            'device_key' => 'required|string',
+            'device_key' => 'required|string|max:255',
             'device_name' => 'required|string|max:255',
         ]);
 

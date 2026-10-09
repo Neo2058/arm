@@ -16,7 +16,7 @@
 | Файлы документов/обучения | `FileProxyService` + signed routes |
 | Наряд | `Naryad/{Planning,Setka,Catalogs,Breakdowns,Personnel,Print}Controller` |
 | Печать нарядов | `NaryadPrintService` (`pecnar`): `/naryad/partial/print`, `/naryad/print` (`kind` = full или extract) |
-| Поиск ФИО в выданных нарядах | `POST /naryady/search-people` + `InstructorNaryad\NaryadDocumentLoader`; журнал — `/journal/naryad-search` |
+| Выкладка нарядов | `NaryadIssuePublisher` + `/naryady` (личный TXT + общий PDF); журнал — `/journal/naryad-search` |
 | Маршруты | `routes/*.php` по доменам, в т.ч. `uchet.php` |
 | Заявки `/about` | валидация полей, согласие, проверка табельного/ФИО в БД |
 | Мобильный API | Sanctum `/api/mobile`: логин, документы, обучение, комментарии, signed файлы |
@@ -46,13 +46,16 @@
 ## Still open
 
 ### 1. CSRF + Livewire workarounds
-`VerifyCsrfToken`, skip в Check-middleware, punycode/`SESSION_DOMAIN`. На проде HTTPS (`SESSION_SECURE_COOKIE=true`). Не чистить «заодно» с загрузками Filament.
+2026-10-08: обходы в `VerifyCsrfToken` и skip активности на Livewire удалены, подключение web middleware исправлено.
+Проверено локально; браузерный smoke HTTPS/Filament и production-выкладка ещё не выполнены.
+`SESSION_DOMAIN`/cookie-конфигурация не менялась. Статусы и порядок выкладки — `SECURITY_ROADMAP.md`.
 
-### 2. Три Check-middleware с одинаковыми skip-путями
-`CheckUserExistence`, `CheckDeviceBinding`, `CheckDynamicBarrier`. Роли уже через `canBypassAccessBarriers()`, списки путей всё ещё в трёх местах.
+### 2. Исключения device/barrier middleware
+`CheckDeviceBinding`, `CheckDynamicBarrier`: списки исключений повторяются. `CheckUserExistence` больше не пропускает Livewire.
+Роли уже через `canBypassAccessBarriers()`. Убирать device/barrier исключения только после проверки lifecycle Filament.
 
 ### 3. Прямые MinIO URL
-`NaryadViewerController` (просмотр PDF: `show` / `search`) и `RospisiController` → `Storage::temporaryUrl()`. Пакетный поиск ФИО уже на сервере и не отдаёт MinIO URL. Документы/обучение — через прокси. Filament `FileUpload` не трогать мимоходом.
+`RospisiController` → `Storage::temporaryUrl()`. Общий PDF нарядов — `FileProxyService` (`/naryady/{id}/pdf`). Документы/обучение — через прокси. Filament `FileUpload` не трогать мимоходом.
 
 ### 4. Filament `getUploadedFileUsing`
 Крупные замыкания в `DocumentResource` / `TrainingMaterialResource`. Вынос только без смены disk / visibility / формы ответа.

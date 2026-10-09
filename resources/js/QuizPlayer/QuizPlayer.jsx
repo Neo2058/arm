@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, CheckCircle2, ChevronRight } from 'lucide-react';
 import axios from 'axios'; // 1. Не забудь добавить импорт
@@ -8,30 +8,17 @@ export default function QuizPlayer({ quiz }) {
     const [selectedAnswers, setSelectedAnswers] = useState({});
     const [isFinished, setIsFinished] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false); // Для индикации загрузки
+    const submissionPending = useRef(false);
     const [timeLeft, setTimeLeft] = useState(quiz.time_limit * 60);
-
-    // 2. Функция расчета баллов
-    const calculateScore = () => {
-        let score = 0;
-        quiz.questions.forEach(question => {
-            const selectedId = selectedAnswers[question.id];
-            const correctOption = question.answers.find(a => a.is_correct);
-            if (correctOption && selectedId === correctOption.id) {
-                score++;
-            }
-        });
-        return score;
-    };
 
     // 3. Функция отправки результатов
     const finishTest = async () => {
-        if (isSubmitting) return;
+        if (submissionPending.current || isFinished) return;
+        submissionPending.current = true;
         setIsSubmitting(true);
 
         const resultsData = {
             quiz_id: quiz.id,
-            score: calculateScore(),
-            total_questions: quiz.questions.length,
             time_spent: quiz.time_limit * 60 - timeLeft,
             answers_log: selectedAnswers
         };
@@ -44,19 +31,21 @@ export default function QuizPlayer({ quiz }) {
             console.error("Ошибка сохранения результатов", error);
             alert("Не удалось сохранить результат. Попробуйте еще раз.");
         } finally {
+            submissionPending.current = false;
             setIsSubmitting(false);
         }
     };
 
     // Таймер
     useEffect(() => {
+        if (isFinished) return;
         if (timeLeft <= 0) {
             finishTest(); // Автоматически завершаем при выходе времени
             return;
         }
         const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
         return () => clearInterval(timer);
-    }, [timeLeft]);
+    }, [timeLeft, isFinished]);
 
     const currentQuestion = quiz.questions[currentQuestionIndex];
 

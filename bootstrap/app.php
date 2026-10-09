@@ -5,7 +5,7 @@ use App\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken as BaseVerifyCsrfToken;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -17,15 +17,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
             CheckUserExistence::class, // 1. Проверка бана/удаления (для всех web роутов)
+        ], replace: [
+            ValidateCsrfToken::class => VerifyCsrfToken::class,
         ]);
         $middleware->encryptCookies(except: [
             'device_key',
         ]);
-
-        // Use our custom VerifyCsrfToken that excludes Livewire routes.
-        // This fixes persistent 419 errors on /livewire/update and /livewire/upload-file
-        // after file uploads in Filament (common with nginx, IDN domains, large payloads, session nuances).
-        $middleware->replace(BaseVerifyCsrfToken::class, VerifyCsrfToken::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -9,6 +9,7 @@ use App\Models\QuizResult;
 use App\Services\AdminNotificationService;
 use App\Services\ClickHouseService;
 use App\Services\FileProxyService;
+use App\Services\QuizService;
 use App\Services\TelegramService;
 
 class DocumentController extends Controller
@@ -119,7 +120,12 @@ class DocumentController extends Controller
         ]);
     }
 
-    public function showGeneralQuiz(Quiz $quiz)
+    public function showQuiz(Quiz $quiz, QuizService $quizzes)
+    {
+        return view('quiz.show', ['quiz' => $quizzes->playerData($quiz, auth()->user())]);
+    }
+
+    public function showGeneralQuiz(QuizService $quizzes)
     {
         // Жадная загрузка вопросов, ответов, ссылок и самих документов
         $quiz = Quiz::whereNull('document_id')->where('is_active', true)->first();
@@ -128,36 +134,7 @@ class DocumentController extends Controller
             return redirect()->route('mainMenu')->with('error', 'Активных аттестаций не найдено');
         }
 
-        // Собираем все уникальные документы, упомянутые в тесте, и делаем для них S3-ссылки
-        $preSignedUrls = [];
-        foreach ($quiz->questions as $question) {
-            foreach ($question->references as $ref) {
-                if ($ref->document && ! isset($preSignedUrls[$ref->document_id])) {
-                    $preSignedUrls[$ref->document_id] = $this->files->temporarySignedRoute('documents.file', 60, $ref->document_id);
-                }
-            }
-        }
-
-        // Формируем структуру данных для React
-        $quizData = [
-            'id' => $quiz->id,
-            'title' => $quiz->title,
-            'time_limit' => $quiz->time_limit,
-            'questions' => $quiz->questions->map(function ($q) use ($preSignedUrls) {
-                return [
-                    'id' => $q->id,
-                    'question_text' => $q->question_text,
-                    'answers' => $q->answers,
-                    'references' => $q->references->map(function ($r) use ($preSignedUrls) {
-                        return [
-                            'anchor_text' => $r->anchor_text,
-                            'page' => $r->page_number,
-                            'url' => $preSignedUrls[$r->document_id] ?? null,
-                        ];
-                    }),
-                ];
-            }),
-        ];
+        $quizData = $quizzes->playerData($quiz, auth()->user());
 
         $unreadResultsCount = QuizResult::where('user_id', auth()->id())
             ->where('is_viewed', false)

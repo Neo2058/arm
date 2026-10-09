@@ -20,9 +20,13 @@ class DocumentResource extends Resource
 {
     protected static ?string $model = Document::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-document-duplicate';
 
     protected static ?string $navigationLabel = 'Документы';
+
+    protected static ?string $navigationGroup = 'Документы';
+
+    protected static ?int $navigationSort = 1;
 
     public static function form(Form $form): Form
     {

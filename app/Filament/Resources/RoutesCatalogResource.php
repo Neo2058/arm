@@ -26,7 +26,9 @@ class RoutesCatalogResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Каталог маршрутов';
 
-    protected static ?string $navigationGroup = 'Управление временем'; // Сгруппируем для порядка
+    protected static ?string $navigationGroup = 'Справочники смен';
+
+    protected static ?int $navigationSort = 1;
 
     public static function form(Form $form): Form
     {

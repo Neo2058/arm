@@ -22,7 +22,21 @@ class AccessRequestResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Заявки';
 
-    protected static ?int $navigationSort = 10;
+    protected static ?string $navigationGroup = 'Люди и доступ';
+
+    protected static ?int $navigationSort = 2;
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = static::getModel()::query()->where('status', 'pending')->count();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
+    }
 
     public static function form(Form $form): Form
     {
@@ -100,7 +114,8 @@ class AccessRequestResource extends Resource
                         'pending' => 'В ожидании',
                         'approved' => 'Одобрено',
                         'rejected' => 'Отклонено',
-                    ]),
+                    ])
+                    ->default('pending'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

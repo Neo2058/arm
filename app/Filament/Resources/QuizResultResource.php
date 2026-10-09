@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\QuizResultResource\Pages;
-use App\Filament\Resources\QuizResultResource\RelationManagers;
 use App\Models\QuizResult;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -18,9 +17,13 @@ class QuizResultResource extends Resource
 {
     protected static ?string $model = QuizResult::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
 
     protected static ?string $navigationLabel = 'Результаты опросов';
+
+    protected static ?string $navigationGroup = 'Обучение';
+
+    protected static ?int $navigationSort = 4;
 
 
     public static function form(Form $form): Form
@@ -131,13 +134,16 @@ class QuizResultResource extends Resource
         ];
     }
 
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
     public static function getPages(): array
     {
         return [
             'index' => Pages\ListQuizResults::route('/'),
-            'create' => Pages\CreateQuizResult::route('/create'),
             'view' => Pages\ViewQuizResult::route('/{record}'),
-            'edit' => Pages\EditQuizResult::route('/{record}/edit'),
         ];
     }
 }

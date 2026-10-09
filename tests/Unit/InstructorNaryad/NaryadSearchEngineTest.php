@@ -95,6 +95,13 @@ TXT);
         $this->assertSame('БОБРОВ|В|А', $q['key']);
     }
 
+    public function test_query_from_full_name_matches_naryad_initials(): void
+    {
+        $this->assertSame('БОБРОВ В.А', FioParser::queryFromPerson('Бобров Виктор Александрович'));
+        $this->assertSame('БОБРОВ В.А', FioParser::queryFromPerson('БОБРОВ В.А'));
+        $this->assertSame('ЛОГИНОВ Р.А', FioParser::queryFromPerson('ЛОГИНОВ Р.А.'));
+    }
+
     public function test_breakdown_kind_from_pdf_filename(): void
     {
         $this->assertSame('work', \App\Services\InstructorNaryad\BreakdownPdfExtractor::inferKindFromName('Рабочие 2025 (улучш.) v.6.pdf'));

@@ -25,6 +25,10 @@ class UserDeviceResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Устройства';
 
+    protected static ?string $navigationGroup = 'Люди и доступ';
+
+    protected static ?int $navigationSort = 3;
+
     public static function form(Form $form): Form
     {
         return $form

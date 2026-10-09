@@ -6,6 +6,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -14,12 +15,10 @@ use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use App\Http\Middleware\VerifyCsrfToken;
+use App\Http\Middleware\CheckUserExistence;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use App\Filament\Resources\ColumnActivityResource\Widgets\ColumnActivityChart;
-use App\Filament\Resources\TopDocumentsResource\Widgets\TopDocumentsChart;
-use App\Filament\Resources\MonthlyColumnAnalyticsResource\Widgets\MonthlyColumnAnalytics;
 
 
 class AdminPanelProvider extends PanelProvider
@@ -34,6 +33,13 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->navigationGroups([
+                NavigationGroup::make('Люди и доступ'),
+                NavigationGroup::make('Документы'),
+                NavigationGroup::make('Обучение'),
+                NavigationGroup::make('Справочники смен'),
+                NavigationGroup::make('Администрирование'),
+            ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
@@ -42,11 +48,6 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
-                // Сюда прописывать кастомные виджеты, если автоподгрузка не сработала
-                ColumnActivityChart::class,
-                TopDocumentsChart::class,
-                MonthlyColumnAnalytics::class,
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -61,7 +62,8 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ])
+                CheckUserExistence::class,
+            ], isPersistent: true)
             // Ensure CSRF token is always present in <head> for Livewire/Filament AJAX (file uploads etc).
             // Prevents some 419 "page expired" cases when the embedded Livewire token gets out of sync.
             ->renderHook(

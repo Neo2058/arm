@@ -50,7 +50,10 @@ class BarrierController extends Controller
 
     public function verify(Request $request)
     {
-        $request->validate(['answers' => 'required|array|size:4']);
+        $request->validate([
+            'answers' => 'required|array|size:4',
+            'answers.*' => 'required|integer|between:0,3',
+        ]);
 
         $userAnswers = $request->input('answers');
         $correctSequence = $this->getDailySequence();
@@ -62,7 +65,7 @@ class BarrierController extends Controller
                 ClickHouseService::log('barrier_success', 0, 'Успешный проход динамического барьера');
             }
 
-            return response()->json(['status' => 'success', 'redirect' => '/index']);
+            return response()->json(['status' => 'success', 'redirect' => route('mainMenu')]);
         }
 
         // Логируем попытку взлома
@@ -85,4 +88,3 @@ class BarrierController extends Controller
         return response()->json(['status' => 'error', 'message' => 'Доступ заблокирован. Неверный протокол ввода.'], 403);
     }
 }
-

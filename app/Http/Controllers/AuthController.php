@@ -19,10 +19,10 @@ class AuthController extends Controller
     {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
-            'password' => ['required'],
+            'password' => ['required', 'string'],
         ]);
 
-        if (Auth::attempt($credentials, $request->has('remember'))) {
+        if (Auth::attempt([...$credentials, 'is_active' => true], $request->boolean('remember'))) {
             $request->session()->regenerate();
             $request->session()->flash('show_welcome_modal', true);
             ClickHouseService::log('login'); // Логируем вход

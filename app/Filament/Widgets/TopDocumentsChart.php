@@ -1,20 +1,20 @@
 <?php
 
-namespace App\Filament\Resources\TopDocumentsResource\Widgets;
+namespace App\Filament\Widgets;
 
-use Filament\Widgets\ChartWidget;
 use ClickHouseDB\Client;
+use Filament\Widgets\ChartWidget;
 
 class TopDocumentsChart extends ChartWidget
 {
     protected static ?string $heading = 'Топ читаемых документов';
+
     protected static ?int $sort = 2;
 
     protected function getData(): array
     {
         $ch = new Client(config('clickhouse'));
 
-        // Запрос: выбираем топ-5 документов по количеству просмотров
         $result = $ch->select("
             SELECT details as doc_name, count() as total
             FROM default.user_actions
@@ -37,8 +37,8 @@ class TopDocumentsChart extends ChartWidget
                 [
                     'data' => $data,
                     'backgroundColor' => [
-                        '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'
-                    ], // Набор ярких цветов для секторов
+                        '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444',
+                    ],
                 ],
             ],
             'labels' => $labels,
@@ -47,6 +47,6 @@ class TopDocumentsChart extends ChartWidget
 
     protected function getType(): string
     {
-        return 'doughnut'; // Круговая диаграмма с вырезом
+        return 'doughnut';
     }
 }

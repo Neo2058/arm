@@ -23,7 +23,9 @@ class AdminNotificationResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Уведомления';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?string $navigationGroup = 'Люди и доступ';
+
+    protected static ?int $navigationSort = 4;
 
     public static function getNavigationBadge(): ?string
     {

@@ -14,9 +14,13 @@ class DeviationsCatalogResource extends Resource
 {
     protected static ?string $model = DeviationsCatalog::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-clock';
 
     protected static ?string $navigationLabel = 'Каталог отвлечений';
+
+    protected static ?string $navigationGroup = 'Справочники смен';
+
+    protected static ?int $navigationSort = 2;
 
     public static function form(Form $form): Form
     {

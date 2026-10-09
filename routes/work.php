@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/naryady', [NaryadViewerController::class, 'index'])->name('naryady.index');
 Route::post('/naryady/search-people', [NaryadViewerController::class, 'searchPeople'])->name('naryady.search-people');
+Route::get('/naryady/{naryad}/pdf', [NaryadViewerController::class, 'pdf'])->name('naryady.pdf');
+Route::get('/naryady/{naryad}/mine', [NaryadViewerController::class, 'mine'])->name('naryady.mine');
 Route::get('/naryady/{naryad}', [NaryadViewerController::class, 'show'])->name('naryady.show');
 Route::get('/naryady/{naryad}/search', [NaryadViewerController::class, 'search'])->name('naryady.search');
 

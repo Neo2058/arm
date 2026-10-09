@@ -10,23 +10,22 @@ class CheckUserExistence
 {
     public function handle(Request $request, Closure $next)
     {
-        // Never interfere with Livewire updates or Filament internal calls (prevents 419 / session destroy during AJAX)
-        if ($request->is('livewire*') || $request->is('filament*') || $request->routeIs('livewire.*')) {
-            return $next($request);
-        }
-
         // Проверяем только авторизованных пользователей
         if (Auth::check()) {
             $user = Auth::user();
 
             // Делаем быстрый запрос в базу, чтобы проверить, существует ли пользователь и активен ли он
             // Использование fresh() принудительно перечитывает данные из БД в обход кеша сессии
-            if (!$user || !$user->fresh() || !$user->is_active) {
+            if (! $user?->fresh()?->is_active) {
 
                 // Если пользователь удален или заблокирован — мгновенно уничтожаем сессию
                 Auth::logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
+
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => 'Аккаунт недоступен.'], 403);
+                }
 
                 // Отправляем на логин с сообщением
                 return redirect()->route('login')->withErrors([

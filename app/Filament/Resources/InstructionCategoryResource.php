@@ -16,11 +16,11 @@ class InstructionCategoryResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-folder';
 
-    protected static ?string $navigationGroup = 'Росписи и формуляр';
+    protected static ?string $navigationGroup = 'Документы';
 
     protected static ?string $navigationLabel = 'Папки инструктажей';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 3;
 
     public static function form(Form $form): Form
     {

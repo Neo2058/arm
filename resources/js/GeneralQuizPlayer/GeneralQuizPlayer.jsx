@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, BookOpen, X, ChevronRight, CheckCircle2 } from 'lucide-react';
 import axios from 'axios';
@@ -7,38 +7,40 @@ export default function GeneralQuizPlayer({ quiz }) {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [selectedAnswers, setSelectedAnswers] = useState({});
     const [isFinished, setIsFinished] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const submissionPending = useRef(false);
     const [timeLeft, setTimeLeft] = useState(quiz.time_limit * 60);
 
     // Стейт для модального окна просмотра документа
     const [activePdf, setActivePdf] = useState(null); // { url, page, title }
 
     useEffect(() => {
+        if (isFinished) return;
         if (timeLeft <= 0) { handleFinish(); return; }
         const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
         return () => clearInterval(timer);
-    }, [timeLeft]);
+    }, [timeLeft, isFinished]);
 
     const currentQuestion = quiz.questions[currentQuestionIndex];
 
     const handleFinish = async () => {
-        // Подсчет баллов
-        let score = 0;
-        quiz.questions.forEach(q => {
-            const correct = q.answers.find(a => a.is_correct || a.is_correct == 1);
-            if (correct && selectedAnswers[q.id] === correct.id) score++;
-        });
+        if (submissionPending.current || isFinished) return;
+        submissionPending.current = true;
+        setIsSubmitting(true);
 
         try {
             await axios.post('/api/quiz-results', {
                 quiz_id: quiz.id,
-                score: score,
-                total_questions: quiz.questions.length,
                 time_spent: quiz.time_limit * 60 - timeLeft,
                 answers_log: selectedAnswers
             });
             setIsFinished(true);
         } catch (e) {
             console.error(e);
+            alert('Не удалось сохранить результат. Попробуйте еще раз.');
+        } finally {
+            submissionPending.current = false;
+            setIsSubmitting(false);
         }
     };
 
@@ -104,7 +106,7 @@ export default function GeneralQuizPlayer({ quiz }) {
                 </div>
 
                 <button
-                    disabled={!selectedAnswers[currentQuestion.id]}
+                    disabled={!selectedAnswers[currentQuestion.id] || isSubmitting}
                     onClick={() => currentQuestionIndex < quiz.questions.length - 1 ? setCurrentQuestionIndex(c => c + 1) : handleFinish()}
                     className="w-full py-4 bg-white text-black font-bold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50"
                 >

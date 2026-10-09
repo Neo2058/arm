@@ -115,7 +115,7 @@
 
 Данные обычно передаются через `window.__QUIZ_DATA__`, `window.__GENERAL_QUIZ_DATA__`, `window.__DOCUMENTS_TREE__` и data-атрибуты.
 
-Просмотр выданных нарядов (`/naryady`) — React-остров `NaryadViewer`. Пакетный поиск ФИО идёт на сервер (`POST /naryady/search-people` → `NaryadDocumentLoader` + `SearchEngine`), не через pdf.js в браузере. PDF в просмотрщике по-прежнему через `Storage::temporaryUrl()` — это открытый долг, не трогать мимоходом.
+Просмотр выданных нарядов (`/naryady`) — React-остров `NaryadViewer`. Пользователь видит свой файл (имя = ФИО) и общий PDF без отбора. Сборку файлов делает админ (`NaryadIssuePublisher`, ядро как в C++ `searching`). Поиск ФИО для инструктора — `/journal/naryad-search`. PDF общего наряда — `GET /naryady/{id}/pdf` через `FileProxyService`.
 
 Стек фронта — JSX-острова без TypeScript. Не начинать массовый JS→TS до закрытия долга в `TECHNICAL_DEBT.md`: долг там PHP (CSRF, middleware, MinIO, Filament, два расчёта зарплаты).
 
@@ -130,6 +130,9 @@
 - После правок доступа, файлов или маршрутов гоняй существующие feature-тесты (`JournalAccessTest`, `FileProxyTest`, `NaryadPlanningTest`, `WebRoutesSplitTest`, `UserRoleAccessTest`).
 
 ### Работа с квизами и документами
+- `QuizService` проверяет доступ при открытии и отправке, формирует данные игрока без `is_correct` и считает балл на сервере.
+- `/api/quiz-results` принимает `answers_log` (question ID → answer ID); клиентские `score`/`total_questions` игнорируются.
+- При правках квизов backend и frontend build выкладывать вместе; порядок — `SECURITY_ROADMAP.md`.
 - При изменении структуры квиза/вопросов/ответов/ссылок на инструкции обязательно поддерживай вложенные Repeater'ы в `QuizResource`.
 - `QuestionReference` — это связь "документ + страница + якорный текст". Не ломай эту механику.
 - При добавлении нового типа квиза используй существующий `GeneralQuizPlayer` / `QuizPlayer` как референс.
@@ -148,15 +151,24 @@
 ### Filament
 - Основная панель: `/admin` (`AdminPanelProvider`).
 - Цвет — Amber.
-- Дашборд содержит кастомные виджеты аналитики (`ColumnActivityChart`, `TopDocumentsChart`, `MonthlyColumnAnalytics`).
+- Группы меню: «Люди и доступ», «Документы», «Обучение», «Справочники смен», «Администрирование».
+- Дашборд: очередь заявок/уведомлений/устройств + виджеты аналитики в `app/Filament/Widgets/`.
+- Выкладка нарядов (`NaryadResource`): TXT + разбивка смен + общий PDF. Сетку `/naryad` сюда не дублировать.
 - Новые ресурсы создавай в `app/Filament/Resources/` с полными Pages (List/Create/Edit).
 
 ### Docker и окружение
+- При обновлении PHP-зависимостей сохраняй `composer.config.platform.php = 8.2.0`; проверяй реальный PHP контейнера через `composer check-platform-reqs --no-dev`.
+- Обновление зависимостей безопасности и открытые mobile advisories — `SECURITY_DEPENDENCIES.md`; production устанавливает зависимости по lock-файлам.
 - Основной способ запуска — `docker compose up`.
 - При локальной разработке без Docker помни про зависимости (postgres host = `postgres`, clickhouse = `clickhouse` и т.д. в конфигах).
 - Миграции и сиды должны работать в контейнере.
 
 ### Роли и доступ
+- CSRF обязателен для web, Filament и Livewire; `X-Livewire` не является основанием для исключения.
+- `CheckUserExistence` проверяет активность также на Livewire; в Filament auth middleware сохраняется при обновлении компонентов.
+- Mobile API: после `auth:sanctum` обязателен `EnsureActiveApiUser`. Деактивация через модель отзывает токены;
+  массовый query-builder/SQL update не запускает этот отзыв (проверка активности всё равно блокирует запросы).
+- План усиления безопасности и ручная выкладка без CI/CD — `SECURITY_ROADMAP.md`.
 - Роли — `App\Enums\UserRole`. Канонический нарядчик: `dispatcher`. Строка `naryadchik` только как алиас в `UserRole::safeFrom()` (старые JSON `allowed_roles`).
 - Проверки в PHP: `User::isAdmin()`, `isSuperAdmin()`, `isInstructor()`, `isDispatcher()`, `isDriver()`, `isStudent()`, `canBypassAccessBarriers()`, `canViewRospisiStatistics()`, `canAccessByRoles()`.
 - Filament (`canAccessPanel`): только `SUPER_ADMIN` и `ADMIN`.
@@ -206,6 +218,6 @@ php artisan optimize:clear
 
 ---
 
-**Последнее обновление:** 2026-10-07 (шаг G: `LSBUH.DBF` CP866)
+**Последнее обновление:** 2026-10-09 (безопасность: серверный расчёт и доступ к квизам)
 
 Этот файл имеет высокий приоритет и будет автоматически подгружаться в контекст AI при работе в директории проекта.

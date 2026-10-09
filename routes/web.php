@@ -30,7 +30,7 @@ Route::post('/about/request', [AccessRequestController::class, 'submit'])
     ->middleware('throttle:5,60');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+Route::post('/login', [AuthController::class, 'login'])->name('login.post')->middleware('throttle:login');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 /*

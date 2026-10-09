@@ -7,6 +7,7 @@
     <script defer>
         window.__NARYADS__ = @js($naryads);
         window.__IS_ADMIN__ = @js($isAdmin ?? false);
+        window.__NARYAD_USER_FILE__ = @js($userFileName ?? '');
     </script>
 </div>
 @endsection

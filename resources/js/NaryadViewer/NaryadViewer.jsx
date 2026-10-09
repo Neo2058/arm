@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, Eye, Phone, BookOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Plus, Trash2, Copy } from 'lucide-react';
 
-export default function NaryadViewer({ naryads = [], isAdmin = false }) {
+export default function NaryadViewer({ naryads = [], isAdmin = false, userFileName = '' }) {
     // Read initial tab from query for sidebar deep links
     const getInitialTab = () => {
         if (typeof window !== 'undefined') {
@@ -13,9 +13,7 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
 
     const [activeTab, setActiveTab] = useState(getInitialTab);
 
-    const [search, setSearch] = useState('');
-    const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo] = useState('');
+    const [selectedIssueId, setSelectedIssueId] = useState(naryads[0]?.id ?? null);
     const [selected, setSelected] = useState(null);
     const [pdfUrl, setPdfUrl] = useState(null);
 
@@ -66,27 +64,12 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
     const [newExpShift, setNewExpShift] = useState('');
     const [newExpText, setNewExpText] = useState('');
 
-    // === Новый функционал: Пакетный поиск по именам (аналог старой C++ программы) ===
-    const [searchLists, setSearchLists] = useState(() => {
-        const saved = localStorage.getItem('naryad_search_lists');
-        return saved ? JSON.parse(saved) : [];
-    });
-    const [newSearchListName, setNewSearchListName] = useState('');
-    const [newQueryForList, setNewQueryForList] = useState('');
-    const [editingListId, setEditingListId] = useState(null);
-    const [selectedSearchListIds, setSelectedSearchListIds] = useState([]);
-    const [selectedNaryadIdsForSearch, setSelectedNaryadIdsForSearch] = useState([]);
-    const [resultText, setResultText] = useState('');
-    const [resultError, setResultError] = useState('');
-    const [resultHits, setResultHits] = useState(0);
-    const [isBatchSearching, setIsBatchSearching] = useState(false);
     const resultFieldRef = useRef(null);
 
-    useEffect(() => {
-        setResultText('');
-        setResultError('');
-        setResultHits(0);
-    }, [selectedSearchListIds, selectedNaryadIdsForSearch]);
+    const selectedIssue = useMemo(
+        () => naryads.find(n => n.id === selectedIssueId) || naryads[0] || null,
+        [naryads, selectedIssueId]
+    );
 
     // Log explanations searches (debounced)
     useEffect(() => {
@@ -96,11 +79,6 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
         }, 800);
         return () => clearTimeout(t);
     }, [expSearch]);
-
-    // Persist search lists
-    useEffect(() => {
-        localStorage.setItem('naryad_search_lists', JSON.stringify(searchLists));
-    }, [searchLists]);
 
     // Logging helper for user activity (phones / naryads / explanations)
     const logAction = (action, details = {}) => {
@@ -137,26 +115,6 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
         localStorage.setItem('naryad_explanations', JSON.stringify(explanations));
     }, [explanations]);
 
-    const filteredNaryads = useMemo(() => {
-        const parseDate = (d) => {
-            if (!d) return null;
-            const parts = d.includes('.') ? d.split('.') : d.split('-');
-            if (parts.length === 3) {
-                if (parts[0].length === 4) return new Date(d);
-                return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-            }
-            return new Date(d);
-        };
-        const from = dateFrom ? new Date(dateFrom) : null;
-        const to = dateTo ? new Date(dateTo) : null;
-        return naryads.filter(n => {
-            const titleMatch = !search.trim() || (n.title || '').toLowerCase().includes(search.toLowerCase());
-            const nDate = parseDate(n.naryad_date_iso || n.naryad_date);
-            const dateMatch = (!from || !nDate || nDate >= from) && (!to || !nDate || nDate <= to);
-            return titleMatch && dateMatch;
-        });
-    }, [naryads, search, dateFrom, dateTo]);
-
     // Phones filtered by FIO (full search)
     const filteredPhones = useMemo(() => {
         const q = phoneSearch.trim().toLowerCase();
@@ -186,6 +144,10 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
         logAction('open_naryad', { id: naryad.id, title: naryad.title, date: naryad.naryad_date });
 
         try {
+            if (naryad.pdf_url) {
+                setPdfUrl(naryad.pdf_url);
+                return;
+            }
             const res = await fetch(`/naryady/${naryad.id}`);
             const data = await res.json();
             setPdfUrl(data.url);
@@ -275,115 +237,14 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
         if (entry) logAction('delete_explanation', { shift: entry.shift });
     };
 
-    // === Search lists handlers (mimics old C++ "search files") ===
-    const addSearchList = () => {
-        const name = newSearchListName.trim();
-        if (!name) return;
-        const newList = { id: Date.now(), name, queries: [] };
-        setSearchLists(prev => [...prev, newList]);
-        setNewSearchListName('');
-        setEditingListId(newList.id);
-    };
-
-    const deleteSearchList = (id) => {
-        setSearchLists(prev => prev.filter(l => l.id !== id));
-        setSelectedSearchListIds(prev => prev.filter(s => s !== id));
-        if (editingListId === id) setEditingListId(null);
-    };
-
-    const addQueryToList = (listId) => {
-        const q = newQueryForList.trim();
-        if (!q) return;
-        setSearchLists(prev => prev.map(l => {
-            if (l.id !== listId) return l;
-            if (l.queries.includes(q)) return l;
-            return { ...l, queries: [...l.queries, q] };
-        }));
-        setNewQueryForList('');
-    };
-
-    const removeQueryFromList = (listId, q) => {
-        setSearchLists(prev => prev.map(l => {
-            if (l.id !== listId) return l;
-            return { ...l, queries: l.queries.filter(x => x !== q) };
-        }));
-    };
-
-    const toggleSearchList = (id) => {
-        setSelectedSearchListIds(prev =>
-            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-        );
-    };
-
-    const toggleNaryadForSearch = (id) => {
-        setSelectedNaryadIdsForSearch(prev =>
-            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-        );
-    };
-
-    const runBatchSearch = async () => {
-        const lists = searchLists.filter(l => selectedSearchListIds.includes(l.id));
-        const naryadsToSearch = filteredNaryads.filter(n => selectedNaryadIdsForSearch.includes(n.id));
-        const queries = lists.flatMap(l => l.queries).map(q => q.trim()).filter(Boolean);
-
-        if (lists.length === 0 || naryadsToSearch.length === 0) {
-            alert('Выберите хотя бы один список поиска и хотя бы один наряд');
-            return;
-        }
-        if (queries.length === 0) {
-            alert('В выбранных списках нет ФИО');
-            return;
-        }
-
-        setIsBatchSearching(true);
-        setResultText('');
-        setResultError('');
-        setResultHits(0);
-
+    const copyPersonalFile = async () => {
+        const text = selectedIssue?.personal_text || '';
+        if (!text) return;
         try {
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-            const res = await fetch('/naryady/search-people', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'X-CSRF-TOKEN': token,
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify({
-                    naryad_ids: naryadsToSearch.map(n => n.id),
-                    queries,
-                }),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (typeof data.text === 'string' && data.text) {
-                setResultText(data.text);
-                setResultHits(Number(data.hits) || 0);
-            }
-            const extra = Array.isArray(data.errors) ? data.errors.filter(Boolean) : [];
-            if (!res.ok) {
-                setResultError(data.message || extra.join('\n') || 'Не удалось выполнить поиск');
-            } else if (extra.length) {
-                setResultError(extra.join('\n'));
-            }
-            requestAnimationFrame(() => {
-                resultFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            });
-        } catch (_) {
-            setResultError('Сеть недоступна, поиск не выполнен.');
-        } finally {
-            setIsBatchSearching(false);
-        }
-    };
-
-    const copyResult = async () => {
-        if (!resultText) return;
-        try {
-            await navigator.clipboard.writeText(resultText);
+            await navigator.clipboard.writeText(text);
             return;
         } catch (_) {
-            /* iOS / старый браузер: копирование через выделение поля */
+            /* iOS / старый браузер */
         }
         const el = resultFieldRef.current;
         if (!el) return;
@@ -626,193 +487,76 @@ export default function NaryadViewer({ naryads = [], isAdmin = false }) {
                 </div>
             </div>
 
-            {/* ========== BLOCK 1: НАРЯДЫ (PDF viewer + list) ========== */}
+            {/* ========== BLOCK 1: личный файл + общий PDF ========== */}
             {activeTab === 'naryady' && (
-                <div>
-                    {/* Mobile friendly filters */}
-                    <div className="mb-4 space-y-3">
-                        <div className="relative">
-                            <Search className="absolute left-4 top-4 h-5 w-5 text-orange-400" />
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                placeholder="Поиск по названию наряда или ФИО"
-                                className="w-full rounded-3xl border border-white/10 bg-white/5 pl-12 py-3.5 text-[15px] text-orange-400 focus:outline-none focus:border-orange-400 placeholder:text-orange-300/50"
-                            />
+                <div className="space-y-4">
+                    {naryads.length === 0 && (
+                        <div className="text-center py-10 text-orange-300 text-sm bg-white/5 rounded-3xl border border-white/10">
+                            Выкладка нарядов ещё не опубликована.
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <div className="flex-1">
-                                <div className="text-[11px] uppercase tracking-widest text-orange-400 ml-1 mb-1">С даты</div>
-                                <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} className="w-full rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-base text-orange-400" />
-                            </div>
-                            <div className="flex-1">
-                                <div className="text-[11px] uppercase tracking-widest text-orange-400 ml-1 mb-1">По дату</div>
-                                <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} className="w-full rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-base text-orange-400" />
-                            </div>
-                            <button
-                                onClick={() => { setSearch(''); setDateFrom(''); setDateTo(''); }}
-                                className="sm:self-end h-12 px-6 rounded-3xl border border-white/10 text-sm active:bg-white/5 text-orange-300"
-                            >
-                                Сбросить
-                            </button>
-                        </div>
-                    </div>
+                    )}
 
-                    {/* Cards grid — always comfortable on mobile */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                        {filteredNaryads.length === 0 && (
-                            <div className="col-span-full text-center py-10 text-orange-300 text-sm bg-white/5 rounded-3xl border border-white/10">Ничего не найдено по фильтрам</div>
-                        )}
-                        {filteredNaryads.map(n => (
-                            <div
-                                key={n.id}
-                                onClick={() => openNaryad(n)}
-                                className="cursor-pointer active:scale-[0.985] rounded-3xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition flex flex-col"
-                            >
-                                <div className="font-semibold text-lg text-orange-300 leading-tight">{n.title}</div>
-                                <div className="text-sm text-orange-400 mt-1">{n.naryad_date}</div>
-                                <div className="mt-auto pt-3 text-[10px] text-right text-orange-500/70">Нажмите для просмотра →</div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="text-xs text-orange-400/60 px-1">Свайп в просмотрщике → листание страниц. Поиск внутри PDF работает.</div>
-
-                    {/* Пакетный поиск ФИО — тот же движок, что в Qt (маршрут, состав, смена, часы) */}
-                    <div className="mt-8 bg-[#0b1018] border border-white/10 rounded-3xl p-4 sm:p-5">
-                        <div className="flex items-center gap-2 text-orange-400 font-semibold mb-3">
-                            <Search size={18} /> Поиск людей в нарядах
-                        </div>
-                        <div className="text-xs text-orange-300/70 mb-4">
-                            Списки ФИО как в наряде (с инициалами). Результат — в поле ниже, как файл poisk_result.txt на станции.
-                        </div>
-
-                        {/* Управление списками поиска */}
-                        <div className="mb-4">
-                            <div className="flex gap-2 mb-2">
-                                <input
-                                    value={newSearchListName}
-                                    onChange={e => setNewSearchListName(e.target.value)}
-                                    placeholder="Название списка (например Bobrov)"
-                                    className="flex-1 rounded-2xl bg-white/5 border border-white/10 px-3 py-2 text-sm text-orange-400 placeholder:text-orange-300/50"
-                                    onKeyDown={e => e.key === 'Enter' && addSearchList()}
-                                />
-                                <button onClick={addSearchList} className="px-4 py-2 rounded-2xl bg-orange-500 text-white text-sm active:bg-orange-600">+ Список</button>
-                            </div>
-
-                            {searchLists.length > 0 && (
-                                <div className="space-y-2">
-                                    {searchLists.map(list => (
-                                        <div key={list.id} className="bg-white/5 rounded-2xl p-3 text-sm">
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className="font-medium text-orange-300">{list.name}</span>
-                                                <div className="flex gap-2 text-xs">
-                                                    <button onClick={() => setEditingListId(editingListId === list.id ? null : list.id)} className="text-orange-400 hover:underline">
-                                                        {editingListId === list.id ? 'Закрыть' : 'Добавить'}
-                                                    </button>
-                                                    <button onClick={() => deleteSearchList(list.id)} className="text-red-400 hover:underline">Удалить</button>
-                                                </div>
-                                            </div>
-
-                                            {/* Queries */}
-                                            <div className="flex flex-wrap gap-1 mb-2">
-                                                {list.queries.length === 0 && <span className="text-xs text-orange-300/60">Нет запросов</span>}
-                                                {list.queries.map(q => (
-                                                    <span key={q} className="bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded text-xs flex items-center gap-1">
-                                                        {q}
-                                                        <button onClick={() => removeQueryFromList(list.id, q)} className="hover:text-red-400">×</button>
-                                                    </span>
-                                                ))}
-                                            </div>
-
-                                            {editingListId === list.id && (
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        value={newQueryForList}
-                                                        onChange={e => setNewQueryForList(e.target.value)}
-                                                        placeholder="ФИО или фамилия"
-                                                        className="flex-1 text-xs rounded bg-black/40 border border-white/10 px-2 py-1"
-                                                        onKeyDown={e => { if (e.key === 'Enter') { addQueryToList(list.id); } }}
-                                                    />
-                                                    <button onClick={() => addQueryToList(list.id)} className="text-xs px-3 py-1 bg-white/10 rounded">Добавить</button>
-                                                </div>
-                                            )}
-
-                                            <label className="flex items-center gap-2 mt-2 text-xs cursor-pointer">
-                                                <input type="checkbox" checked={selectedSearchListIds.includes(list.id)} onChange={() => toggleSearchList(list.id)} />
-                                                Использовать в поиске
-                                            </label>
-                                        </div>
+                    {naryads.length > 0 && (
+                        <div className="bg-[#0b1018] border border-white/10 rounded-3xl p-4 sm:p-5 space-y-4">
+                            <div>
+                                <div className="text-[11px] uppercase tracking-widest text-orange-400 mb-1">Выкладка</div>
+                                <select
+                                    value={selectedIssue?.id ?? ''}
+                                    onChange={e => setSelectedIssueId(Number(e.target.value))}
+                                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-base text-orange-300"
+                                >
+                                    {naryads.map(n => (
+                                        <option key={n.id} value={n.id}>
+                                            {n.title} {n.naryad_date ? `• ${n.naryad_date}` : ''}
+                                        </option>
                                     ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Выбор нарядов и запуск */}
-                        <div>
-                            <div className="text-xs font-semibold mb-1 text-orange-400">Выберите наряды для поиска:</div>
-                            <div className="flex gap-2 mb-1 text-xs">
-                                <button onClick={() => setSelectedNaryadIdsForSearch(filteredNaryads.map(n => n.id))} className="px-2 py-0.5 bg-white/10 rounded">Все видимые</button>
-                                <button onClick={() => setSelectedNaryadIdsForSearch([])} className="px-2 py-0.5 bg-white/10 rounded">Сбросить</button>
-                            </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 max-h-32 overflow-auto mb-3 text-xs">
-                                {filteredNaryads.map(n => (
-                                    <label key={n.id} className="flex items-center gap-1.5 cursor-pointer bg-white/5 px-2 py-1 rounded">
-                                        <input type="checkbox" checked={selectedNaryadIdsForSearch.includes(n.id)} onChange={() => toggleNaryadForSearch(n.id)} />
-                                        <span className="truncate">{n.title} ({n.naryad_date})</span>
-                                    </label>
-                                ))}
+                                </select>
                             </div>
 
-                            <button
-                                onClick={runBatchSearch}
-                                disabled={isBatchSearching || selectedSearchListIds.length === 0 || selectedNaryadIdsForSearch.length === 0}
-                                className="w-full min-h-11 h-11 rounded-2xl bg-orange-500 active:bg-orange-600 text-white font-bold text-sm disabled:opacity-50"
-                            >
-                                {isBatchSearching ? 'Идёт поиск...' : 'Найти'}
-                            </button>
-
-                            <div className="mt-4">
+                            <div>
                                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                                     <div className="font-semibold text-sm text-orange-300">
-                                        Результат{resultHits ? ` · совпадений ${resultHits}` : ''}
+                                        {selectedIssue?.personal_name || (userFileName ? `${userFileName}.txt` : 'Личный файл')}
                                     </div>
                                     <div className="flex gap-3 text-xs">
                                         <button
                                             type="button"
-                                            onClick={copyResult}
-                                            disabled={!resultText}
+                                            onClick={copyPersonalFile}
+                                            disabled={!selectedIssue?.personal_text}
                                             className="text-orange-400 underline disabled:opacity-40"
                                         >
                                             Копировать
                                         </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => { setResultText(''); setResultError(''); setResultHits(0); }}
-                                            disabled={!resultText && !resultError}
-                                            className="text-orange-400/70 hover:text-orange-400 disabled:opacity-40"
-                                        >
-                                            Очистить
-                                        </button>
+                                        {selectedIssue?.personal_url && (
+                                            <a href={selectedIssue.personal_url} className="text-orange-400 underline">
+                                                Скачать
+                                            </a>
+                                        )}
                                     </div>
                                 </div>
-                                {resultError && (
-                                    <div className="mb-2 text-xs text-red-400 whitespace-pre-wrap">{resultError}</div>
-                                )}
                                 <textarea
                                     ref={resultFieldRef}
                                     readOnly
                                     spellCheck={false}
                                     autoComplete="off"
                                     autoCorrect="off"
-                                    value={resultText}
-                                    placeholder="Здесь появится готовый текст поиска"
+                                    value={selectedIssue?.personal_text || ''}
+                                    placeholder="Здесь появится ваш файл наряда, когда администратор выложит TXT и разбивку смен"
                                     className="w-full min-h-[12rem] sm:min-h-[22rem] max-h-[70vh] rounded-2xl bg-black/40 border border-white/10 p-3 text-xs sm:text-sm font-mono text-orange-100 placeholder:text-orange-300/40 overflow-auto whitespace-pre leading-snug touch-pan-y"
                                 />
                             </div>
+
+                            {selectedIssue?.has_pdf && (
+                                <button
+                                    type="button"
+                                    onClick={() => openNaryad(selectedIssue)}
+                                    className="w-full min-h-12 rounded-2xl bg-orange-500 active:bg-orange-600 text-white font-bold text-sm"
+                                >
+                                    Открыть общий наряд (PDF)
+                                </button>
+                            )}
                         </div>
-                    </div>
+                    )}
                 </div>
             )}
 

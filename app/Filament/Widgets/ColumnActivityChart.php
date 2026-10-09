@@ -1,21 +1,20 @@
 <?php
 
-namespace App\Filament\Resources\ColumnActivityResource\Widgets;
+namespace App\Filament\Widgets;
 
-use Filament\Widgets\ChartWidget;
 use ClickHouseDB\Client;
+use Filament\Widgets\ChartWidget;
 
 class ColumnActivityChart extends ChartWidget
 {
-    protected static ?string $heading = 'Активность колонн (Просмотры документов)';
-    protected static ?int $sort = 1; // Порядок отображения на главной
+    protected static ?string $heading = 'Активность колонн (просмотры документов)';
+
+    protected static ?int $sort = 1;
 
     protected function getData(): array
     {
-        // 1. Подключаемся к ClickHouse
         $ch = new Client(config('clickhouse'));
 
-        // 2. Делаем агрегирующий запрос: группируем просмотры по колоннам
         $result = $ch->select("
             SELECT user_column, count() as total
             FROM default.user_actions
@@ -28,12 +27,11 @@ class ColumnActivityChart extends ChartWidget
         $data = [];
 
         foreach ($result->rows() as $row) {
-            $labels[] = 'Колонна № ' . $row['user_column'];
+            $labels[] = 'Колонна № '.$row['user_column'];
             $data[] = $row['total'];
         }
 
-        // Если данных еще нет, покажем заглушку
-        if (empty($data)) {
+        if ($data === []) {
             $labels = ['Нет данных'];
             $data = [0];
         }
@@ -43,7 +41,7 @@ class ColumnActivityChart extends ChartWidget
                 [
                     'label' => 'Количество просмотров',
                     'data' => $data,
-                    'backgroundColor' => '#f97316', // Оранжевый цвет в стиле нашего бренда
+                    'backgroundColor' => '#f97316',
                 ],
             ],
             'labels' => $labels,
@@ -52,6 +50,6 @@ class ColumnActivityChart extends ChartWidget
 
     protected function getType(): string
     {
-        return 'bar'; //Типы графиков: столбцы
+        return 'bar';
     }
 }

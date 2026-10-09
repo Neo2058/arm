@@ -16,11 +16,11 @@ class FormularTaskResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
 
-    protected static ?string $navigationGroup = 'Росписи и формуляр';
+    protected static ?string $navigationGroup = 'Документы';
 
     protected static ?string $navigationLabel = 'Задачи в формуляр';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 4;
 
     public static function form(Form $form): Form
     {

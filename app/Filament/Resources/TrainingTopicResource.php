@@ -18,6 +18,8 @@ class TrainingTopicResource extends Resource
 
     protected static ?string $navigationGroup = 'Обучение';
 
+    protected static ?int $navigationSort = 1;
+
     protected static ?string $navigationLabel = 'Темы обучения';
 
     protected static ?string $modelLabel = 'Тема';

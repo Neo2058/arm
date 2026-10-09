@@ -4,10 +4,11 @@ use App\Http\Controllers\Api\Mobile\AuthController;
 use App\Http\Controllers\Api\Mobile\DocumentController;
 use App\Http\Controllers\Api\Mobile\FileController;
 use App\Http\Controllers\Api\Mobile\TrainingController;
+use App\Http\Middleware\EnsureActiveApiUser;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('mobile')->group(function () {
-    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
     Route::get('/files/documents/{document}', [FileController::class, 'document'])
         ->name('mobile.files.documents')
@@ -16,7 +17,7 @@ Route::prefix('mobile')->group(function () {
         ->name('mobile.files.training')
         ->middleware('signed');
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', EnsureActiveApiUser::class])->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
 

@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\QuizResource\Pages;
-use App\Filament\Resources\QuizResource\RelationManagers;
 use App\Models\Quiz;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -20,9 +19,13 @@ class QuizResource extends Resource
 {
     protected static ?string $model = Quiz::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
 
     protected static ?string $navigationLabel = 'Опросники';
+
+    protected static ?string $navigationGroup = 'Обучение';
+
+    protected static ?int $navigationSort = 3;
 
 
     public static function form(Form $form): Form

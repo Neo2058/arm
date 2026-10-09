@@ -102,6 +102,37 @@ final class FioParser
         return $query['display'] !== '' ? $query['display'] : $query['original'];
     }
 
+    /**
+     * Строка запроса как в searching: «БОБРОВ В.А» из ФИО карточки или «Фамилия Имя Отчество».
+     */
+    public static function queryFromPerson(?string $fullName): string
+    {
+        $name = Text::trim((string) $fullName);
+        if ($name === '') {
+            return '';
+        }
+
+        $extracted = self::extract(Text::upper($name));
+        if ($extracted !== []) {
+            return $extracted[0]['display'];
+        }
+
+        $parts = preg_split('/\s+/u', $name) ?: [];
+        $parts = array_values(array_filter($parts, fn (string $part): bool => $part !== ''));
+        if (count($parts) >= 3) {
+            $surname = Text::upper($parts[0]);
+            $i1 = Text::upper(mb_substr($parts[1], 0, 1, 'UTF-8'));
+            $i2 = Text::upper(mb_substr($parts[2], 0, 1, 'UTF-8'));
+            if (mb_strlen($surname, 'UTF-8') >= 2 && $i1 !== '' && $i2 !== '') {
+                return $surname.' '.$i1.'.'.$i2;
+            }
+        }
+
+        $parsed = self::parseQuery($name);
+
+        return $parsed['ok'] ? self::label($parsed) : '';
+    }
+
     private static function takeMarks(string $tail): string
     {
         $marks = [];

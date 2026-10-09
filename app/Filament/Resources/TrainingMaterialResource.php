@@ -20,6 +20,8 @@ class TrainingMaterialResource extends Resource
 
     protected static ?string $navigationGroup = 'Обучение';
 
+    protected static ?int $navigationSort = 2;
+
     protected static ?string $navigationLabel = 'Материалы обучения';
 
     protected static ?string $modelLabel = 'Материал';

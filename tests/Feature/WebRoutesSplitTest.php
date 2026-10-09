@@ -50,6 +50,8 @@ class WebRoutesSplitTest extends TestCase
             'naryady.show',
             'naryady.search',
             'naryady.search-people',
+            'naryady.pdf',
+            'naryady.mine',
             'work.time.index',
             'podstroiki.index',
             'podstroiki.store',
