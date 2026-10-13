@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Mobile;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActionLog;
 use App\Models\Document;
 use App\Services\FileProxyService;
 use Illuminate\Http\JsonResponse;
@@ -56,6 +57,11 @@ class DocumentController extends Controller
         if (! $request->user()->canAccessByRoles($document->allowed_roles)) {
             abort(403, 'Доступ к документу ограничен.');
         }
+
+        ActionLog::log('mobile.view_document', [
+            'document_id' => $document->id,
+            'title' => $document->title,
+        ]);
 
         $url = $this->files->temporarySignedRoute(
             'mobile.files.documents',

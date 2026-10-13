@@ -1,8 +1,8 @@
 <div class="max-w-5xl">
     <h2 class="text-2xl font-bold mb-1">Печать нарядов</h2>
     <p class="text-sm text-orange-700 dark:text-orange-200 mb-4">
-        Как пункт «Печать нарядов» в АРМ: наряд на выбранную дату из разбивки смен и сетки.
-        Выписка — только 1-я, 3+ и 4+ смены (комната отдыха). Составы вагонов из <code>RASST</code> пока не перенесены.
+        Как пункт «Печать нарядов» в АРМ: наряд на выбранную дату из разбивки смен, сетки и расстановки составов.
+        Выписка — только 1-я, 3+ и 4+ смены (комната отдыха), без колонки состава. Составы — из <a class="underline" href="{{ route('nsi.rosters', ['date' => $date]) }}">расстановки RASST</a> на эту дату. Подписи — из НСИ PODPISI.
     </p>
 
     <form id="naryad-print-form" class="bg-white dark:bg-[#0b1018] border border-gray-200 dark:border-white/10 rounded-3xl p-5 mb-5 flex flex-wrap gap-4 items-end text-sm">
@@ -17,6 +17,11 @@
                 <option value="full" @selected($kind === 'full')>Наряд локомотивных бригад</option>
                 <option value="extract" @selected($kind === 'extract')>Выписка в комнату отдыха</option>
             </select>
+        </div>
+        <div class="w-full">
+            <label class="block text-xs mb-1">Дополнительный текст в наряд (TEXTN)</label>
+            <textarea name="extra_text" id="naryad-print-extra" rows="3"
+                      class="w-full border rounded-2xl px-3 py-2 bg-white dark:bg-[#0b1018] font-mono">{{ $extra_text ?? '' }}</textarea>
         </div>
         <button type="submit" class="px-5 py-2 bg-orange-600 text-white rounded-2xl font-semibold">Показать</button>
         <a id="naryad-print-open" href="{{ route('naryad.print', ['date' => $date, 'kind' => $kind]) }}"
@@ -36,19 +41,26 @@
     const form = document.getElementById('naryad-print-form');
     const dateEl = document.getElementById('naryad-print-date');
     const kindEl = document.getElementById('naryad-print-kind');
+    const extraEl = document.getElementById('naryad-print-extra');
     const openEl = document.getElementById('naryad-print-open');
     const basePartial = @json(route('naryad.partial.print'));
     const baseSheet = @json(route('naryad.print'));
+    const query = () => {
+        const extra = extraEl ? extraEl.value : '';
+        return '?date=' + encodeURIComponent(dateEl.value)
+            + '&kind=' + encodeURIComponent(kindEl.value)
+            + '&extra_text=' + encodeURIComponent(extra);
+    };
     form?.addEventListener('submit', function (e) {
         e.preventDefault();
-        const q = '?date=' + encodeURIComponent(dateEl.value) + '&kind=' + encodeURIComponent(kindEl.value);
-        window.Naryad.loadPartial(basePartial + q);
+        window.Naryad.loadPartial(basePartial + query());
         window.Naryad.setActive('print');
     });
     const sync = () => {
-        openEl.href = baseSheet + '?date=' + encodeURIComponent(dateEl.value) + '&kind=' + encodeURIComponent(kindEl.value);
+        openEl.href = baseSheet + query();
     };
     dateEl?.addEventListener('change', sync);
     kindEl?.addEventListener('change', sync);
+    extraEl?.addEventListener('input', sync);
 })();
 </script>

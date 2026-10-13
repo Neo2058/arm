@@ -9,6 +9,7 @@ use App\Models\TrainingMaterial;
 use App\Models\TrainingTopic;
 use App\Models\User;
 use App\Services\FileProxyService;
+use Illuminate\Queue\CallQueuedClosure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -73,6 +74,30 @@ class FileProxyTest extends TestCase
         $response->assertHeader('X-Content-Type-Options', 'nosniff');
         $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
         $this->assertStringContainsString('%PDF-1.4 test-document', $response->streamedContent());
+        $this->assertDatabaseMissing('action_logs', ['action' => 'view_document']);
+    }
+
+    public function test_document_click_logs_once_file_stream_does_not(): void
+    {
+        $driver = User::factory()->driver()->create();
+        $document = $this->document();
+
+        $this->actingAs($driver)
+            ->get('/api/documents/'.$document->id.'/click')
+            ->assertOk();
+
+        $this->assertDatabaseCount('action_logs', 1);
+        $this->assertDatabaseHas('action_logs', [
+            'user_id' => $driver->id,
+            'action' => 'view_document',
+        ]);
+
+        $url = URL::temporarySignedRoute('documents.file', now()->addMinutes(30), $document->id);
+        $this->actingAs($driver)->get($url)->assertOk();
+        $this->actingAs($driver)->get($url)->assertOk();
+
+        $this->assertDatabaseCount('action_logs', 1);
+        Queue::assertPushed(CallQueuedClosure::class, 1);
     }
 
     public function test_unsigned_document_url_is_rejected(): void
@@ -124,6 +149,12 @@ class FileProxyTest extends TestCase
 
         $response->assertOk();
         $response->assertHeader('Content-Disposition', 'attachment; filename="test.pdf"');
+        $this->assertDatabaseCount('action_logs', 1);
+        $this->assertDatabaseHas('action_logs', [
+            'user_id' => $admin->id,
+            'action' => 'document_download',
+        ]);
+        Queue::assertPushed(CallQueuedClosure::class, 1);
     }
 
     public function test_admin_document_preview_proxy_is_admin_only(): void
@@ -173,6 +204,14 @@ class FileProxyTest extends TestCase
         $response->assertHeader('Content-Disposition', 'inline; filename="clip.mp4"');
         $response->assertHeader('Accept-Ranges', 'bytes');
         $this->assertStringContainsString('fake-mp4-bytes', $response->streamedContent());
+        $this->assertDatabaseMissing('action_logs', ['action' => 'training_material_viewed']);
+
+        $this->actingAs($driver)->get(route('training.video', $material))->assertOk();
+        $this->assertDatabaseCount('action_logs', 1);
+        $this->assertDatabaseHas('action_logs', [
+            'user_id' => $driver->id,
+            'action' => 'training_material_viewed',
+        ]);
     }
 
     public function test_admin_training_preview_proxy_is_admin_only(): void

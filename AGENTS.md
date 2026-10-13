@@ -56,7 +56,9 @@
 - `Document` (хранится в MinIO)
 
 ### Важные сервисы
-- `ClickHouseService::log($actionType, $resourceId, $details)` — **всегда используй** для фиксации действий пользователя (ставится в очередь).
+- `ClickHouseService::log($actionType, $resourceId, $details, $actor = null)` — фиксация действия в ClickHouse (очередь `analytics`). `$actor` — `User`, id или null (тогда `Auth::user()`, иначе `user_id=0` / `user_role=system`).
+- `ActionLog::log()` — операционный журнал в Postgres (Filament) **и** одна запись в ClickHouse. Не вызывай `ClickHouseService::log()` следом за тем же событием.
+- Клиентский `POST /api/actions/log` — только белый список `ActionLog::CLIENT_ACTIONS`, в БД уходит как `ui.{action}`. Серверные мутации сюда не писать.
 - `FileProxyService` — стрим документов и training-медиа из MinIO через приложение. Не возвращай `Storage::temporaryUrl()` в браузер для новых фич. Не меняй Filament `FileUpload` (disk / visibility / `getUploadedFileUsing`) мимоходом.
 - `NaryadHoursCalculator` — часы сетки наряда; формулы не дублировать в контроллерах.
 - `TelegramService`
@@ -144,8 +146,10 @@
 - При изменении этой логики обновляй миграции/модели/тесты и документируй.
 
 ### Аналитика (ClickHouse)
-- Любое значимое действие пользователя должно логироваться через `ClickHouseService::log()`.
-- Не пиши напрямую в ClickHouse из контроллеров — используй сервис + очередь `analytics`.
+- Любое значимое действие пользователя должно логироваться через `ClickHouseService::log()` **или** `ActionLog::log()` (он сам форвардит в ClickHouse один раз). Не оба вызова на одно событие.
+- Не пиши напрямую в ClickHouse из контроллеров (`new Client` + `insert`) — только сервис + очередь `analytics`.
+- События без сессии (Telegram и т.п.) не отбрасывать: `user_id=0`, `user_role=system`.
+- Логировать выдачу доступа (click / JSON show / страница материала), а не каждый Range-запрос к signed URL.
 - Схема таблицы `user_actions` важна: `event_date`, `user_column` (из профиля), `action_type` и т.д.
 
 ### Filament
@@ -218,6 +222,6 @@ php artisan optimize:clear
 
 ---
 
-**Последнее обновление:** 2026-10-09 (безопасность: серверный расчёт и доступ к квизам)
+**Последнее обновление:** 2026-10-12 (клон: печать наряда RASST/TEXTN/PODPISI; KN 3+/4+, CHTAR, 009)
 
 Этот файл имеет высокий приоритет и будет автоматически подгружаться в контекст AI при работе в директории проекта.

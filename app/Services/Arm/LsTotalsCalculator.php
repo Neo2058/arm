@@ -77,7 +77,7 @@ class LsTotalsCalculator
                 $t['prazd1'] += (float) $row->hours_holiday;
                 $t['prazdr'] += (float) $row->hours_holiday_reserve;
                 $t['dni'] += 1.0;
-                if ($this->isNightShift($row, $planir['night_shift_codes'])) {
+                if ($this->isCountedNightShift($row, $planir['night_count_codes'] ?? ['3+', '4+'])) {
                     $t['kn'] += 1.0;
                 }
                 if ($row->two_person) {
@@ -238,6 +238,7 @@ class LsTotalsCalculator
 
         return array_replace([
             'night_shift_codes' => ['3+', '4+', '5+'],
+            'night_count_codes' => ['3+', '4+'],
             'rest_codes' => ['В', 'Е', 'ВЫХ'],
             'brigadier_percent' => 10,
             'shop_combined' => '11',
@@ -252,19 +253,26 @@ class LsTotalsCalculator
     }
 
     /**
+     * KN в RAS1LS: только NR_nsm1 / NR_nsm2 (`3+`/`4+`). `5+` остаётся в PLANIR.
+     *
      * @param  list<string>  $nightCodes
      */
-    private function isNightShift(NaryadAssignment $row, array $nightCodes): bool
+    private function isCountedNightShift(NaryadAssignment $row, mixed $nightCodes): bool
     {
-        $shift = (string) $row->shift_code;
+        $shift = trim((string) $row->shift_code);
+        if ($shift === '') {
+            return false;
+        }
+        if (! is_array($nightCodes)) {
+            $nightCodes = ['3+', '4+'];
+        }
         foreach ($nightCodes as $code) {
-            if ($shift !== '' && (string) $code === $shift) {
+            if ((string) $code === $shift) {
                 return true;
             }
         }
 
-        return mb_stripos((string) $row->route_number, 'ночь') !== false
-            && ! str_contains((string) $row->route_number, '1-с');
+        return false;
     }
 
     private function isWorkShift(NaryadAssignment $row): bool

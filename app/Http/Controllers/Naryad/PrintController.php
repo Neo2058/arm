@@ -20,12 +20,14 @@ class PrintController extends Controller implements HasMiddleware
         $this->abortIfNotDispatcher();
         $date = $this->date($request);
         $kind = $this->kind($request);
-        $sheet = $this->print->build($date, $kind);
+        $extra = (string) $request->input('extra_text', '');
+        $sheet = $this->print->build($date, $kind, Auth::user(), $extra);
 
         return view('naryad.partials.print', [
             'sheet' => $sheet,
             'date' => $date->toDateString(),
             'kind' => $kind,
+            'extra_text' => $extra,
             'user' => Auth::user(),
         ]);
     }
@@ -35,12 +37,14 @@ class PrintController extends Controller implements HasMiddleware
         $this->abortIfNotDispatcher();
         $date = $this->date($request);
         $kind = $this->kind($request);
-        $sheet = $this->print->build($date, $kind);
+        $extra = (string) $request->input('extra_text', '');
+        $sheet = $this->print->build($date, $kind, Auth::user(), $extra);
 
         return view('naryad.print-sheet', [
             'sheet' => $sheet,
             'date' => $date->toDateString(),
             'kind' => $kind,
+            'extra_text' => $extra,
             'user' => Auth::user(),
             'autoPrint' => $request->boolean('auto'),
         ]);

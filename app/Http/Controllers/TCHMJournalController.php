@@ -407,32 +407,17 @@ class TCHMJournalController extends Controller implements HasMiddleware
                         }
                         $norm->save();
 
-                        // Log directly to ClickHouse (sync to ensure appears in history; crew as user_id)
                         if (! empty($dates['last_date'])) {
-                            try {
-                                $ch = new Client(config('clickhouse'));
-                                $data = [
-                                    'event_date' => date('Y-m-d'),
-                                    'event_time' => now()->format('Y-m-d H:i:s'),
-                                    'user_id' => (int) $userId, // the crew member
-                                    'user_role' => UserRole::DRIVER->value,
-                                    'user_column' => $column,
-                                    'action_type' => 'normative_completed',
-                                    'resource_id' => 0,
-                                    'details' => json_encode([
-                                        'type' => $type,
-                                        'last_date' => $dates['last_date'],
-                                        'next_date' => $norm->next_date ? $norm->next_date->format('Y-m-d') : null,
-                                        'remarks' => $norm->remarks ?? null,
-                                        'start_time' => $norm->start_time ?? ($dates['start_time'] ?? null),
-                                        'end_time' => $norm->end_time ?? ($dates['end_time'] ?? null),
-                                        'recorded_by' => Auth::id(),
-                                    ], JSON_UNESCAPED_UNICODE),
-                                ];
-                                $ch->insert('user_actions', [$data], ['event_date', 'event_time', 'user_id', 'user_role', 'user_column', 'action_type', 'resource_id', 'details']);
-                            } catch (\Exception $e) {
-                                // fail silently for demo
-                            }
+                            ClickHouseService::log('normative_completed', 0, [
+                                'type' => $type,
+                                'last_date' => $dates['last_date'],
+                                'next_date' => $norm->next_date ? $norm->next_date->format('Y-m-d') : null,
+                                'remarks' => $norm->remarks ?? null,
+                                'start_time' => $norm->start_time ?? ($dates['start_time'] ?? null),
+                                'end_time' => $norm->end_time ?? ($dates['end_time'] ?? null),
+                                'recorded_by' => Auth::id(),
+                                'column' => $column,
+                            ], (int) $userId);
                         }
                     }
                 }

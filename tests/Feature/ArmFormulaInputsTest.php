@@ -178,7 +178,10 @@ class ArmFormulaInputsTest extends TestCase
             'nom' => 1,
             'name' => 'Основные часы 1 лицо',
             'percent' => 100,
+            'percent_text' => '100',
             'pay_code' => '004',
+            'tariff_code' => 'tm1',
+            'tariff' => 176.81,
             'formula' => 'Vchas1+dob1',
             'selected' => true,
         ]);
@@ -211,10 +214,7 @@ class ArmFormulaInputsTest extends TestCase
         $this->assertEquals(80.0, $t['tek_nr']);
 
         $this->assertTrue($account->lines->contains(fn ($l) => $l->pay_code === '004' && abs((float) $l->hours - 60.0) < 0.001));
-        $premLine = $account->lines->firstWhere('pay_code', '009');
-        $this->assertNotNull($premLine);
-        $this->assertEquals(24.0, (float) $premLine->percent);
-        $this->assertEquals(1.0, (float) $premLine->hours);
+        $this->assertNull($account->lines->firstWhere('pay_code', '009'));
     }
 
     public function test_operator_saves_extras_and_driver_is_forbidden(): void

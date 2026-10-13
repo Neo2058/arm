@@ -45,7 +45,7 @@ class AccountingImporter
                     'percent' => (float) ($row['PROCR'] ?? $row['PROC'] ?? 100),
                     'pay_code' => $this->nullable($row['VIDOPL'] ?? null),
                     'tariff_code' => $this->nullable($row['TARIF'] ?? null),
-                    'tariff' => (float) ($row['N_TARIF'] ?? $row['CHTAR'] ?? 0),
+                    'tariff' => $this->formulaTariff($row),
                     'cost_code' => $this->nullable($row['SHZAT'] ?? null),
                     'formula' => $formula,
                 ];
@@ -385,8 +385,16 @@ class AccountingImporter
             'min_rest_hours' => 8,
         ]);
         $incoming = $this->nrdparToPlanir($row);
+        $incomingPrint = is_array($incoming['print'] ?? null) ? $incoming['print'] : null;
+        unset($incoming['print']);
         $merged = array_replace(app(PlanirRulesService::class)->settings($norm), $incoming);
         $merged['night_shift_codes'] = $this->keepNightFivePlus($merged['night_shift_codes'] ?? []);
+        if ($incomingPrint !== null) {
+            $merged['print'] = array_replace(
+                is_array($merged['print'] ?? null) ? $merged['print'] : [],
+                $incomingPrint
+            );
+        }
         $norm->planir = $merged;
         $norm->save();
 
@@ -435,13 +443,18 @@ class AccountingImporter
         ];
 
         $nights = ['3+', '4+', '5+'];
+        $countNights = [];
         foreach (['NR_NSM1', 'NR_NSM2'] as $field) {
             $code = trim((string) ($row[$field] ?? ''));
             if ($code !== '') {
                 $nights[] = $code;
+                $countNights[] = $code;
             }
         }
         $mapped['night_shift_codes'] = $this->keepNightFivePlus($nights);
+        $mapped['night_count_codes'] = $countNights !== []
+            ? array_values(array_unique($countNights))
+            : ['3+', '4+'];
 
         $ran1 = (float) ($row['NR_2RAN1'] ?? 0);
         $ran2 = (float) ($row['NR_2RAN2'] ?? 0);
@@ -456,6 +469,35 @@ class AccountingImporter
         }
         if (array_key_exists('NR_P1L', $row)) {
             $mapped['premium_p1l'] = (bool) $row['NR_P1L'];
+        }
+
+        $print = [];
+        if (array_key_exists('NR_PVAG', $row)) {
+            $print['show_wagons'] = trim((string) $row['NR_PVAG']) === '+';
+        }
+        if (array_key_exists('NR_POK1', $row)) {
+            $print['show_end_on_line'] = trim((string) $row['NR_POK1']) === '+';
+        }
+        if (array_key_exists('NR_POK2', $row)) {
+            $print['show_end_off_line'] = trim((string) $row['NR_POK2']) === '+';
+        }
+        if (array_key_exists('NR_NAZGR', $row)) {
+            $print['show_graph_name'] = trim((string) $row['NR_NAZGR']) === '+';
+        }
+        if (array_key_exists('NR_DINF', $row)) {
+            $print['extra_text_prompt'] = trim((string) $row['NR_DINF']) === '+';
+        }
+        if (array_key_exists('NR_OTST', $row)) {
+            $print['note_indent'] = (int) $row['NR_OTST'];
+        }
+        if (array_key_exists('NR_VERT', $row)) {
+            $print['merge_extra_roster'] = (int) $row['NR_VERT'] === 2;
+        }
+        if (array_key_exists('NR_ZAGM', $row)) {
+            $print['header_banner'] = trim((string) $row['NR_ZAGM']);
+        }
+        if ($print !== []) {
+            $mapped['print'] = $print;
         }
 
         return $mapped;
@@ -795,6 +837,19 @@ class AccountingImporter
         $s = trim((string) $value);
 
         return $s !== '' && $s !== '0' && ! in_array(strtoupper($s), ['F', 'N', '-'], true);
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function formulaTariff(array $row): float
+    {
+        $nTariff = (float) ($row['N_TARIF'] ?? 0);
+        if (abs($nTariff) > 0.0000001) {
+            return $nTariff;
+        }
+
+        return (float) ($row['CHTAR'] ?? 0);
     }
 
     private function nullable(mixed $value): ?string

@@ -7,7 +7,6 @@ use App\Models\Document;
 use App\Models\Quiz;
 use App\Models\QuizResult;
 use App\Services\AdminNotificationService;
-use App\Services\ClickHouseService;
 use App\Services\FileProxyService;
 use App\Services\QuizService;
 use App\Services\TelegramService;
@@ -185,12 +184,6 @@ class DocumentController extends Controller
             abort(404, 'Файл не найден');
         }
 
-        // Log access to both DB (ActionLog) and ClickHouse
-        ActionLog::log('view_document', [
-            'document_id' => $document->id,
-            'title' => $document->title,
-        ]);
-
         $filename = pathinfo($path, PATHINFO_FILENAME).'.pdf';
 
         // Force inline display to prevent auto-download on Android and other mobiles.
@@ -261,14 +254,11 @@ class DocumentController extends Controller
             abort(403, 'Скачивание документов запрещено согласно регламенту. Доступно только для чтения.');
         }
 
-        // Log the download (admins)
         ActionLog::log('document_download', [
             'document_id' => $document->id,
             'title' => $document->title,
             'user_role' => $userRole,
         ]);
-
-        ClickHouseService::log('document_download', $document->id, $document->title);
 
         return $this->files->respond($path, $filename, [
             'Content-Type' => $mime,

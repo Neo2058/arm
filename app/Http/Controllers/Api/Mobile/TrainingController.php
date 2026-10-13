@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Mobile;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActionLog;
 use App\Models\TrainingMaterial;
 use App\Models\TrainingTopic;
 use App\Services\FileProxyService;
@@ -56,6 +57,12 @@ class TrainingController extends Controller
     public function material(TrainingMaterial $material): JsonResponse
     {
         abort_unless($material->is_active, 404);
+
+        ActionLog::log('mobile.training_material_viewed', [
+            'material_id' => $material->id,
+            'title' => $material->title,
+            'type' => $material->type,
+        ]);
 
         $url = null;
         if (in_array($material->type, ['video', 'audio'], true) && $material->file_path) {

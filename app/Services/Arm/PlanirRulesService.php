@@ -127,6 +127,7 @@ class PlanirRulesService
             'early_from' => 5.0,
             'early_to' => 8.0,
             'night_shift_codes' => ['3+', '4+', '5+'],
+            'night_count_codes' => ['3+', '4+'],
             'rest_codes' => ['В', 'Е', 'ВЫХ'],
             'enforce_after_first' => true,
             'enforce_after_night' => true,

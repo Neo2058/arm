@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\ActionLog;
 use App\Models\TrainingMaterial;
 use App\Models\TrainingTopic;
-use App\Services\ClickHouseService;
 use App\Services\FileProxyService;
 use App\Services\Training\TrainingContentService;
 use Illuminate\Http\Request;
@@ -58,6 +57,8 @@ class TrainingController extends Controller
                 ->value('reaction_type');
         }
 
+        $this->logMaterialViewed($material);
+
         return view('teaching.training.video', compact('material', 'comments', 'likesCount', 'dislikesCount', 'userReaction'));
     }
 
@@ -81,6 +82,8 @@ class TrainingController extends Controller
                 ->value('reaction_type');
         }
 
+        $this->logMaterialViewed($material);
+
         return view('teaching.training.audio', compact('material', 'comments', 'likesCount', 'dislikesCount', 'userReaction'));
     }
 
@@ -88,6 +91,15 @@ class TrainingController extends Controller
     {
         abort_if($material->type !== $expectedType, 404);
         // В будущем добавить проверку доступа по ролям пользователя
+    }
+
+    private function logMaterialViewed(TrainingMaterial $material): void
+    {
+        ActionLog::log('training_material_viewed', [
+            'material_id' => $material->id,
+            'title' => $material->title,
+            'type' => $material->type,
+        ]);
     }
 
     /**
@@ -118,19 +130,6 @@ class TrainingController extends Controller
         if (! $this->files->exists($path)) {
             abort(404, 'Файл не найден');
         }
-
-        // Log the view
-        ActionLog::log('training_material_viewed', [
-            'material_id' => $material->id,
-            'title' => $material->title,
-            'type' => $material->type,
-        ]);
-
-        // Also to ClickHouse
-        ClickHouseService::log('training_material_viewed', $material->id, [
-            'title' => $material->title,
-            'type' => $material->type,
-        ]);
 
         $filename = $material->file_name ?: basename($path);
         $mime = $material->mime_type ?: $this->files->disk()->mimeType($path) ?: ($material->type === 'video' ? 'video/mp4' : 'audio/mpeg');

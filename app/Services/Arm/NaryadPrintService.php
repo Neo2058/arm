@@ -3,12 +3,16 @@
 namespace App\Services\Arm;
 
 use App\Models\ArmAppointment;
+use App\Models\ArmCode;
 use App\Models\ArmPersonnel;
+use App\Models\ArmRoster;
 use App\Models\ArmShiftBreakdown;
+use App\Models\ArmSignature;
 use App\Models\DeviationsCatalog;
 use App\Models\NaryadAssignment;
 use App\Models\NaryadNorm;
 use App\Models\NaryadQuota;
+use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -17,7 +21,8 @@ use Illuminate\Support\Collection;
  * Печать нарядов — логика DOKMENU.PRG / pecnar.
  *
  * tip_nar=1 полный наряд, tip_nar=2 выписка в комнату отдыха.
- * Состав вагонов (RASST) в клон ещё не перенесён: колонка состава пустая.
+ * Составы: RASST/RASST1 + ELKODIF kodspr=03 (app_nar). Имена вне линии — kodspr=07.
+ * Подписи: текущий нарядчик + PODPISI с ненулевым порядком. TEXTN — доп. строки с формы.
  */
 class NaryadPrintService
 {
@@ -41,18 +46,29 @@ class NaryadPrintService
      *     graph_name: ?string,
      *     message: ?string,
      *     rows: list<array<string, mixed>>,
+     *     extra_text: list<string>,
      *     absences: list<array{title: string, names: list<string>}>,
+     *     signatures: list<array{position: string, name: string}>,
      *     warnings: list<string>,
      *     printed_on: string
      * }
      */
-    public function build(CarbonInterface|string $date, string $kind = self::KIND_FULL): array
-    {
+    public function build(
+        CarbonInterface|string $date,
+        string $kind = self::KIND_FULL,
+        ?User $user = null,
+        string $extraText = '',
+    ): array {
         $day = $date instanceof CarbonInterface
             ? $date->copy()->startOfDay()
             : Carbon::parse($date)->startOfDay();
         $kind = $kind === self::KIND_EXTRACT ? self::KIND_EXTRACT : self::KIND_FULL;
         $settings = $this->settings(NaryadNorm::query()->first());
+        if ($kind === self::KIND_EXTRACT) {
+            $settings['show_wagons'] = false;
+            $settings['show_end_on_line'] = true;
+            $settings['show_end_off_line'] = true;
+        }
         $weekday = $this->weekdayName($day);
         $title = $kind === self::KIND_EXTRACT
             ? 'ВЫПИСКА ИЗ НАРЯДА ЛОКОМОТИВНЫХ БРИГАД НА '.$day->format('d.m.Y').', '.$weekday
@@ -68,7 +84,9 @@ class NaryadPrintService
             'graph_name' => null,
             'message' => null,
             'rows' => [],
+            'extra_text' => [],
             'absences' => [],
+            'signatures' => $this->signatures($user),
             'warnings' => [],
             'printed_on' => now()->format('d.m.Y'),
         ];
@@ -98,14 +116,30 @@ class NaryadPrintService
             ->orderBy('id')
             ->get();
 
+        $catalogs = $this->printCatalogs($day, $settings);
         $used = [];
         $prevRoute = null;
+        $leftover = '';
+        $bannerPending = trim((string) $settings['header_banner']) !== '';
         foreach ($slots as $slot) {
             $people = $this->peopleForSlot($assignments, $slot['route'], $slot['shift']);
             foreach ($people as $person) {
                 $used[$person['user_id']] = true;
             }
-            $built = $this->buildSlotRows($slot, $people, $prevRoute, $kind, $settings, $day);
+            $isFirst = $prevRoute === null;
+            $newRoute = $isFirst || ! $this->sameCode($prevRoute, $slot['route']);
+            $built = $this->buildSlotRows(
+                $slot,
+                $people,
+                $newRoute,
+                $isFirst,
+                $kind,
+                $settings,
+                $day,
+                $catalogs,
+                $leftover,
+                $bannerPending,
+            );
             foreach ($built['rows'] as $row) {
                 $sheet['rows'][] = $row;
             }
@@ -114,10 +148,13 @@ class NaryadPrintService
             }
             if (! ($built['skipped'] ?? false)) {
                 $prevRoute = $slot['route'];
+                $leftover = $built['leftover'];
+                $bannerPending = $built['banner_pending'];
             }
         }
 
         if ($kind === self::KIND_FULL) {
+            $sheet['extra_text'] = $this->extraTextLines($extraText);
             $sheet['absences'] = $this->absenceBlocks($assignments, $used, $settings);
         }
 
@@ -138,17 +175,27 @@ class NaryadPrintService
             'show_graph_name' => false,
             'show_end_on_line' => true,
             'show_end_off_line' => true,
+            'show_wagons' => true,
             'two_person_layout' => false,
             'split_rest_by_position' => true,
             'note_indent' => 40,
+            'merge_extra_roster' => false,
+            'header_banner' => '',
+            'extra_text_prompt' => false,
         ];
         $stored = is_array($norm?->planir) && is_array($norm->planir['print'] ?? null)
             ? $norm->planir['print']
             : [];
+        if (! array_key_exists('merge_extra_roster', $stored) && (int) ($planir['train_count'] ?? 0) === 2) {
+            $defaults['merge_extra_roster'] = true;
+        }
 
         return array_replace($defaults, $stored, [
             'night_shift_codes' => $planir['night_shift_codes'],
             'rest_codes' => $planir['rest_codes'],
+            'route_from' => (int) ($planir['route_from'] ?? $defaults['route_from']),
+            'route_to' => (int) ($planir['route_to'] ?? $defaults['route_to']),
+            'line_mode' => (int) ($planir['line_mode'] ?? 1),
         ]);
     }
 
@@ -224,45 +271,94 @@ class NaryadPrintService
      * @param  array<string, mixed>  $slot
      * @param  list<array<string, mixed>>  $people
      * @param  array<string, mixed>  $settings
-     * @return array{rows: list<array<string, mixed>>, warnings: list<string>, skipped: bool}
+     * @param  array{rosters: array<string, array{instrument: string, name: string}>, costs: array<string, string>}  $catalogs
+     * @return array{rows: list<array<string, mixed>>, warnings: list<string>, skipped: bool, leftover: string, banner_pending: bool}
      */
-    private function buildSlotRows(array $slot, array $people, ?string $prevRoute, string $kind, array $settings, CarbonInterface $day): array
-    {
+    private function buildSlotRows(
+        array $slot,
+        array $people,
+        bool $newRoute,
+        bool $isFirst,
+        string $kind,
+        array $settings,
+        CarbonInterface $day,
+        array $catalogs,
+        string $leftover,
+        bool $bannerPending,
+    ): array {
         if ($people === [] && $slot['skip_vacant']) {
-            return ['rows' => [], 'warnings' => [], 'skipped' => true];
+            return [
+                'rows' => [],
+                'warnings' => [],
+                'skipped' => true,
+                'leftover' => $leftover,
+                'banner_pending' => $bannerPending,
+            ];
         }
 
         $warnings = [];
         $isLine = $this->isLineRoute($slot['route'], $settings);
-        $showRoute = $prevRoute === null || ! $this->sameCode($prevRoute, $slot['route']);
+        $rows = [];
+
+        if ($newRoute && $leftover !== '') {
+            $rows[] = $this->leftoverRow($leftover);
+            $leftover = '';
+        }
+        if ($newRoute && ! $isFirst) {
+            $rows[] = $this->spacerRow();
+        }
+        if ($newRoute && $bannerPending && ! $isLine) {
+            $banner = trim((string) $settings['header_banner']);
+            if ($banner !== '') {
+                $rows[] = $this->bannerRow($banner);
+                $rows[] = $this->spacerRow();
+            }
+            $bannerPending = false;
+        }
+
+        $column = $this->routeColumn($slot['route'], $newRoute, $settings, $catalogs, $leftover);
+        $leftover = $column['leftover'];
 
         foreach ($people as $i => $person) {
             $people[$i]['mark'] = $this->personMark((int) $person['user_id'], $day, $settings);
         }
 
         if ($people === []) {
+            $rows[] = $this->makeRow($slot, $newRoute, $kind, $settings, [
+                'machinist' => '. . . . . . . . .',
+                'assistant' => $settings['two_person_layout'] ? '. . . . . . . . .' : '',
+                'vacant' => true,
+                'left' => $column['left'],
+                'composition' => $column['composition'],
+            ]);
+
             return [
-                'rows' => [$this->makeRow($slot, $showRoute, $kind, $settings, [
-                    'machinist' => '. . . . . . . . .',
-                    'assistant' => $settings['two_person_layout'] ? '. . . . . . . . .' : '',
-                    'vacant' => true,
-                ])],
+                'rows' => $rows,
                 'warnings' => [],
                 'skipped' => false,
+                'leftover' => $leftover,
+                'banner_pending' => $bannerPending,
             ];
         }
 
-        $rows = [];
         $chunks = $this->pairPeople($people, $isLine, $slot, $warnings);
         foreach ($chunks as $index => $pair) {
-            $rows[] = $this->makeRow($slot, $showRoute && $index === 0, $kind, $settings, [
+            $rows[] = $this->makeRow($slot, $newRoute && $index === 0, $kind, $settings, [
                 'machinist' => $this->formatName($pair['machinist'] ?? null),
                 'assistant' => $this->formatName($pair['assistant'] ?? null, $settings['two_person_layout']),
                 'vacant' => false,
+                'left' => $index === 0 ? $column['left'] : '',
+                'composition' => $index === 0 ? $column['composition'] : '',
             ]);
         }
 
-        return ['rows' => $rows, 'warnings' => $warnings, 'skipped' => false];
+        return [
+            'rows' => $rows,
+            'warnings' => $warnings,
+            'skipped' => false,
+            'leftover' => $leftover,
+            'banner_pending' => $bannerPending,
+        ];
     }
 
     /**
@@ -304,7 +400,7 @@ class NaryadPrintService
     /**
      * @param  array<string, mixed>  $slot
      * @param  array<string, mixed>  $settings
-     * @param  array{machinist: string, assistant: string, vacant: bool}  $names
+     * @param  array{machinist: string, assistant: string, vacant: bool, left?: string, composition?: string}  $names
      * @return array<string, mixed>
      */
     private function makeRow(array $slot, bool $showRoute, string $kind, array $settings, array $names): array
@@ -331,12 +427,15 @@ class NaryadPrintService
         }
 
         $note = $this->splitNotes((string) $slot['notes'], (int) $settings['note_indent']);
+        $left = array_key_exists('left', $names)
+            ? (string) $names['left']
+            : ($showRoute ? trim($slot['route'].' '.$slot['shift']) : '');
 
         return [
             'route' => $showRoute ? $slot['route'] : '',
             'shift' => $slot['shift'],
-            'route_label' => $showRoute ? trim($slot['route'].' '.$slot['shift']) : '',
-            'composition' => '',
+            'route_label' => $left,
+            'composition' => (string) ($names['composition'] ?? ''),
             'machinist' => $names['machinist'],
             'assistant' => $names['assistant'],
             'start' => $startText,
@@ -346,6 +445,8 @@ class NaryadPrintService
             'note_lines' => $note['extra'],
             'vacant' => $names['vacant'],
             'is_line' => $isLine,
+            'spacer' => false,
+            'banner' => '',
         ];
     }
 
@@ -670,6 +771,315 @@ class NaryadPrintService
 
     private function weekdayName(CarbonInterface $day): string
     {
-        return $day->copy()->locale('ru')->isoFormat('dddd');
+        $code = (string) ($day->dayOfWeek + 1);
+        $fromBook = ArmCode::query()
+            ->where('book_code', '47')
+            ->where('code', $code)
+            ->value('name');
+        if (is_string($fromBook) && trim($fromBook) !== '') {
+            return mb_strtoupper(trim($fromBook));
+        }
+
+        return mb_strtoupper($day->copy()->locale('ru')->isoFormat('dddd'));
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     * @return array{rosters: array<string, array{instrument: string, name: string}>, costs: array<string, string>}
+     */
+    private function printCatalogs(CarbonInterface $day, array $settings): array
+    {
+        $kinds = [ArmRoster::KIND_PRIMARY];
+        if ($settings['merge_extra_roster']) {
+            $kinds[] = ArmRoster::KIND_EXTRA;
+        }
+        $consistNames = ArmCode::query()
+            ->where('book_code', '03')
+            ->get()
+            ->keyBy(fn (ArmCode $code) => trim((string) $code->code));
+        $rosters = [];
+        foreach ($kinds as $kind) {
+            $rows = ArmRoster::query()
+                ->whereDate('roster_date', $day->toDateString())
+                ->where('kind', $kind)
+                ->orderBy('id')
+                ->get();
+            foreach ($rows as $row) {
+                $route = trim((string) $row->route_number);
+                if ($route === '' || isset($rosters[$route])) {
+                    continue;
+                }
+                $instrument = trim((string) ($row->instrument ?? ''));
+                $name = '';
+                if ($instrument !== '' && isset($consistNames[$instrument])) {
+                    $name = trim((string) $consistNames[$instrument]->name);
+                }
+                $rosters[$route] = ['instrument' => $instrument, 'name' => $name];
+            }
+        }
+
+        $costs = [];
+        foreach (ArmCode::query()->where('book_code', '07')->orderBy('id')->get() as $code) {
+            $key = trim((string) $code->code);
+            if ($key === '' || isset($costs[$key])) {
+                continue;
+            }
+            $costs[$key] = trim((string) $code->name);
+        }
+
+        return ['rosters' => $rosters, 'costs' => $costs];
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     * @param  array{rosters: array<string, array{instrument: string, name: string}>, costs: array<string, string>}  $catalogs
+     * @return array{left: string, leftover: string, composition: string}
+     */
+    private function routeColumn(
+        string $route,
+        bool $newRoute,
+        array $settings,
+        array $catalogs,
+        string $leftover,
+    ): array {
+        if (! $newRoute) {
+            if ($leftover !== '') {
+                return [
+                    'left' => $this->leftoverColumn($leftover),
+                    'leftover' => '',
+                    'composition' => trim($leftover),
+                ];
+            }
+
+            return ['left' => '', 'leftover' => '', 'composition' => ''];
+        }
+
+        if ($this->usesConsistColumn($route)) {
+            return $this->lineRouteColumn($route, $settings, $catalogs);
+        }
+
+        return $this->namedRouteColumn($route, $catalogs);
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     * @param  array{rosters: array<string, array{instrument: string, name: string}>, costs: array<string, string>}  $catalogs
+     * @return array{left: string, leftover: string, composition: string}
+     */
+    private function lineRouteColumn(string $route, array $settings, array $catalogs): array
+    {
+        $work = $this->cut($route, 2);
+        if (! $settings['show_wagons']) {
+            return [
+                'left' => $this->pad($work, 13),
+                'leftover' => '',
+                'composition' => '',
+            ];
+        }
+        $roster = $this->rosterForRoute($route, $catalogs['rosters'])
+            ?? ['instrument' => '', 'name' => ''];
+        $nazel = (string) ($roster['name'] ?? '');
+        $instr = (string) ($roster['instrument'] ?? '');
+        if ($nazel === '' && $instr === '') {
+            return [
+                'left' => $this->pad($work, 13),
+                'leftover' => '',
+                'composition' => '',
+            ];
+        }
+        $sost = $this->cut($nazel, 11).' '.$instr;
+        $ws = $work.' '.$sost.' ';
+        $ins = $this->cut(trim($this->right(trim($ws), 3)), 2);
+        $ws15 = $this->cut($ws, 15);
+        $pz = mb_strpos($ws15, '-');
+        if ($nazel === '' || $pz === false) {
+            $left = $this->pad($this->cut($ws15, 2).'    '.$ins, 13);
+
+            return ['left' => $left, 'leftover' => '', 'composition' => trim($instr)];
+        }
+        $head = $this->cut($this->cut($ws15, $pz + 1).' ', 9);
+        $left = $this->pad($head.$ins, 13);
+        $leftover = trim(mb_substr($ws15, $pz + 1));
+
+        return ['left' => $left, 'leftover' => $leftover, 'composition' => trim($nazel.' '.$instr)];
+    }
+
+    /**
+     * @param  array{rosters: array<string, array{instrument: string, name: string}>, costs: array<string, string>}  $catalogs
+     * @return array{left: string, leftover: string, composition: string}
+     */
+    private function namedRouteColumn(string $route, array $catalogs): array
+    {
+        $name = $catalogs['costs'][$route] ?? '';
+        if ($name === '') {
+            foreach ($catalogs['costs'] as $code => $label) {
+                if ($this->sameCode($code, $route)) {
+                    $name = $label;
+                    break;
+                }
+            }
+        }
+        if ($name === '') {
+            $name = $route;
+        }
+        $ws = $this->pad($name, 18);
+        $left = $this->cut($ws, 13);
+        $leftover = trim(mb_substr($ws, 13));
+
+        return ['left' => $left, 'leftover' => $leftover, 'composition' => ''];
+    }
+
+    /**
+     * @param  array<string, array{instrument: string, name: string}>  $rosters
+     * @return array{instrument: string, name: string}|null
+     */
+    private function rosterForRoute(string $route, array $rosters): ?array
+    {
+        if (isset($rosters[$route])) {
+            return $rosters[$route];
+        }
+        foreach ($rosters as $code => $row) {
+            if ($this->sameCode((string) $code, $route)) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
+    private function usesConsistColumn(string $route): bool
+    {
+        return is_numeric($route);
+    }
+
+    private function leftoverColumn(string $leftover): string
+    {
+        return '   '.$this->pad($leftover, 10);
+    }
+
+    /**
+     * @return list<array{position: string, name: string}>
+     */
+    private function signatures(?User $user): array
+    {
+        $out = [];
+        if ($user) {
+            $position = trim((string) ($user->profile?->position ?? ''));
+            $out[] = [
+                'position' => $position !== '' ? $position : 'Нарядчик',
+                'name' => trim((string) $user->name),
+            ];
+        }
+        $rows = ArmSignature::query()
+            ->where('sort_order', '!=', 0)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+        foreach ($rows as $row) {
+            $out[] = [
+                'position' => trim((string) $row->position),
+                'name' => trim((string) $row->full_name),
+            ];
+        }
+        foreach ($out as $i => $sign) {
+            $out[$i]['position'] = $this->pad($sign['position'], 45);
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function extraTextLines(string $text): array
+    {
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+        $lines = explode("\n", $text);
+        while ($lines !== [] && trim((string) end($lines)) === '') {
+            array_pop($lines);
+        }
+        $out = [];
+        foreach ($lines as $line) {
+            $out[] = rtrim($line);
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function spacerRow(): array
+    {
+        return [
+            'route' => '',
+            'shift' => '',
+            'route_label' => '',
+            'composition' => '',
+            'machinist' => '',
+            'assistant' => '',
+            'start' => '',
+            'end' => '',
+            'time' => '',
+            'note' => '',
+            'note_lines' => [],
+            'vacant' => false,
+            'is_line' => false,
+            'spacer' => true,
+            'banner' => '',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function leftoverRow(string $leftover): array
+    {
+        $row = $this->spacerRow();
+        $row['spacer'] = false;
+        $row['route_label'] = $this->leftoverColumn($leftover);
+        $row['composition'] = trim($leftover);
+
+        return $row;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function bannerRow(string $banner): array
+    {
+        $row = $this->spacerRow();
+        $row['banner'] = $banner;
+
+        return $row;
+    }
+
+    private function cut(string $text, int $length): string
+    {
+        if ($length <= 0) {
+            return '';
+        }
+
+        return mb_substr($text, 0, $length);
+    }
+
+    private function pad(string $text, int $length): string
+    {
+        $text = $this->cut($text, $length);
+
+        return $text.str_repeat(' ', max(0, $length - mb_strlen($text)));
+    }
+
+    private function right(string $text, int $length): string
+    {
+        if ($length <= 0) {
+            return '';
+        }
+        $len = mb_strlen($text);
+        if ($len <= $length) {
+            return $text;
+        }
+
+        return mb_substr($text, $len - $length);
     }
 }

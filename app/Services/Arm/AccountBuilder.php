@@ -196,7 +196,8 @@ class AccountBuilder
                 continue;
             }
             $hours = $this->interpreter->evaluate($formula->formula, $totals);
-            if (abs($hours) < 0.0005) {
+            $sc = $this->scFls($formula, $hours, $totals);
+            if ($sc === null) {
                 continue;
             }
             ArmAccountLine::create([
@@ -205,9 +206,9 @@ class AccountBuilder
                 'name' => $formula->name,
                 'pay_code' => $formula->pay_code,
                 'tariff_code' => $formula->tariff_code,
-                'tariff' => $this->lineTariff($formula),
-                'percent' => $this->linePercent($formula, $totals),
-                'hours' => round($hours, 2),
+                'tariff' => $sc['tariff'],
+                'percent' => $sc['percent'],
+                'hours' => $sc['hours'],
                 'cost_code' => $formula->cost_code,
                 'profession' => $formula->kind === 'assistant'
                     ? (str_contains((string) $position, 'П') ? $position : 'П/М')
@@ -320,5 +321,47 @@ class AccountBuilder
         $row = ArmTariff::query()->where('code', $code)->first();
 
         return (float) ($row?->rate ?? 0);
+    }
+
+    /**
+     * sc_fls: TARST из N_TARIF, иначе CHTAR; VROTR только если есть тариф или часовая ставка;
+     * пустой TARIF и ненулевой CHTAR → PROCNT=100.
+     *
+     * @param  array<string, float>  $totals
+     * @return array{tariff: float, percent: float, hours: float}|null
+     */
+    private function scFls(ArmPayFormula $formula, float $hours, array $totals): ?array
+    {
+        $nTariff = $this->lineTariff($formula);
+        $tariffCode = trim((string) $formula->tariff_code);
+        $percent = $this->linePercent($formula, $totals);
+        $hasNamedTariff = $tariffCode !== '';
+        $chtar = 0.0;
+        if ($hasNamedTariff && abs($nTariff) > 0.0000001) {
+            $procText = trim((string) $formula->percent_text);
+            if ($procText !== '' && $procText !== '*') {
+                $chtar = round($nTariff * $percent / 100, 3);
+            }
+        } elseif (! $hasNamedTariff && abs($nTariff) > 0.0000001) {
+            $chtar = $nTariff;
+        }
+
+        if (! $hasNamedTariff && abs($chtar) < 0.0000001) {
+            return null;
+        }
+        if (abs($hours) < 0.0005) {
+            return null;
+        }
+
+        $procnt = $percent;
+        if (! $hasNamedTariff && abs($chtar) > 0.0000001) {
+            $procnt = 100.0;
+        }
+
+        return [
+            'tariff' => $hasNamedTariff ? $nTariff : $chtar,
+            'percent' => $procnt,
+            'hours' => round($hours, 2),
+        ];
     }
 }

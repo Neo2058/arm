@@ -139,13 +139,17 @@ Role checks in PHP go through `User` helpers (`isAdmin()`, `isInstructor()`, `is
 
 1. **Operational + Violations**
    - `ActionLog::log()`
-   - Stored in PostgreSQL
-   - Used for document views, training views, download attempts
+   - PostgreSQL (`action_logs`) for Filament, and **one** ClickHouse row via `ClickHouseService`
+   - Document click, training page, downloads, mobile JSON show, UI events (`ui.*`)
 
-2. **Analytics**
-   - `ClickHouseService::log()`
-   - `user_actions` table
-   - High-volume events
+2. **Analytics-only**
+   - `ClickHouseService::log($type, $resourceId, $details, $actor = null)`
+   - `user_actions` table, queue `analytics`
+   - Dispatcher / uchet / nsi / login / quiz complete
+   - No `Auth` user → `user_id=0`, `user_role=system` (Telegram etc.)
+   - Do **not** call this after `ActionLog::log()` for the same event
+
+Client `POST /api/actions/log` accepts only `ActionLog::CLIENT_ACTIONS`; stored as `ui.{action}` with scalar details.
 
 ### Violation Flow (Downloads/Views)
 

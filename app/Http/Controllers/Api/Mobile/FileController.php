@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\Mobile;
 
 use App\Http\Controllers\Controller;
-use App\Models\ActionLog;
 use App\Models\Document;
 use App\Models\TrainingMaterial;
 use App\Services\FileProxyService;
@@ -23,11 +22,6 @@ class FileController extends Controller
         if (! $this->files->exists($path)) {
             abort(404, 'Файл не найден');
         }
-
-        ActionLog::log('mobile.view_document', [
-            'document_id' => $document->id,
-            'title' => $document->title,
-        ]);
 
         $filename = pathinfo($path, PATHINFO_FILENAME).'.pdf';
 
@@ -51,12 +45,6 @@ class FileController extends Controller
         if (! $this->files->exists($path)) {
             abort(404, 'Файл не найден');
         }
-
-        ActionLog::log('mobile.training_material_viewed', [
-            'material_id' => $material->id,
-            'title' => $material->title,
-            'type' => $material->type,
-        ]);
 
         $filename = $material->file_name ?: basename($path);
         $mime = $material->mime_type

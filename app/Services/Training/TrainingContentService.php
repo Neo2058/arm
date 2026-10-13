@@ -125,12 +125,12 @@ class TrainingContentService
 
             // Логируем действие пользователя
             ClickHouseService::log('training_material_viewed', $material->id, [
-                'user_id'    => $user?->id,
-                'chat_id'    => $chatId,
+                'chat_id' => $chatId,
                 'material_id' => $material->id,
-                'type'       => $material->type,
-                'topic_id'   => $material->training_topic_id,
-            ]);
+                'type' => $material->type,
+                'topic_id' => $material->training_topic_id,
+                'via' => 'telegram',
+            ], $user);
 
             // В будущем здесь можно обновлять прогресс пользователя:
             // UserTrainingProgress::updateOrCreate([...]);

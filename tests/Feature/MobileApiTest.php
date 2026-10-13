@@ -81,6 +81,11 @@ class MobileApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('id', $open->id)
             ->assertJsonStructure(['url']);
+
+        $this->assertDatabaseHas('action_logs', [
+            'user_id' => $driver->id,
+            'action' => 'mobile.view_document',
+        ]);
     }
 
     public function test_driver_cannot_open_restricted_document_url(): void
@@ -114,6 +119,7 @@ class MobileApiTest extends TestCase
         $this->assertStringContainsString('%PDF-1.4 mobile', $response->streamedContent());
 
         $this->get('/api/mobile/files/documents/'.$document->id)->assertForbidden();
+        $this->assertDatabaseMissing('action_logs', ['action' => 'mobile.view_document']);
     }
 
     public function test_training_topics_materials_and_comments(): void
@@ -151,6 +157,11 @@ class MobileApiTest extends TestCase
             ->getJson('/api/mobile/training/materials/'.$material->id)
             ->assertOk()
             ->assertJsonStructure(['url', 'comments']);
+
+        $this->assertDatabaseHas('action_logs', [
+            'user_id' => $user->id,
+            'action' => 'mobile.training_material_viewed',
+        ]);
 
         $this->withToken($token)
             ->postJson('/api/mobile/training/materials/'.$material->id.'/comments', [

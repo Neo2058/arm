@@ -38,7 +38,7 @@
 | Почти не было тестов | набор Feature-тестов |
 | Форма `/about` без серверной проверки «уже есть пользователь» | `StoreAccessRequestRequest` |
 | Нет мобильного канала | `/api/mobile` + `mobile/` + `/install` |
-| Нет печати наряда как в `pecnar` | `NaryadPrintService` + `PrintController` (2026-10; нет `RASST`/`TEXTN`/`PODPISI`) |
+| Нет печати наряда как в `pecnar` | `NaryadPrintService` + `PrintController` (2026-10-12: RASST/TEXTN/PODPISI; нет диалога `who_msh`) |
 | Поиск ФИО в PDF на клиенте (pdf.js) | серверный `POST /naryady/search-people` |
 
 ---
@@ -60,8 +60,8 @@
 ### 4. Filament `getUploadedFileUsing`
 Крупные замыкания в `DocumentResource` / `TrainingMaterialResource`. Вынос только без смены disk / visibility / формы ответа.
 
-### 5. Логи размазаны
-`ActionLog`, `ClickHouseService`, `AdminNotificationService`. Нет единого «это violation».
+### 5. Логи: покрытие, не канал
+Канал записи зафиксирован: `ActionLog::log()` (Postgres + один CH) или только `ClickHouseService::log()`; UI — белый список `ui.*`; стрим signed URL не логирует Range-запросы. Остаётся **покрытие** (Filament CRUD, logout, смены, подстройки, НСИ, журнал) и нет единого признака «это violation». `AdminNotificationService` — алерты, не журнал действий.
 
 ### 6. Два расчёта зарплаты
 `WorkShift::booted()` (хардкод ставок) и `PayrollService`. Параллельно появился учёт `/uchet` (формулы FoxPro / ЛС) — не смешивать со ставкой 450 в `WorkShift` без явной задачи.

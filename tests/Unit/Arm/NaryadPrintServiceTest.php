@@ -3,8 +3,11 @@
 namespace Tests\Unit\Arm;
 
 use App\Models\ArmAppointment;
+use App\Models\ArmCode;
 use App\Models\ArmPersonnel;
+use App\Models\ArmRoster;
 use App\Models\ArmShiftBreakdown;
+use App\Models\ArmSignature;
 use App\Models\DeviationsCatalog;
 use App\Models\NaryadAssignment;
 use App\Models\NaryadNorm;
@@ -157,6 +160,140 @@ class NaryadPrintServiceTest extends TestCase
         $sheet = app(NaryadPrintService::class)->build('2026-04-10');
         $this->assertNotNull($sheet['message']);
         $this->assertSame([], $sheet['rows']);
+    }
+
+    public function test_rasst_consist_splits_across_shifts_like_app_nar(): void
+    {
+        $this->seedGraph();
+        ArmCode::create([
+            'book_code' => '03',
+            'code' => '51 ш',
+            'name' => '27018-27017',
+            'nom' => '30',
+        ]);
+        ArmRoster::create([
+            'roster_date' => '2026-04-10',
+            'kind' => ArmRoster::KIND_PRIMARY,
+            'route_number' => '25',
+            'instrument' => '51 ш',
+        ]);
+        $mash = $this->driver('ПОДСЕКАЛОВ Ю.В.', 'МШ', '2101');
+        $second = $this->driver('РАМЗИН В.А', 'МШ', '2102');
+        NaryadAssignment::create([
+            'user_id' => $mash->id,
+            'plan_date' => '2026-04-10',
+            'route_number' => '25 (2-ранняя)',
+        ]);
+        NaryadAssignment::create([
+            'user_id' => $second->id,
+            'plan_date' => '2026-04-10',
+            'route_number' => '25 (1-с ночи)',
+        ]);
+
+        $sheet = app(NaryadPrintService::class)->build('2026-04-10');
+        $rows25 = collect($sheet['rows'])->filter(
+            fn ($row) => str_contains((string) $row['machinist'], 'ПОДСЕКАЛОВ')
+                || str_contains((string) $row['machinist'], 'РАМЗИН')
+        )->values();
+        $this->assertCount(2, $rows25);
+        $this->assertStringContainsString('27018', $rows25[0]['route_label']);
+        $this->assertStringContainsString('25', $rows25[0]['route_label']);
+        $this->assertStringContainsString('27017', $rows25[1]['route_label']);
+        $this->assertStringNotContainsString('27018', $rows25[1]['route_label']);
+    }
+
+    public function test_extract_omits_consist_column(): void
+    {
+        $this->seedGraph();
+        ArmCode::create([
+            'book_code' => '03',
+            'code' => '51 ш',
+            'name' => '27018-27017',
+            'nom' => '30',
+        ]);
+        ArmRoster::create([
+            'roster_date' => '2026-04-10',
+            'kind' => ArmRoster::KIND_PRIMARY,
+            'route_number' => '25',
+            'instrument' => '51 ш',
+        ]);
+        $mash = $this->driver('СИДОРОВ С.С.', 'МШ', '2003');
+        NaryadAssignment::create([
+            'user_id' => $mash->id,
+            'plan_date' => '2026-04-10',
+            'route_number' => '25 (1-с ночи)',
+        ]);
+
+        $sheet = app(NaryadPrintService::class)->build('2026-04-10', NaryadPrintService::KIND_EXTRACT);
+        $first = collect($sheet['rows'])->first(fn ($row) => $row['shift'] === '1');
+        $this->assertNotNull($first);
+        $this->assertStringNotContainsString('27018', (string) $first['route_label']);
+        $this->assertSame('', $first['composition']);
+    }
+
+    public function test_off_line_route_uses_kodspr_07_name(): void
+    {
+        $this->seedGraph();
+        ArmCode::create([
+            'book_code' => '07',
+            'code' => 'М1',
+            'name' => 'Мз-1 маневры',
+            'nom' => '+',
+        ]);
+        ArmShiftBreakdown::create([
+            'graph_code' => '01',
+            'route_code' => 'М1',
+            'shift_code' => '1',
+            'sequence' => '1',
+            'start_hours' => 5.25,
+            'end_hours' => 8.05,
+            'appearance_start' => 'ЗБЛ',
+            'appearance_end' => 'ЗБЛ',
+        ]);
+        $mash = $this->driver('КРЫМСКИЙ А.С.', 'МШ', '2103');
+        NaryadAssignment::create([
+            'user_id' => $mash->id,
+            'plan_date' => '2026-04-10',
+            'route_number' => 'М1',
+            'work_code' => 'М1',
+            'shift_code' => '1',
+        ]);
+
+        $sheet = app(NaryadPrintService::class)->build('2026-04-10');
+        $row = collect($sheet['rows'])->first(fn ($r) => str_contains((string) $r['machinist'], 'КРЫМСКИЙ'));
+        $this->assertNotNull($row);
+        $this->assertStringContainsString('Мз-1', $row['route_label']);
+    }
+
+    public function test_signatures_and_extra_text_go_on_full_sheet(): void
+    {
+        $this->seedGraph();
+        ArmSignature::create([
+            'sort_order' => 1,
+            'position' => 'Заместитель начальника депо по эксплуатации',
+            'full_name' => 'Михайлов Е.В',
+        ]);
+        ArmSignature::create([
+            'sort_order' => 0,
+            'position' => 'Председатель профкома',
+            'full_name' => 'Комаров А.В.',
+        ]);
+        $user = User::factory()->dispatcher()->create(['name' => 'ДРОЖЖИНА НЕЛЛИ ЮРЬЕВНА']);
+        $sheet = app(NaryadPrintService::class)->build(
+            '2026-04-10',
+            NaryadPrintService::KIND_FULL,
+            $user,
+            "доп. строка\n",
+        );
+
+        $this->assertCount(2, $sheet['signatures']);
+        $this->assertStringContainsString('ДРОЖЖИНА', $sheet['signatures'][0]['name']);
+        $this->assertStringContainsString('Михайлов', $sheet['signatures'][1]['name']);
+        $this->assertStringContainsString('Заместитель', $sheet['signatures'][1]['position']);
+        $this->assertFalse(collect($sheet['signatures'])->contains(
+            fn ($s) => str_contains($s['name'], 'Комаров')
+        ));
+        $this->assertSame(['доп. строка'], $sheet['extra_text']);
     }
 
     private function seedGraph(): void
