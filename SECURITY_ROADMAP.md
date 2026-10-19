@@ -117,7 +117,7 @@ composer.json теперь фиксирует platform.php=8.2.0 для разр
 
 1. Определить TTL/повторный вход с учётом существующего mobile-клиента; проверять истечение и logout.
 2. Привязать выдачу mobile signed URL к пользователю и проверять его актуальную активность и права при стриме.
-3. Закрыть remaining temporaryUrl в нарядах/росписях через FileProxyService без случайных правок FileUpload.
+3. Росписи и наряды уже через FileProxyService. Filament FileUpload не менять мимоходом.
 4. Проверить отзыв доступа, Range/media playback, PDF viewer и отсутствие MinIO URLs в браузере.
 
 ## Этап 8 — инфраструктура

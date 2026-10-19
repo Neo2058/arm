@@ -69,14 +69,18 @@ class NaryadSearchController extends Controller implements HasMiddleware
             $count++;
         }
 
+        ClickHouseService::log('instructor_naryad_uploaded', $user->id, ['count' => $count]);
+
         return back()->with('success', "Загружено нарядов: {$count}");
     }
 
     public function destroyNaryad(InstructorNaryadFile $naryadFile)
     {
         $this->authorizeFile($naryadFile->user_id);
+        $id = $naryadFile->id;
         Storage::disk('local')->delete($naryadFile->path);
         $naryadFile->delete();
+        ClickHouseService::log('instructor_naryad_deleted', $id, []);
 
         return back()->with('success', 'Наряд удалён.');
     }
@@ -125,14 +129,18 @@ class NaryadSearchController extends Controller implements HasMiddleware
             $count++;
         }
 
+        ClickHouseService::log('instructor_shift_uploaded', $user->id, ['count' => $count]);
+
         return back()->with('success', "Загружено таблиц разбивки: {$count}");
     }
 
     public function destroyShift(InstructorShiftTable $shiftTable)
     {
         $this->authorizeFile($shiftTable->user_id);
+        $id = $shiftTable->id;
         Storage::disk('local')->delete($shiftTable->path);
         $shiftTable->delete();
+        ClickHouseService::log('instructor_shift_deleted', $id, []);
 
         return back()->with('success', 'Разбивка удалена.');
     }
@@ -165,14 +173,18 @@ class NaryadSearchController extends Controller implements HasMiddleware
             $count++;
         }
 
+        ClickHouseService::log('instructor_query_uploaded', $user->id, ['count' => $count]);
+
         return back()->with('success', "Загружено списков ФИО: {$count}");
     }
 
     public function destroyQuery(InstructorQueryList $queryList)
     {
         $this->authorizeFile($queryList->user_id);
+        $id = $queryList->id;
         Storage::disk('local')->delete($queryList->path);
         $queryList->delete();
+        ClickHouseService::log('instructor_query_deleted', $id, []);
 
         return back()->with('success', 'Список ФИО удалён.');
     }
@@ -244,6 +256,10 @@ class NaryadSearchController extends Controller implements HasMiddleware
         if (! is_string($text) || $text === '') {
             return back()->withErrors(['run' => 'Сначала выполните поиск.']);
         }
+
+        ClickHouseService::log('instructor_naryad_result_downloaded', Auth::id() ?? 0, [
+            'bytes' => strlen($text),
+        ]);
 
         return response($text, 200, [
             'Content-Type' => 'text/plain; charset=UTF-8',

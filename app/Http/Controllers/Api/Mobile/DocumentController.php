@@ -55,6 +55,11 @@ class DocumentController extends Controller
     public function show(Request $request, Document $document): JsonResponse
     {
         if (! $request->user()->canAccessByRoles($document->allowed_roles)) {
+            ActionLog::violation('violation_document_access', [
+                'document_id' => $document->id,
+                'title' => $document->title,
+                'via' => 'mobile',
+            ]);
             abort(403, 'Доступ к документу ограничен.');
         }
 

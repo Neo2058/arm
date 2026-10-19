@@ -12,6 +12,7 @@ use App\Models\NaryadNorm;
 use App\Models\User;
 use App\Services\Arm\DbfReader;
 use App\Services\Arm\LsbuhExportService;
+use App\Services\ClickHouseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Queue;
@@ -194,10 +195,18 @@ class ArmStepGTest extends TestCase
             'hours' => 10,
             'ls_number' => '0',
         ]);
+        ClickHouseService::fake();
         $path = sys_get_temp_dir().'/LSBUH_'.uniqid().'.DBF';
         $code = Artisan::call('arm:export-lsbuh', ['month' => '2026-04', 'path' => $path]);
         $this->assertSame(0, $code);
         $this->assertFileExists($path);
+        $export = array_values(array_filter(
+            ClickHouseService::recorded(),
+            fn (array $row) => $row['action_type'] === 'arm.export_lsbuh'
+        ));
+        $this->assertNotEmpty($export);
+        $this->assertSame(0, $export[0]['user_id']);
+        $this->assertStringContainsString('"month":"2026-04"', $export[0]['details']);
         $row = (new DbfReader($path))->all()[0];
         $this->assertSame('0321', $row['TABN']);
         $this->assertSame('004', $row['VOPL']);

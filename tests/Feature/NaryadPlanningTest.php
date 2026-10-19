@@ -95,7 +95,9 @@ class NaryadPlanningTest extends TestCase
     {
         $dispatcher = User::factory()->dispatcher()->create();
 
-        $this->actingAs($dispatcher)->get('/naryad')->assertOk();
+        $html = $this->actingAs($dispatcher)->get('/naryad')->assertOk()->getContent();
+        $this->assertStringContainsString('/api/bug-report', $html);
+        $this->assertStringNotContainsString('заглушка', $html);
         $this->actingAs($dispatcher)->get('/naryad/partial/setka')->assertOk();
         $this->actingAs($dispatcher)->get('/naryad/partial/crews')->assertOk();
         $this->actingAs($dispatcher)->get('/naryad/partial/variants')->assertOk();

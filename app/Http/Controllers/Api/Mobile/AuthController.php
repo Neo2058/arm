@@ -7,6 +7,7 @@ use App\Services\ClickHouseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -36,8 +37,6 @@ class AuthController extends Controller
         $user->tokens()->where('name', 'mobile')->delete();
         $token = $user->createToken('mobile')->plainTextToken;
 
-        ClickHouseService::log('mobile.login');
-
         return response()->json([
             'token' => $token,
             'user' => $this->payload($user),
@@ -53,7 +52,14 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()?->currentAccessToken()?->delete();
+        $user = $request->user();
+        $token = $user?->currentAccessToken();
+        if ($token instanceof PersonalAccessToken) {
+            $token->delete();
+        }
+        if ($user) {
+            ClickHouseService::log('mobile.logout', $user->id, ['via' => 'token'], $user);
+        }
 
         return response()->json(['ok' => true]);
     }

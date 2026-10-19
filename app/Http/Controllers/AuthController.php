@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\ClickHouseService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -25,7 +24,6 @@ class AuthController extends Controller
         if (Auth::attempt([...$credentials, 'is_active' => true], $request->boolean('remember'))) {
             $request->session()->regenerate();
             $request->session()->flash('show_welcome_modal', true);
-            ClickHouseService::log('login'); // Логируем вход
 
             $user = Auth::user();
 

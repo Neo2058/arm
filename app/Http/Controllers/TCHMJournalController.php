@@ -13,7 +13,6 @@ use App\Models\User;
 use App\Models\UserProfile;
 use App\Services\ClickHouseService;
 use Carbon\Carbon;
-use ClickHouseDB\Client;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Support\Facades\Auth;
@@ -58,13 +57,22 @@ class TCHMJournalController extends Controller implements HasMiddleware
             ->latest()
             ->get();
 
+        $normativesTotal = JournalCrewNormative::where('column', $column)->count();
+        $normativesDone = JournalCrewNormative::where('column', $column)->whereNotNull('last_date')->count();
+
         $stats = [
             'column_members' => $columnMembers,
             'tasks_pending' => $tasks->where('status', 'pending')->count(),
             'tasks_done' => $tasks->where('status', 'done')->count(),
             'documents_count' => $documents->count(),
-            'norms_completed' => rand(45, 92), // demo
-            'reports_written' => rand(12, 38),
+            'norms_completed' => $normativesTotal > 0
+                ? (int) round($normativesDone * 100 / $normativesTotal)
+                : 0,
+            'reports_written' => JournalTask::where('user_id', $user->id)
+                ->where('column', $column)
+                ->where('source', 'report')
+                ->where('status', 'done')
+                ->count(),
         ];
 
         return view('journal.index', compact('column', 'tasks', 'documents', 'stats'));
@@ -82,7 +90,7 @@ class TCHMJournalController extends Controller implements HasMiddleware
             'source' => 'nullable|string',
         ]);
 
-        JournalTask::create([
+        $task = JournalTask::create([
             'user_id' => $user->id,
             'column' => $profile?->column,
             'title' => $validated['title'],
@@ -90,6 +98,10 @@ class TCHMJournalController extends Controller implements HasMiddleware
             'due_date' => $validated['due_date'] ?? null,
             'source' => $validated['source'] ?? 'manual',
             'status' => 'pending',
+        ]);
+        ClickHouseService::log('journal.todo.created', $task->id, [
+            'title' => $task->title,
+            'source' => $task->source,
         ]);
 
         return redirect()->route('journal.index')->with('success', 'Задача добавлена в журнал.');
@@ -130,6 +142,7 @@ class TCHMJournalController extends Controller implements HasMiddleware
             'description' => $validated['description'] ?? $task->description,
             'due_date' => $validated['due_date'] ?? $task->due_date,
         ]);
+        ClickHouseService::log('journal.todo.updated', $task->id, ['title' => $task->title]);
 
         return redirect()->route('journal.index')->with('success', 'Задача обновлена.');
     }
@@ -138,7 +151,9 @@ class TCHMJournalController extends Controller implements HasMiddleware
     {
         $task = JournalTask::where('user_id', Auth::id())->findOrFail($id);
         $taskName = $task->title;
+        $id = $task->id;
         $task->delete();
+        ClickHouseService::log('journal.todo.deleted', $id, ['title' => $taskName]);
 
         return redirect()->route('journal.index')->with('success', "Задача «{$taskName}» удалена.");
     }
@@ -156,13 +171,14 @@ class TCHMJournalController extends Controller implements HasMiddleware
         $file = $request->file('pdf');
         $path = $file->store('journal-documents/'.$user->id, 'local'); // or 's3'
 
-        JournalDocument::create([
+        $doc = JournalDocument::create([
             'user_id' => $user->id,
             'column' => $profile?->column,
             'title' => $validated['title'],
             'file_path' => $path,
-            'extracted_text' => null, // For demo, we'll handle extraction on ask
+            'extracted_text' => null,
         ]);
+        ClickHouseService::log('journal.document.uploaded', $doc->id, ['title' => $doc->title]);
 
         return redirect()->route('journal.index')->with('success', 'Документ загружен. Теперь можно задавать вопросы.');
     }
@@ -178,9 +194,7 @@ class TCHMJournalController extends Controller implements HasMiddleware
 
         $doc = JournalDocument::where('user_id', $user->id)->findOrFail($validated['document_id']);
 
-        // For demo: simple text-based "AI" using extracted or mock
-        // In real would use LLM + embeddings. Here we simulate based on example.
-        $answer = $this->generateDemoAnswer($validated['question'], $doc);
+        $answer = $this->answerFromDocument($validated['question'], $doc);
 
         // Store last Q&A in session for immediate add to todo
         session(['last_qa' => [
@@ -189,6 +203,10 @@ class TCHMJournalController extends Controller implements HasMiddleware
             'document_title' => $doc->title,
         ]]);
 
+        ClickHouseService::log('journal.document.asked', $doc->id, [
+            'title' => $doc->title,
+        ]);
+
         return redirect()->route('journal.index')->with('qa_result', [
             'question' => $validated['question'],
             'answer' => $answer,
@@ -196,24 +214,36 @@ class TCHMJournalController extends Controller implements HasMiddleware
         ]);
     }
 
-    private function generateDemoAnswer(string $question, JournalDocument $doc): string
+    private function answerFromDocument(string $question, JournalDocument $doc): string
     {
-        $q = mb_strtolower($question);
-
-        // Demo logic based on user's example
-        if (str_contains($q, 'светиков') || str_contains($q, 'тчм')) {
-            return 'ТЧМ Светикову до 21.07.2026 года провести ДОП КИП с машинистом Степановым А.Г. и отразить результаты работы в рабочем журнале.';
+        $text = trim((string) $doc->extracted_text);
+        if ($text === '') {
+            return 'Текст PDF не извлечён. Добавьте задачу в TODO вручную.';
         }
 
-        if (str_contains($q, 'норматив') || str_contains($q, 'задач')) {
-            return 'По загруженному документу определены следующие задачи: провести ДОП, заполнить рапорт, отчитаться по колонне до указанной даты.';
+        $words = preg_split('/\s+/u', mb_strtolower($question)) ?: [];
+        $needles = array_values(array_filter($words, fn (string $word) => mb_strlen($word) >= 4));
+
+        if ($needles === []) {
+            return mb_substr($text, 0, 400);
         }
 
-        // Fallback simple extraction simulation
-        $text = $doc->extracted_text ?? 'В документе указаны задачи по проведению инструктажей и отчётности для ТЧМ.';
-        $snippet = mb_substr($text, 0, 200);
+        $haystack = mb_strtolower($text);
+        $matches = [];
+        foreach ($needles as $needle) {
+            $pos = mb_strpos($haystack, $needle);
+            if ($pos === false) {
+                continue;
+            }
+            $start = max(0, $pos - 80);
+            $matches[] = trim(mb_substr($text, $start, 240));
+        }
 
-        return "На основе документа '{$doc->title}': {$snippet}... (рекомендуется добавить в TODO для контроля).";
+        if ($matches === []) {
+            return 'В извлечённом тексте документа нет совпадений с запросом.';
+        }
+
+        return implode("\n…\n", array_unique($matches));
     }
 
     private function getDefaultStats(): array
@@ -292,6 +322,10 @@ class TCHMJournalController extends Controller implements HasMiddleware
                 'is_pomoshnik' => ! empty($data['is_pomoshnik']),
             ]);
         }
+
+        ClickHouseService::log('journal.settings.updated', $user->id, [
+            'column' => $profile?->column,
+        ]);
 
         return redirect()->route('journal.settings')->with('success', 'Настройки сохранены.');
     }
@@ -424,6 +458,10 @@ class TCHMJournalController extends Controller implements HasMiddleware
             }
         }
 
+        ClickHouseService::log('journal.standards.updated', $user->id, [
+            'column' => $column,
+        ]);
+
         return redirect()->route('journal.standards')->with('success', 'Нормативы обновлены.');
     }
 
@@ -473,44 +511,32 @@ class TCHMJournalController extends Controller implements HasMiddleware
         $profile = $user->profile;
         $column = $profile?->column;
 
-        // Query ClickHouse for history
         $history = [];
         $userMap = [];
-        try {
-            if ($column) {
-                $crews = User::whereHas('profile', fn ($q) => $q->where('column', $column))->pluck('name', 'id')->toArray();
-                $userMap = $crews;
-            }
-
-            $ch = new Client(config('clickhouse'));
-            $query = "
-                SELECT 
+        if ($column) {
+            $userMap = User::whereHas('profile', fn ($q) => $q->where('column', $column))->pluck('name', 'id')->toArray();
+            $quotedColumn = ClickHouseService::quote($column);
+            $rows = ClickHouseService::select("
+                SELECT
                     event_time,
                     user_id,
                     action_type,
                     details
                 FROM default.user_actions
                 WHERE action_type = 'normative_completed'
+                  AND user_column = {$quotedColumn}
                 ORDER BY event_time DESC
                 LIMIT 100
-            ";
+            ");
 
-            $result = $ch->select($query);
-            $history = $result->rows();
-
-            // Dedup to avoid duplicate records
             $seen = [];
-            $unique = [];
-            foreach ($history as $row) {
+            foreach ($rows as $row) {
                 $key = ($row['user_id'] ?? '').'|'.($row['event_time'] ?? '').'|'.($row['details'] ?? '');
                 if (! isset($seen[$key])) {
                     $seen[$key] = true;
-                    $unique[] = $row;
+                    $history[] = $row;
                 }
             }
-            $history = $unique;
-        } catch (\Exception $e) {
-            $history = [];
         }
 
         $normativeLabels = [
@@ -620,7 +646,7 @@ class TCHMJournalController extends Controller implements HasMiddleware
             'notes' => 'nullable|string',
         ]);
 
-        JournalVacation::create([
+        $vacation = JournalVacation::create([
             'user_id' => $validated['user_id'],
             'instructor_id' => $user->id,
             'column' => $column,
@@ -628,6 +654,11 @@ class TCHMJournalController extends Controller implements HasMiddleware
             'end_date' => $validated['end_date'],
             'type' => $validated['type'] ?? 'основной',
             'notes' => $validated['notes'] ?? null,
+        ]);
+        ClickHouseService::log('journal.vacation.created', $vacation->id, [
+            'target_user_id' => $vacation->user_id,
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'],
         ]);
 
         return redirect()->route('journal.report')->with('success', 'Период отпуска добавлен.');
@@ -644,7 +675,12 @@ class TCHMJournalController extends Controller implements HasMiddleware
         })
             ->findOrFail($id);
 
+        $vacId = $vac->id;
+        $target = $vac->user_id;
         $vac->delete();
+        ClickHouseService::log('journal.vacation.deleted', $vacId, [
+            'target_user_id' => $target,
+        ]);
 
         return redirect()->route('journal.report')->with('success', 'Период отпуска удалён.');
     }

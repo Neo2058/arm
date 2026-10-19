@@ -188,7 +188,7 @@
                         <form action="{{ route('journal.ask') }}" method="POST" class="flex gap-2">
                             @csrf
                             <input type="hidden" name="document_id" value="{{ $doc->id }}">
-                            <input type="text" name="question" class="flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500" placeholder="Например: Какие задачи поставлены ТЧМ Светикову?" required>
+                            <input type="text" name="question" class="flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500" placeholder="Слово или фраза из документа" required>
                             <button type="submit" class="bg-orange-500 text-white px-3 py-1 rounded-xl text-sm">Спросить</button>
                         </form>
 

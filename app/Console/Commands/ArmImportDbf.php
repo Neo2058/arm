@@ -9,6 +9,7 @@ use App\Models\ScheduleType;
 use App\Services\Arm\AccountingImporter;
 use App\Services\Arm\DbfReader;
 use App\Services\Arm\PersonnelImporter;
+use App\Services\ClickHouseService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\Finder\Finder;
@@ -119,6 +120,12 @@ class ArmImportDbf extends Command
         }
 
         $this->info('Готово. Схема — armd.md');
+        ClickHouseService::log('arm.import_dbf', 0, [
+            'targets' => array_values($targets),
+            'month' => $this->monthFilter(),
+            'tabs' => $this->tabsFilter(),
+            'source' => basename($path),
+        ]);
 
         return self::SUCCESS;
     }

@@ -98,6 +98,10 @@ class DocumentController extends Controller
 
         // Защита прямой ссылки: если документ ограничен и роль пользователя не совпадает
         if (! $user->canAccessByRoles($document->allowed_roles)) {
+            ActionLog::violation('violation_document_access', [
+                'document_id' => $document->id,
+                'title' => $document->title,
+            ]);
             abort(403, 'Доступ к данному документу ограничен протоколом безопасности.');
         }
 
@@ -121,7 +125,13 @@ class DocumentController extends Controller
 
     public function showQuiz(Quiz $quiz, QuizService $quizzes)
     {
-        return view('quiz.show', ['quiz' => $quizzes->playerData($quiz, auth()->user())]);
+        $player = $quizzes->playerData($quiz, auth()->user());
+        ActionLog::log('quiz_opened', [
+            'quiz_id' => $quiz->id,
+            'title' => $quiz->title,
+        ]);
+
+        return view('quiz.show', ['quiz' => $player]);
     }
 
     public function showGeneralQuiz(QuizService $quizzes)
@@ -134,6 +144,11 @@ class DocumentController extends Controller
         }
 
         $quizData = $quizzes->playerData($quiz, auth()->user());
+        ActionLog::log('quiz_opened', [
+            'quiz_id' => $quiz->id,
+            'title' => $quiz->title,
+            'general' => true,
+        ]);
 
         $unreadResultsCount = QuizResult::where('user_id', auth()->id())
             ->where('is_viewed', false)
@@ -220,7 +235,7 @@ class DocumentController extends Controller
 
         if (! $isAdmin) {
             // Violation: log to DB + CH
-            ActionLog::log('violation_document_download', [
+            ActionLog::violation('violation_document_download', [
                 'document_id' => $document->id,
                 'title' => $document->title,
                 'user_role' => $userRole,

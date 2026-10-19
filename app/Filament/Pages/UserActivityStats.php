@@ -49,10 +49,13 @@ class UserActivityStats extends Page
 
         $last7d = ActionLog::where('created_at', '>=', now()->subDays(7))->count();
 
+        $violations = ActionLog::query()->where('is_violation', true)->count();
+
         return [
             'total' => $total,
             'last_24h' => $last24h,
             'last_7d' => $last7d,
+            'violations' => $violations,
             'by_action' => $byAction,
             'top_users' => $topUsers,
         ];

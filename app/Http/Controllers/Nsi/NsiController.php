@@ -142,11 +142,12 @@ class NsiController extends Controller implements HasMiddleware
             'position' => 'required|string|max:45',
             'full_name' => 'nullable|string|max:18',
         ]);
-        ArmSignature::create([
+        $signature = ArmSignature::create([
             'sort_order' => (int) ($data['sort_order'] ?? 0),
             'position' => $data['position'],
             'full_name' => $data['full_name'] ?? '',
         ]);
+        ClickHouseService::log('nsi.signature.created', $signature->id, ['position' => $signature->position]);
 
         return back()->with('ok', 'Подпись добавлена');
     }
@@ -164,6 +165,7 @@ class NsiController extends Controller implements HasMiddleware
             'position' => $data['position'],
             'full_name' => $data['full_name'] ?? '',
         ]);
+        ClickHouseService::log('nsi.signature.updated', $signature->id, ['position' => $signature->position]);
 
         return back()->with('ok', 'Подпись сохранена');
     }
@@ -171,7 +173,10 @@ class NsiController extends Controller implements HasMiddleware
     public function signaturesDestroy(ArmSignature $signature): RedirectResponse
     {
         $this->abortIfNotDispatcher();
+        $id = $signature->id;
+        $position = $signature->position;
         $signature->delete();
+        ClickHouseService::log('nsi.signature.deleted', $id, ['position' => $position]);
 
         return back()->with('ok', 'Подпись удалена');
     }
@@ -204,13 +209,14 @@ class NsiController extends Controller implements HasMiddleware
             'month_hours' => 'required|numeric|min:0',
             'day_hours' => 'required|numeric|min:0',
         ]);
-        ArmMonthNorm::updateOrCreate(
+        $norm = ArmMonthNorm::updateOrCreate(
             ['year_month' => $data['year_month']],
             [
                 'month_hours' => $data['month_hours'],
                 'day_hours' => $data['day_hours'],
             ]
         );
+        ClickHouseService::log('nsi.hours.saved', $norm->id, ['year_month' => $norm->year_month]);
 
         return back()->with('ok', 'Норма часов сохранена');
     }
@@ -223,6 +229,7 @@ class NsiController extends Controller implements HasMiddleware
             'day_hours' => 'required|numeric|min:0',
         ]);
         $norm->update($data);
+        ClickHouseService::log('nsi.hours.updated', $norm->id, ['year_month' => $norm->year_month]);
 
         return back()->with('ok', 'Норма часов обновлена');
     }
@@ -230,7 +237,10 @@ class NsiController extends Controller implements HasMiddleware
     public function hoursDestroy(ArmMonthNorm $norm): RedirectResponse
     {
         $this->abortIfNotDispatcher();
+        $id = $norm->id;
+        $month = $norm->year_month;
         $norm->delete();
+        ClickHouseService::log('nsi.hours.deleted', $id, ['year_month' => $month]);
 
         return back()->with('ok', 'Норма часов удалена');
     }
@@ -254,7 +264,7 @@ class NsiController extends Controller implements HasMiddleware
             'percent' => 'required|numeric|min:0',
             'name' => 'nullable|string|max:40',
         ]);
-        ArmPremiumRate::updateOrCreate(
+        $premium = ArmPremiumRate::updateOrCreate(
             [
                 'position_code' => $data['position_code'],
                 'is_brigadier' => $request->boolean('is_brigadier'),
@@ -264,6 +274,7 @@ class NsiController extends Controller implements HasMiddleware
                 'name' => $data['name'] ?? null,
             ]
         );
+        ClickHouseService::log('nsi.premium.saved', $premium->id, ['position_code' => $premium->position_code]);
 
         return back()->with('ok', 'Процент премии сохранён');
     }
@@ -276,6 +287,7 @@ class NsiController extends Controller implements HasMiddleware
             'name' => 'nullable|string|max:40',
         ]);
         $premium->update($data);
+        ClickHouseService::log('nsi.premium.updated', $premium->id, ['position_code' => $premium->position_code]);
 
         return back()->with('ok', 'Процент премии обновлён');
     }
@@ -283,7 +295,10 @@ class NsiController extends Controller implements HasMiddleware
     public function premiumsDestroy(ArmPremiumRate $premium): RedirectResponse
     {
         $this->abortIfNotDispatcher();
+        $id = $premium->id;
+        $code = $premium->position_code;
         $premium->delete();
+        ClickHouseService::log('nsi.premium.deleted', $id, ['position_code' => $code]);
 
         return back()->with('ok', 'Процент премии удалён');
     }
@@ -306,13 +321,14 @@ class NsiController extends Controller implements HasMiddleware
             'years_to' => 'required|integer|min:0|max:80',
             'percent' => 'required|numeric|min:0',
         ]);
-        ArmSeniorityBand::updateOrCreate(
+        $band = ArmSeniorityBand::updateOrCreate(
             [
                 'years_from' => $data['years_from'],
                 'years_to' => $data['years_to'],
             ],
             ['percent' => $data['percent']]
         );
+        ClickHouseService::log('nsi.seniority.saved', $band->id, ['years_from' => $band->years_from]);
 
         return back()->with('ok', 'Выслуга сохранена');
     }
@@ -326,6 +342,7 @@ class NsiController extends Controller implements HasMiddleware
             'percent' => 'required|numeric|min:0',
         ]);
         $band->update($data);
+        ClickHouseService::log('nsi.seniority.updated', $band->id, ['years_from' => $band->years_from]);
 
         return back()->with('ok', 'Выслуга обновлена');
     }
@@ -333,7 +350,9 @@ class NsiController extends Controller implements HasMiddleware
     public function seniorityDestroy(ArmSeniorityBand $band): RedirectResponse
     {
         $this->abortIfNotDispatcher();
+        $id = $band->id;
         $band->delete();
+        ClickHouseService::log('nsi.seniority.deleted', $id, []);
 
         return back()->with('ok', 'Выслуга удалена');
     }
@@ -364,6 +383,7 @@ class NsiController extends Controller implements HasMiddleware
             ['name' => $data['name']]
         );
         $record->syncSpecialized();
+        ClickHouseService::log('nsi.tariff.saved', $record->id, ['code' => $record->code]);
 
         return back()->with('ok', 'Тариф сохранён');
     }
@@ -379,6 +399,7 @@ class NsiController extends Controller implements HasMiddleware
             ->where('book_code', '41')
             ->where('code', $tariff->code)
             ->update(['name' => $data['name']]);
+        ClickHouseService::log('nsi.tariff.updated', $tariff->id, ['code' => $tariff->code]);
 
         return back()->with('ok', 'Тариф обновлён');
     }
@@ -387,7 +408,10 @@ class NsiController extends Controller implements HasMiddleware
     {
         $this->abortIfNotDispatcher();
         ArmCode::query()->where('book_code', '41')->where('code', $tariff->code)->delete();
+        $id = $tariff->id;
+        $code = $tariff->code;
         $tariff->delete();
+        ClickHouseService::log('nsi.tariff.deleted', $id, ['code' => $code]);
 
         return back()->with('ok', 'Тариф удалён');
     }
@@ -411,6 +435,10 @@ class NsiController extends Controller implements HasMiddleware
     {
         $this->abortIfNotDispatcher();
         $formula->update(['selected' => $request->boolean('selected')]);
+        ClickHouseService::log('nsi.formula.updated', $formula->id, [
+            'kind' => $formula->kind,
+            'selected' => $request->boolean('selected'),
+        ]);
 
         return back()->with('ok', 'Отбор формы ЛС сохранён');
     }
@@ -467,6 +495,11 @@ class NsiController extends Controller implements HasMiddleware
             );
         }
 
+        ClickHouseService::log('nsi.roster.seeded', 0, [
+            'date' => $data['date'],
+            'kind' => $data['kind'],
+        ]);
+
         return redirect()
             ->route('nsi.rosters', ['date' => $data['date'], 'kind' => $data['kind']])
             ->with('ok', 'Маршруты из кодификатора 43 занесены в расстановку');
@@ -479,6 +512,7 @@ class NsiController extends Controller implements HasMiddleware
             'instrument' => 'nullable|string|max:4',
         ]);
         $roster->update(['instrument' => $data['instrument'] ?? null]);
+        ClickHouseService::log('nsi.roster.updated', $roster->id, ['route_number' => $roster->route_number]);
 
         return back()->with('ok', 'Инструмент сохранён');
     }
@@ -486,7 +520,10 @@ class NsiController extends Controller implements HasMiddleware
     public function rostersDestroy(ArmRoster $roster): RedirectResponse
     {
         $this->abortIfNotDispatcher();
+        $id = $roster->id;
+        $route = $roster->route_number;
         $roster->delete();
+        ClickHouseService::log('nsi.roster.deleted', $id, ['route_number' => $route]);
 
         return back()->with('ok', 'Строка расстановки удалена');
     }
@@ -620,6 +657,9 @@ class NsiController extends Controller implements HasMiddleware
         $merged['night_shift_codes'] = app(AccountingImporter::class)->keepNightFivePlus($merged['night_shift_codes'] ?? []);
         $norm->planir = $merged;
         $norm->save();
+        ClickHouseService::log('nsi.advance.updated', $norm->id, [
+            'advance' => $merged['advance'] ?? '',
+        ]);
 
         return back()->with('ok', 'Величина аванса сохранена');
     }
@@ -644,7 +684,7 @@ class NsiController extends Controller implements HasMiddleware
             'dlkodel' => 'nullable|integer|min:1|max:8',
             'dlnazel' => 'nullable|integer|min:1|max:60',
         ]);
-        ArmCodeBook::updateOrCreate(
+        $book = ArmCodeBook::updateOrCreate(
             ['kodspr' => $data['kodspr']],
             [
                 'nazspr' => $data['nazspr'],
@@ -654,6 +694,7 @@ class NsiController extends Controller implements HasMiddleware
                 'dlnazel' => (int) ($data['dlnazel'] ?? 30),
             ]
         );
+        ClickHouseService::log('nsi.book.saved', $book->id, ['kodspr' => $book->kodspr]);
 
         return back()->with('ok', 'Справочник сохранён');
     }
@@ -673,6 +714,7 @@ class NsiController extends Controller implements HasMiddleware
             'dlkodel' => (int) ($data['dlkodel'] ?? $book->dlkodel),
             'dlnazel' => (int) ($data['dlnazel'] ?? $book->dlnazel),
         ]);
+        ClickHouseService::log('nsi.book.updated', $book->id, ['kodspr' => $book->kodspr]);
 
         return back()->with('ok', 'Название справочника сохранено');
     }

@@ -2,7 +2,7 @@
 
 namespace App\Filament\Widgets;
 
-use ClickHouseDB\Client;
+use App\Services\ClickHouseService;
 use Filament\Widgets\ChartWidget;
 
 class TopDocumentsChart extends ChartWidget
@@ -13,9 +13,7 @@ class TopDocumentsChart extends ChartWidget
 
     protected function getData(): array
     {
-        $ch = new Client(config('clickhouse'));
-
-        $result = $ch->select("
+        $rows = ClickHouseService::select("
             SELECT details as doc_name, count() as total
             FROM default.user_actions
             WHERE action_type = 'view_document'
@@ -27,9 +25,14 @@ class TopDocumentsChart extends ChartWidget
         $labels = [];
         $data = [];
 
-        foreach ($result->rows() as $row) {
+        foreach ($rows as $row) {
             $labels[] = $row['doc_name'];
             $data[] = $row['total'];
+        }
+
+        if ($data === []) {
+            $labels = ['Нет данных'];
+            $data = [0];
         }
 
         return [

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActionLog;
 use App\Models\BugReport;
 use App\Services\AdminNotificationService;
 use App\Services\TelegramService;
@@ -30,6 +31,12 @@ class BugReportController extends Controller
             'description' => $request->description,
             'screenshot_path' => $path,
             'page_url' => $request->page_url,
+        ]);
+
+        ActionLog::log('bug_report_submitted', [
+            'id' => $report->id,
+            'page_url' => $request->page_url,
+            'has_screenshot' => (bool) $path,
         ]);
 
         // Формируем красивый текст для Телеграма

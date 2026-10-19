@@ -100,6 +100,12 @@ class MobileApiTest extends TestCase
         $this->withToken($driver->createToken('mobile')->plainTextToken)
             ->getJson('/api/mobile/documents/'.$doc->id)
             ->assertForbidden();
+
+        $this->assertDatabaseHas('action_logs', [
+            'user_id' => $driver->id,
+            'action' => 'violation_document_access',
+            'is_violation' => true,
+        ]);
     }
 
     public function test_signed_document_file_is_inline_pdf(): void
@@ -174,6 +180,10 @@ class MobileApiTest extends TestCase
             'training_material_id' => $material->id,
             'user_id' => $user->id,
             'comment' => 'Понятно, спасибо',
+        ]);
+        $this->assertDatabaseHas('action_logs', [
+            'user_id' => $user->id,
+            'action' => 'mobile.training_comment_added',
         ]);
     }
 }

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Http\Middleware\CheckDeviceBinding;
 use App\Http\Middleware\CheckDynamicBarrier;
 use App\Models\Document;
+use App\Models\InstructionCategory;
 use App\Models\TrainingMaterial;
 use App\Models\TrainingTopic;
 use App\Models\User;
@@ -128,6 +129,9 @@ class FileProxyTest extends TestCase
         $url = URL::temporarySignedRoute('documents.file', now()->addMinutes(30), $document->id);
 
         $this->actingAs($driver)->get($url)->assertForbidden();
+        $this->assertDatabaseMissing('action_logs', [
+            'action' => 'violation_document_access',
+        ]);
     }
 
     public function test_driver_cannot_download_document(): void
@@ -138,6 +142,28 @@ class FileProxyTest extends TestCase
         $this->actingAs($driver)
             ->get('/documents/'.$document->id.'/download')
             ->assertForbidden();
+
+        $this->assertDatabaseHas('action_logs', [
+            'user_id' => $driver->id,
+            'action' => 'violation_document_download',
+            'is_violation' => true,
+        ]);
+    }
+
+    public function test_restricted_document_click_is_logged_as_violation(): void
+    {
+        $driver = User::factory()->driver()->create();
+        $document = $this->document(['allowed_roles' => ['admin']]);
+
+        $this->actingAs($driver)
+            ->get('/api/documents/'.$document->id.'/click')
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('action_logs', [
+            'user_id' => $driver->id,
+            'action' => 'violation_document_access',
+            'is_violation' => true,
+        ]);
     }
 
     public function test_admin_download_is_attachment(): void
@@ -153,6 +179,7 @@ class FileProxyTest extends TestCase
         $this->assertDatabaseHas('action_logs', [
             'user_id' => $admin->id,
             'action' => 'document_download',
+            'is_violation' => false,
         ]);
         Queue::assertPushed(CallQueuedClosure::class, 1);
     }
@@ -229,6 +256,27 @@ class FileProxyTest extends TestCase
         $response->assertOk();
         $response->assertHeader('Accept-Ranges', 'bytes');
         $response->assertHeader('Content-Disposition', 'inline; filename="clip.mp4"');
+    }
+
+    public function test_rospisi_page_uses_signed_file_proxy_url(): void
+    {
+        $driver = User::factory()->driver()->create();
+        $category = InstructionCategory::create([
+            'name' => 'Инструктаж',
+            'slug' => 'instruktazh',
+            'is_active' => true,
+        ]);
+        $document = $this->document([
+            'title' => 'Охрана труда',
+            'instruction_category_id' => $category->id,
+        ]);
+
+        $html = $this->actingAs($driver)->get(route('rosisi.index'))->assertOk()->getContent();
+        $this->assertStringContainsString('/documents/'.$document->id.'/file', $html);
+        $this->assertStringContainsString('signature=', $html);
+        $this->assertStringNotContainsString('9000', $html);
+        $this->assertStringNotContainsString('minio', strtolower($html));
+        $this->assertStringNotContainsString('temporaryUrl', $html);
     }
 
     public function test_temporary_signed_route_helper_keeps_ttl_and_route_name(): void

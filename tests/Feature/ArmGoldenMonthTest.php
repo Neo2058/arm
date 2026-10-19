@@ -10,6 +10,7 @@ use App\Models\NaryadAssignment;
 use App\Models\NaryadNorm;
 use App\Models\User;
 use App\Services\Arm\GoldenMonthComparer;
+use App\Services\ClickHouseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Queue;
@@ -77,6 +78,7 @@ class ArmGoldenMonthTest extends TestCase
 
     public function test_golden_month_matches_naryad_hours_and_lsbuh_line(): void
     {
+        ClickHouseService::fake();
         $dir = sys_get_temp_dir().'/arm_gold_'.uniqid();
         mkdir($dir);
         DbfWriter::write($dir.'/NARJAD.DBF', $this->naryadFields(), [
@@ -148,6 +150,14 @@ class ArmGoldenMonthTest extends TestCase
             '--tabs' => '0428',
         ]);
         $this->assertSame(0, $code, Artisan::output());
+        $golden = array_values(array_filter(
+            ClickHouseService::recorded(),
+            fn (array $row) => $row['action_type'] === 'arm.golden_month'
+        ));
+        $this->assertNotEmpty($golden);
+        $this->assertSame(0, $golden[0]['user_id']);
+        $this->assertStringContainsString('"month":"2018-11"', $golden[0]['details']);
+        $this->assertStringContainsString('"discrepancies":0', $golden[0]['details']);
 
         $this->assertSame(3, NaryadAssignment::query()->count());
         $account = ArmAccount::query()->first();

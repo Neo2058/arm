@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Models\WorkShift;
 use App\Models\RoutesCatalog;
 use Illuminate\Support\Facades\Auth;
+use App\Services\ClickHouseService;
 use App\Services\Payroll\PayrollService;
 
 class WorkShiftController extends Controller
@@ -77,6 +78,13 @@ class WorkShiftController extends Controller
             ],
             array_merge($data, $calculated)
         );
+
+        ClickHouseService::log('work_shift.saved', $shift->id, [
+            'shift_date' => $data['shift_date'],
+            'type' => $data['type'],
+            'route_id' => $data['route_id'] ?? null,
+            'deviation_id' => $data['deviation_id'] ?? null,
+        ]);
 
         return response()->json([
             'status' => 'success',

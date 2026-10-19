@@ -70,8 +70,7 @@ This is one of the most important and carefully designed parts of the system.
 - Models: `getTemporaryUrl()` / `getFileUrlAttribute()` (signed app routes)
 - TTL is **not** one number: documents 30 min, quiz refs 60 min, admin preview / training stream 15 min
 
-**Never** use `Storage::temporaryUrl()` or direct S3 URLs for new code.  
-`NaryadViewerController` and `RospisiController` still do; that is remaining debt.
+**Never** use `Storage::temporaryUrl()` or direct S3 URLs for new code. Росписи `/rosisi` отдают signed `documents.file`. Общий PDF нарядов — `FileProxyService` (`GET /naryady/{id}/pdf`).
 
 ---
 
@@ -118,18 +117,18 @@ Role checks in PHP go through `User` helpers (`isAdmin()`, `isInstructor()`, `is
 
 | Middleware                | Purpose                              | Admin Bypass | Livewire Skip | Notes |
 |---------------------------|--------------------------------------|--------------|---------------|-------|
-| `CheckUserExistence`      | Block deleted/deactivated users      | No (but admin usually active) | Yes | Invalidates session |
-| `CheckDeviceBinding`      | Device approval                      | Yes          | Yes           | - |
-| `CheckDynamicBarrier`     | One-time barrier check               | Yes          | Yes           | Uses session flag |
+| `CheckUserExistence`      | Block deleted/deactivated users      | No (but admin usually active) | No | Invalidates session; also on Filament |
+| `CheckDeviceBinding`      | Device approval                      | Yes          | Yes           | Exemptions: `AccessBarrierExemptions` |
+| `CheckDynamicBarrier`     | One-time barrier check               | Yes          | Yes           | Same exemptions; session flag |
 
-**Important**: Livewire and admin serve paths are explicitly exempted in the middlewares to prevent 419 loops during AJAX.
+**Important**: Livewire, Filament lifecycle and `admin/serve-*` paths stay exempt in device/barrier so FileUpload / `/livewire/update` do not hit a redirect loop. `CheckUserExistence` still runs on Livewire.
 
 ### Filament Admin Panel
 
 - Own middleware stack (defined in `AdminPanelProvider`)
-- Includes custom `VerifyCsrfToken` (our subclass)
+- Includes custom `VerifyCsrfToken` (our subclass) and persistent `CheckUserExistence`
 - CSRF meta tag injected via render hook
-- Does **not** run the three custom Check middlewares (by design)
+- Does **not** run `CheckDeviceBinding` / `CheckDynamicBarrier` (by design)
 
 ---
 
@@ -145,21 +144,28 @@ Role checks in PHP go through `User` helpers (`isAdmin()`, `isInstructor()`, `is
 2. **Analytics-only**
    - `ClickHouseService::log($type, $resourceId, $details, $actor = null)`
    - `user_actions` table, queue `analytics`
-   - Dispatcher / uchet / nsi / login / quiz complete
-   - No `Auth` user → `user_id=0`, `user_role=system` (Telegram etc.)
+   - Auth (`LogAuthenticationEvents`: `login` / `logout` / `login_failed` / `mobile.*`), dispatcher / uchet / nsi / journal / work shifts / podstroiki / instructor search / quiz complete
+   - No `Auth` user → `user_id=0`, `user_role=system` (Telegram, failed login)
    - Do **not** call this after `ActionLog::log()` for the same event
+   - Tests: `ClickHouseService::fake()` records payloads without dispatch
+
+Filament admin CRUD is `ActionLog` via `AdminPanelAudit` (`admin.{model}.{created|updated|deleted}`), gated by `Filament::isServing()` + `canAccessPanel`. Query-builder updates do not fire it.
 
 Client `POST /api/actions/log` accepts only `ActionLog::CLIENT_ACTIONS`; stored as `ui.{action}` with scalar details.
 
+PDF naryad stream logs `view_naryad_pdf` only on the initial request (`Range` empty or `bytes=0-`).
+
 ### Violation Flow (Downloads/Views)
 
-When a non-admin tries to download or sometimes view:
-1. Log as violation in `ActionLog`
+`action_logs.is_violation` is the single flag (Filament filter / badge). Action names `violation_*` set it automatically. ClickHouse keeps the flag in `details.is_violation`.
+
+When a non-admin tries to **download**:
+1. `ActionLog::violation('violation_document_download', …)`
 2. `AdminNotificationService::notify('violation', ...)`
-3. Sends to:
-   - Database (AdminNotification)
-   - Email
-   - Telegram (via `TelegramService`)
+3. Telegram via `TelegramService`
+4. Abort 403
+
+Denied **view** (JSON click / mobile show) writes `violation_document_access` with the flag and does **not** send alerts. Byte-stream 403 on a signed URL is not logged (Range).
 
 ---
 

@@ -20,6 +20,13 @@ class ClickHouseService
     ];
 
     /**
+     * Captured payloads while {@see fake()} is active. Null means production dispatch.
+     *
+     * @var list<array<string, mixed>>|null
+     */
+    private static ?array $fake = null;
+
+    /**
      * Analytics event. Queued on `analytics`.
      *
      * $actor — User, user id, or null (Auth::user(), otherwise system: user_id=0).
@@ -28,6 +35,12 @@ class ClickHouseService
     public static function log(string $actionType, int $resourceId = 0, mixed $details = '', User|int|null $actor = null): void
     {
         $data = self::payload($actionType, $resourceId, $details, $actor);
+
+        if (self::$fake !== null) {
+            self::$fake[] = $data;
+
+            return;
+        }
 
         dispatch(function () use ($data) {
             try {
@@ -39,6 +52,54 @@ class ClickHouseService
                 ]);
             }
         })->onQueue('analytics');
+    }
+
+    /**
+     * Record payloads in memory instead of dispatching to ClickHouse.
+     */
+    public static function fake(): void
+    {
+        self::$fake = [];
+    }
+
+    public static function clearFake(): void
+    {
+        self::$fake = null;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public static function recorded(): array
+    {
+        return self::$fake ?? [];
+    }
+
+    /**
+     * Read-only query. Empty while {@see fake()} is on or if ClickHouse is down.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function select(string $sql): array
+    {
+        if (self::$fake !== null) {
+            return [];
+        }
+
+        try {
+            $client = new Client(config('clickhouse'));
+
+            return $client->select($sql)->rows();
+        } catch (\Throwable $e) {
+            Log::warning('ClickHouse select failed', ['error' => $e->getMessage()]);
+
+            return [];
+        }
+    }
+
+    public static function quote(string $value): string
+    {
+        return "'".str_replace(['\\', "'"], ['\\\\', "\\'"], $value)."'";
     }
 
     /**

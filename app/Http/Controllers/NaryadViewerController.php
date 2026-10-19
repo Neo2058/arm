@@ -97,6 +97,11 @@ class NaryadViewerController extends Controller
 
         $filename = pathinfo($naryad->file_path, PATHINFO_FILENAME).'.pdf';
 
+        $this->logInitialFileAccess('view_naryad_pdf', [
+            'naryad_id' => $naryad->id,
+            'title' => $naryad->title,
+        ]);
+
         return $this->files->respond($naryad->file_path, $filename, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="'.addslashes($filename).'"',
@@ -125,6 +130,11 @@ class NaryadViewerController extends Controller
         }
 
         $filename = $file->file_name ?: $user->name.'.txt';
+
+        ActionLog::log('view_naryad_personal', [
+            'naryad_id' => $naryad->id,
+            'file_name' => $filename,
+        ]);
 
         return Storage::disk('s3')->response($file->file_path, $filename, [
             'Content-Type' => 'text/plain; charset=UTF-8',
@@ -249,5 +259,18 @@ class NaryadViewerController extends Controller
             'missing' => $result['missing'],
             'errors' => $errors,
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $details
+     */
+    private function logInitialFileAccess(string $action, array $details): void
+    {
+        $range = request()->header('Range');
+        if ($range !== null && $range !== '' && ! str_starts_with($range, 'bytes=0-')) {
+            return;
+        }
+
+        ActionLog::log($action, $details);
     }
 }

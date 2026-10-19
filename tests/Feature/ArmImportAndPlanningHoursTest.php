@@ -11,6 +11,7 @@ use App\Models\NaryadNorm;
 use App\Models\NaryadQuota;
 use App\Models\ScheduleType;
 use App\Models\User;
+use App\Services\ClickHouseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Queue;
@@ -33,6 +34,7 @@ class ArmImportAndPlanningHoursTest extends TestCase
 
     public function test_import_dbf_loads_graphs_holidays_and_calendar(): void
     {
+        ClickHouseService::fake();
         $dir = sys_get_temp_dir().'/arm_dbf_'.uniqid();
         mkdir($dir);
 
@@ -115,6 +117,14 @@ class ArmImportAndPlanningHoursTest extends TestCase
             'shift_code' => '1',
             'hours_total' => 7.4,
         ]);
+        $import = array_values(array_filter(
+            ClickHouseService::recorded(),
+            fn (array $row) => $row['action_type'] === 'arm.import_dbf'
+        ));
+        $this->assertNotEmpty($import);
+        $this->assertSame(0, $import[0]['user_id']);
+        $this->assertSame(ClickHouseService::SYSTEM_ROLE, $import[0]['user_role']);
+        $this->assertStringContainsString('"source":"'.basename($dir).'"', $import[0]['details']);
     }
 
     public function test_import_nrdpar_merges_planir_and_keeps_early_window(): void

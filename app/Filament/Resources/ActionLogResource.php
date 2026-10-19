@@ -49,16 +49,29 @@ class ActionLogResource extends Resource
                     ->sortable()
                     ->default('—'),
 
+                Tables\Columns\IconColumn::make('is_violation')
+                    ->label('Нарушение')
+                    ->boolean()
+                    ->trueColor('danger')
+                    ->falseColor('gray')
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('action')
                     ->label('Действие')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'view_phones_tab', 'view_explanations_tab', 'view_naryads_tab' => 'info',
-                        'open_naryad' => 'success',
-                        'search_phones', 'search_explanations', 'search_naryad_pdf' => 'warning',
-                        'add_phone', 'add_explanation' => 'success',
-                        'delete_phone', 'delete_explanation' => 'danger',
-                        default => 'gray',
+                    ->color(function (string $state, ActionLog $record): string {
+                        if ($record->is_violation) {
+                            return 'danger';
+                        }
+
+                        return match ($state) {
+                            'view_phones_tab', 'view_explanations_tab', 'view_naryads_tab' => 'info',
+                            'open_naryad' => 'success',
+                            'search_phones', 'search_explanations', 'search_naryad_pdf' => 'warning',
+                            'add_phone', 'add_explanation' => 'success',
+                            'delete_phone', 'delete_explanation' => 'danger',
+                            default => 'gray',
+                        };
                     })
                     ->searchable(),
 
@@ -87,9 +100,18 @@ class ActionLogResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
+                Tables\Filters\TernaryFilter::make('is_violation')
+                    ->label('Нарушение')
+                    ->boolean()
+                    ->trueLabel('Только нарушения')
+                    ->falseLabel('Без нарушений')
+                    ->placeholder('Все'),
+
                 Tables\Filters\SelectFilter::make('action')
                     ->label('Тип действия')
                     ->options([
+                        'violation_document_download' => 'Скачивание документа (нарушение)',
+                        'violation_document_access' => 'Доступ к закрытому документу',
                         'view_naryads_page' => 'Просмотр страницы нарядов',
                         'view_naryads_tab' => 'Вкладка «Наряды»',
                         'view_phones_tab' => 'Вкладка «Телефоны»',
@@ -151,6 +173,8 @@ class ActionLogResource extends Resource
 
     public static function getNavigationBadgeColor(): ?string
     {
-        return 'warning';
+        return static::getModel()::query()->where('is_violation', true)->exists()
+            ? 'danger'
+            : 'warning';
     }
 }

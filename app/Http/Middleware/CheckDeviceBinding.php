@@ -11,58 +11,40 @@ class CheckDeviceBinding
 {
     public function handle(Request $request, Closure $next)
     {
-        // Never run device checks on Livewire/Filament AJAX (can cause redirects/419 during component updates and file uploads)
-        if ($request->is('livewire*') || $request->is('filament*') || $request->routeIs('livewire.*')) {
+        if (AccessBarrierExemptions::isLifecycleRequest($request)) {
             return $next($request);
         }
 
         if (Auth::check()) {
             $user = Auth::user();
 
-            // 1. Иммунитет для администраторов
             if ($user->canBypassAccessBarriers()) {
                 return $next($request);
             }
 
-            // 2. Исключения путей
-            if (
-                $request->is('device-register*') ||
-                $request->is('api/device/register*') ||
-                $request->is('barrier*') ||
-                $request->is('api/barrier/verify*') ||
-                $request->is('logout') ||
-                $request->is('admin/serve-document') ||
-                $request->is('admin/serve-training-material')
-            ) {
+            if (AccessBarrierExemptions::isExemptPath($request)) {
                 return $next($request);
             }
 
-            // 3. Получаем хэш устройства
             $deviceKey = $request->header('X-Device-Key') ?: $request->cookie('device_key');
 
             if (! $deviceKey) {
                 return redirect()->route('device.register.form');
             }
 
-            // 4. Проверяем, существует ли ОДОБРЕННОЕ устройство
             $isApprovedDeviceExists = $user->devices()
                 ->where('device_key', $deviceKey)
                 ->where('is_approved', true)
                 ->exists();
 
-            // 5. Если одобренного устройства НЕТ — блокируем и отправляем на форму заявки
             if (! $isApprovedDeviceExists) {
+                $msg = "⚠️ *ПОПЫТКА ВХОДА С НЕИЗВЕСТНОГО УСТРОЙСТВА!*\n";
+                $msg .= "👤 Сотрудник: {$user->name} (Email: {$user->email})\n";
+                $msg .= "🔑 Ключ устройства: `{$deviceKey}`\n";
+                $msg .= '🌐 IP: '.$request->ip();
 
-                // Шлём алерт в Telegram (только если это первичный переход, а не рефреш формы)
-                if (! $request->is('device-register*')) {
-                    $msg = "⚠️ *ПОПЫТКА ВХОДА С НЕИЗВЕСТНОГО УСТРОЙСТВА!*\n";
-                    $msg .= "👤 Сотрудник: {$user->name} (Email: {$user->email})\n";
-                    $msg .= "🔑 Ключ устройства: `{$deviceKey}`\n";
-                    $msg .= '🌐 IP: '.$request->ip();
-
-                    if (class_exists(TelegramService::class)) {
-                        TelegramService::send($msg);
-                    }
+                if (class_exists(TelegramService::class)) {
+                    TelegramService::send($msg);
                 }
 
                 return redirect()->route('device.register.form');

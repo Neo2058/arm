@@ -8,12 +8,14 @@ use App\Models\InstructionCategory;
 use App\Models\UserFormularLog;
 use App\Models\UserInstructionSignature;
 use App\Services\ClickHouseService;
+use App\Services\FileProxyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class RospisiController extends Controller
 {
+    public function __construct(private FileProxyService $files) {}
+
     public function index()
     {
         $user = Auth::user();
@@ -33,19 +35,9 @@ class RospisiController extends Controller
                     ->where('document_id', $doc->id)
                     ->first();
 
-                $url = (function () use ($doc) {
-                    try {
-                        return Storage::disk('s3')->temporaryUrl(
-                            $doc->file_path,
-                            now()->addMinutes(30),
-                            ['ResponseContentDisposition' => 'inline']
-                        );
-                    } catch (\Throwable $e) {
-                        \Log::warning('S3 temp url failed for rospisi', ['doc' => $doc->id, 'err' => $e->getMessage()]);
-
-                        return null;
-                    }
-                })();
+                $url = $this->files->exists($doc->file_path)
+                    ? $this->files->temporarySignedRoute('documents.file', 30, $doc->id)
+                    : null;
 
                 return [
                     'id' => $doc->id,

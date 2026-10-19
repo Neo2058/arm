@@ -1,7 +1,7 @@
 # Technical Debt & Refactoring Roadmap
 
 **Project:** ТЧ-15 (ARM)  
-**Last reviewed:** 2026-10-02
+**Last reviewed:** 2026-10-19
 
 Снимок того, что **есть в репозитории** и что ещё открыто. Закрытое не поднимать без новой причины.
 
@@ -50,18 +50,20 @@
 Проверено локально; браузерный smoke HTTPS/Filament и production-выкладка ещё не выполнены.
 `SESSION_DOMAIN`/cookie-конфигурация не менялась. Статусы и порядок выкладки — `SECURITY_ROADMAP.md`.
 
-### 2. Исключения device/barrier middleware
-`CheckDeviceBinding`, `CheckDynamicBarrier`: списки исключений повторяются. `CheckUserExistence` больше не пропускает Livewire.
-Роли уже через `canBypassAccessBarriers()`. Убирать device/barrier исключения только после проверки lifecycle Filament.
+### 2. Исключения device/barrier: списки сведены
+`AccessBarrierExemptions` — общий список для `CheckDeviceBinding` и `CheckDynamicBarrier`.
+Livewire/Filament (`livewire*`, `filament*`, `livewire.*`) и `admin/serve-*` оставлены: FileUpload preview и `/livewire/update` ломаются редиректом.
+`CheckUserExistence` по-прежнему проверяет Livewire. Панель `/admin` эти два middleware не запускает (свой стек).
+Новые URI в исключения — только через этот класс.
 
-### 3. Прямые MinIO URL
-`RospisiController` → `Storage::temporaryUrl()`. Общий PDF нарядов — `FileProxyService` (`/naryady/{id}/pdf`). Документы/обучение — через прокси. Filament `FileUpload` не трогать мимоходом.
+### 3. Filament FileUpload и прямые URL
+Росписи `/rosisi` и общий PDF нарядов идут через `FileProxyService`. Filament `FileUpload` (disk / directory / visibility / `getUploadedFileUsing`) не трогать мимоходом.
 
 ### 4. Filament `getUploadedFileUsing`
 Крупные замыкания в `DocumentResource` / `TrainingMaterialResource`. Вынос только без смены disk / visibility / формы ответа.
 
-### 5. Логи: покрытие, не канал
-Канал записи зафиксирован: `ActionLog::log()` (Postgres + один CH) или только `ClickHouseService::log()`; UI — белый список `ui.*`; стрим signed URL не логирует Range-запросы. Остаётся **покрытие** (Filament CRUD, logout, смены, подстройки, НСИ, журнал) и нет единого признака «это violation». `AdminNotificationService` — алерты, не журнал действий.
+### 5. Логи: канал закрыт
+Auth, Filament CRUD, мутации, `is_violation`, artisan-прогоны (`arm.import_dbf` / `arm.export_lsbuh` / `arm.golden_month`) пишутся. Query-builder по строкам DBF специально не логируется. `AdminNotificationService` — алерты, не журнал действий.
 
 ### 6. Два расчёта зарплаты
 `WorkShift::booted()` (хардкод ставок) и `PayrollService`. Параллельно появился учёт `/uchet` (формулы FoxPro / ЛС) — не смешивать со ставкой 450 в `WorkShift` без явной задачи.
@@ -82,10 +84,10 @@ Web — ~4k строк JSX-островов, мобильный — ~700 стр�
 | Area | Status |
 |---|---|
 | Тесты | Нет e2e Livewire-загрузки Filament; журнал/наряд покрыты слабо по бизнес-правилам |
-| ClickHouse | Журнал иногда пишет напрямую, не через очередь `analytics` |
+| ClickHouse | Запись через `ClickHouseService::log` (очередь `analytics`); чтение виджетов и истории журнала — `ClickHouseService::select` |
 | Webhooks ЮKassa / Telegram | В auth-группе (`support.php`) |
 | Backup / monitoring | Не описаны |
-| Demo в журнале | `rand()` в статистике, Q&A по PDF |
+| Журнал Q&A | Ответ только из `extracted_text`; извлечение текста PDF при загрузке ещё не сделано |
 | Бинарники APK/IPA | Собирать по `mobile/README.md`, не коммитить |
 
 ---
@@ -94,6 +96,7 @@ Web — ~4k строк JSX-островов, мобильный — ~700 стр�
 
 - Новые файлы документов/обучения — только `FileProxyService`.
 - Filament FileUpload и CSRF/Livewire — не подчищать мимоходом.
+- Новые исключения device/barrier — только в `AccessBarrierExemptions`.
 - Роли — хелперы `User` / `UserRole` (`operator`, `dispatcher`, не `naryadchik`).
 - Маршруты — в `routes/*.php`.
 - Мобильная сборка и состав функций — **`mobile/README.md`**, не дублировать вслепую.

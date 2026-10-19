@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActionLog;
 use App\Models\BackstageMessage;
 use App\Services\AdminNotificationService;
 use App\Services\TelegramService;
@@ -50,6 +51,12 @@ class BackstageController extends Controller
             'attachment_path' => $path,
             'support_amount' => $request->support_amount,
             'source' => 'backstage',
+        ]);
+
+        ActionLog::log('backstage.message', [
+            'id' => $message->id,
+            'has_attachment' => (bool) $path,
+            'support_amount' => $request->support_amount,
         ]);
 
         // Уведомление в Telegram
@@ -104,6 +111,11 @@ class BackstageController extends Controller
             'support_amount' => $amount,
             'source' => 'backstage-support',
             'payment_status' => 'pending',
+        ]);
+
+        ActionLog::log('backstage.support', [
+            'id' => $message->id,
+            'amount' => $amount,
         ]);
 
         try {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Naryad;
 
 use App\Http\Controllers\Controller;
 use App\Services\Arm\NaryadPrintService;
+use App\Services\ClickHouseService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -39,6 +40,11 @@ class PrintController extends Controller implements HasMiddleware
         $kind = $this->kind($request);
         $extra = (string) $request->input('extra_text', '');
         $sheet = $this->print->build($date, $kind, Auth::user(), $extra);
+        ClickHouseService::log('naryad.print', 0, [
+            'date' => $date->toDateString(),
+            'kind' => $kind,
+            'auto' => $request->boolean('auto'),
+        ]);
 
         return view('naryad.print-sheet', [
             'sheet' => $sheet,

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\NaryadPodstroikaLimit;
 use App\Models\Podstroika;
+use App\Services\ClickHouseService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -107,13 +108,17 @@ class PodstroikiController extends Controller
             $requestedMonth = $nextMonth;
         }
 
-        Podstroika::create(
+        $podstroika = Podstroika::create(
             [
                 'user_id' => $user->id,
                 'for_month' => $requestedMonth,
                 'details' => $request->details,
             ]
         );
+
+        ClickHouseService::log('podstroika.submitted', $podstroika->id, [
+            'for_month' => $requestedMonth->format('Y-m'),
+        ]);
 
         return redirect()->route('podstroiki.index')->with('success', 'Заявка на подстройку смены отправлена.');
     }
@@ -162,6 +167,11 @@ class PodstroikiController extends Controller
         }
 
         $podstroika->update(['status' => $request->status]);
+        ClickHouseService::log('podstroika.status_updated', $podstroika->id, [
+            'status' => $request->status,
+            'target_user_id' => $podstroika->user_id,
+            'for_month' => $podstroika->for_month?->format('Y-m'),
+        ]);
 
         if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json(['success' => true, 'message' => 'Статус обновлён']);

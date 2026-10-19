@@ -106,6 +106,11 @@ class TrainingController extends Controller
             'comment' => $validated['comment'],
         ]);
 
+        ActionLog::log('mobile.training_comment_added', [
+            'material_id' => $material->id,
+            'comment_id' => $comment->id,
+        ]);
+
         return response()->json([
             'id' => $comment->id,
             'body' => $comment->comment,

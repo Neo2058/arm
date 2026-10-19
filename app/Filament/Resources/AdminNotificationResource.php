@@ -72,6 +72,7 @@ class AdminNotificationResource extends Resource
                         'access_request' => 'info',
                         'device_request' => 'warning',
                         'bug_report' => 'danger',
+                        'violation' => 'danger',
                         'backstage' => 'success',
                         default => 'gray',
                     })

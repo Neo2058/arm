@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ActionLogResource\Pages;
 use App\Filament\Resources\ActionLogResource;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 
@@ -20,6 +21,7 @@ class ViewActionLog extends ViewRecord
                     ->schema([
                         TextEntry::make('user.name')->label('Пользователь'),
                         TextEntry::make('action')->label('Действие')->badge(),
+                        IconEntry::make('is_violation')->label('Нарушение')->boolean(),
                         TextEntry::make('details')
                             ->label('Детали')
                             ->formatStateUsing(fn ($state) => is_array($state) ? json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) : $state)

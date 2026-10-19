@@ -2,7 +2,7 @@
 
 namespace App\Filament\Widgets;
 
-use ClickHouseDB\Client;
+use App\Services\ClickHouseService;
 use Filament\Widgets\ChartWidget;
 
 class ColumnActivityChart extends ChartWidget
@@ -13,9 +13,7 @@ class ColumnActivityChart extends ChartWidget
 
     protected function getData(): array
     {
-        $ch = new Client(config('clickhouse'));
-
-        $result = $ch->select("
+        $rows = ClickHouseService::select("
             SELECT user_column, count() as total
             FROM default.user_actions
             WHERE action_type = 'view_document'
@@ -26,7 +24,7 @@ class ColumnActivityChart extends ChartWidget
         $labels = [];
         $data = [];
 
-        foreach ($result->rows() as $row) {
+        foreach ($rows as $row) {
             $labels[] = 'Колонна № '.$row['user_column'];
             $data[] = $row['total'];
         }

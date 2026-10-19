@@ -2,7 +2,7 @@
 
 namespace App\Filament\Widgets;
 
-use ClickHouseDB\Client;
+use App\Services\ClickHouseService;
 use Filament\Widgets\ChartWidget;
 
 class MonthlyColumnAnalytics extends ChartWidget
@@ -15,13 +15,11 @@ class MonthlyColumnAnalytics extends ChartWidget
 
     protected function getData(): array
     {
-        $ch = new Client(config('clickhouse'));
-
-        $offset = $this->filter ?? 0;
+        $offset = (int) ($this->filter ?? 0);
         $monthName = date('F Y', strtotime("$offset month"));
         $targetYearMonth = date('Ym', strtotime("$offset month"));
 
-        $result = $ch->select("
+        $rows = ClickHouseService::select("
             SELECT
                 user_column,
                 count(DISTINCT user_id) as passed_count,
@@ -36,7 +34,7 @@ class MonthlyColumnAnalytics extends ChartWidget
         $labels = [];
         $avgPercents = [];
 
-        foreach ($result->rows() as $row) {
+        foreach ($rows as $row) {
             $labels[] = "Колонна №{$row['user_column']} ({$row['passed_count']} чел.)";
             $avgPercents[] = round($row['avg_percent'], 1);
         }

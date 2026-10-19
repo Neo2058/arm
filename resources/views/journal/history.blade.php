@@ -73,8 +73,7 @@
             </table>
             </div>
         @else
-            <p class="text-gray-500">История пока пуста. Выполненные нормативы будут логироваться в ClickHouse.</p>
-            <p class="text-xs mt-2 text-orange-500">Для демо: используйте ClickHouseService::log('normative_completed', $userId, ['type' => '...']);</p>
+            <p class="text-gray-500">История пока пуста. Выполненные нормативы колонны появятся здесь.</p>
         @endif
     </div>
 </div>

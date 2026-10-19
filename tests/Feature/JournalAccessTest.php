@@ -5,7 +5,12 @@ namespace Tests\Feature;
 use App\Enums\UserRole;
 use App\Http\Middleware\CheckDeviceBinding;
 use App\Http\Middleware\CheckDynamicBarrier;
+use App\Models\JournalCrewNormative;
+use App\Models\JournalDocument;
+use App\Models\JournalTask;
 use App\Models\User;
+use App\Models\UserProfile;
+use App\Services\ClickHouseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -22,6 +27,7 @@ class JournalAccessTest extends TestCase
             CheckDeviceBinding::class,
             CheckDynamicBarrier::class,
         ]);
+        ClickHouseService::fake();
     }
 
     public static function journalEndpoints(): array
@@ -143,6 +149,80 @@ class JournalAccessTest extends TestCase
             'title' => 'Задача инструктора',
             'status' => 'pending',
         ]);
+    }
+
+    public function test_journal_stats_use_real_counts_not_random(): void
+    {
+        $instructor = User::factory()->instructor()->create();
+        UserProfile::create(['user_id' => $instructor->id, 'column' => '15']);
+
+        $driver = User::factory()->driver()->create();
+        UserProfile::create(['user_id' => $driver->id, 'column' => '15']);
+
+        JournalCrewNormative::create([
+            'user_id' => $driver->id,
+            'instructor_id' => $instructor->id,
+            'column' => '15',
+            'type' => 'kip_linia',
+            'last_date' => '2026-01-01',
+        ]);
+        JournalCrewNormative::create([
+            'user_id' => $driver->id,
+            'instructor_id' => $instructor->id,
+            'column' => '15',
+            'type' => 'kip_kru',
+        ]);
+        JournalTask::create([
+            'user_id' => $instructor->id,
+            'column' => '15',
+            'title' => 'Рапорт по КИП',
+            'source' => 'report',
+            'status' => 'done',
+        ]);
+
+        $this->actingAs($instructor)->get('/journal')->assertOk()->assertSee('50%', false)->assertDontSee('Светикову');
+    }
+
+    public function test_document_question_uses_extracted_text_only(): void
+    {
+        $instructor = User::factory()->instructor()->create();
+        UserProfile::create(['user_id' => $instructor->id, 'column' => '15']);
+
+        $empty = JournalDocument::create([
+            'user_id' => $instructor->id,
+            'column' => '15',
+            'title' => 'Пустой',
+            'file_path' => 'journal-documents/empty.pdf',
+            'extracted_text' => null,
+        ]);
+        $filled = JournalDocument::create([
+            'user_id' => $instructor->id,
+            'column' => '15',
+            'title' => 'Приказ',
+            'file_path' => 'journal-documents/order.pdf',
+            'extracted_text' => 'Провести КИП на линии со Степановым до конца месяца.',
+        ]);
+
+        $this->actingAs($instructor)
+            ->post('/journal/ask', [
+                'document_id' => $empty->id,
+                'question' => 'Какие задачи ТЧМ Светикову?',
+            ])
+            ->assertRedirect(route('journal.index'))
+            ->assertSessionHas('qa_result.answer', function (string $answer) {
+                return str_contains($answer, 'не извлечён')
+                    && ! str_contains($answer, 'Светикову до 21.07.2026');
+            });
+
+        $this->actingAs($instructor)
+            ->post('/journal/ask', [
+                'document_id' => $filled->id,
+                'question' => 'КИП Степановым',
+            ])
+            ->assertRedirect(route('journal.index'))
+            ->assertSessionHas('qa_result.answer', function (string $answer) {
+                return str_contains($answer, 'Степановым');
+            });
     }
 
     public function test_is_instructor_helper(): void

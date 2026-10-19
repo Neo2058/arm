@@ -33,6 +33,7 @@ class ActionLog extends Model
     protected $fillable = [
         'user_id',
         'action',
+        'is_violation',
         'details',
         'ip_address',
         'user_agent',
@@ -40,6 +41,7 @@ class ActionLog extends Model
 
     protected $casts = [
         'details' => 'array',
+        'is_violation' => 'boolean',
     ];
 
     public function user(): BelongsTo
@@ -50,22 +52,31 @@ class ActionLog extends Model
     /**
      * Operational log (Postgres for Filament) + one ClickHouse analytics row.
      * Callers must not also invoke ClickHouseService::log() for the same event.
+     *
+     * ClickHouse schema is fixed: the flag is copied into `details.is_violation`.
      */
-    public static function log(string $action, ?array $details = null, ?int $userId = null): self
+    public static function log(string $action, ?array $details = null, ?int $userId = null, bool $isViolation = false): self
     {
         $request = request();
         $userId = $userId ?? auth()->id();
+        $isViolation = $isViolation || self::isViolationAction($action);
 
         $log = self::create([
             'user_id' => $userId,
             'action' => $action,
+            'is_violation' => $isViolation,
             'details' => $details,
             'ip_address' => $request?->ip(),
             'user_agent' => $request?->userAgent(),
         ]);
 
+        $chDetails = $details ?? [];
+        if ($isViolation) {
+            $chDetails['is_violation'] = true;
+        }
+
         try {
-            ClickHouseService::log($action, self::resourceIdFromDetails($details), $details ?? '', $userId);
+            ClickHouseService::log($action, self::resourceIdFromDetails($details), $chDetails === [] ? '' : $chDetails, $userId);
         } catch (\Throwable $e) {
             Log::warning('Failed to log action to ClickHouse', [
                 'action' => $action,
@@ -77,6 +88,19 @@ class ActionLog extends Model
     }
 
     /**
+     * Reglament breach: same as log(), with is_violation = true.
+     */
+    public static function violation(string $action, ?array $details = null, ?int $userId = null): self
+    {
+        return self::log($action, $details, $userId, true);
+    }
+
+    public static function isViolationAction(string $action): bool
+    {
+        return str_starts_with($action, 'violation_') || str_starts_with($action, 'violation.');
+    }
+
+    /**
      * @param  array<string, mixed>|null  $details
      */
     public static function resourceIdFromDetails(?array $details): int
@@ -85,7 +109,7 @@ class ActionLog extends Model
             return 0;
         }
 
-        foreach (['id', 'naryad_id', 'document_id', 'material_id', 'resource_id'] as $key) {
+        foreach (['id', 'naryad_id', 'document_id', 'material_id', 'quiz_id', 'resource_id'] as $key) {
             if (isset($details[$key]) && is_numeric($details[$key])) {
                 return (int) $details[$key];
             }

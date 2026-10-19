@@ -148,9 +148,18 @@
 ### Аналитика (ClickHouse)
 - Любое значимое действие пользователя должно логироваться через `ClickHouseService::log()` **или** `ActionLog::log()` (он сам форвардит в ClickHouse один раз). Не оба вызова на одно событие.
 - Не пиши напрямую в ClickHouse из контроллеров (`new Client` + `insert`) — только сервис + очередь `analytics`.
+- Чтение `user_actions` (история журнала, виджеты Filament) — `ClickHouseService::select()`. При `fake()` и при недоступном ClickHouse возвращает пустой список.
 - События без сессии (Telegram и т.п.) не отбрасывать: `user_id=0`, `user_role=system`.
 - Логировать выдачу доступа (click / JSON show / страница материала), а не каждый Range-запрос к signed URL.
+- PDF общего наряда (`GET /naryady/{id}/pdf`): `view_naryad_pdf` только без `Range` или с `bytes=0-`.
+- Не логировать обычные просмотры страниц.
 - Схема таблицы `user_actions` важна: `event_date`, `user_column` (из профиля), `action_type` и т.д.
+- Auth: `LogAuthenticationEvents` на Login/Failed/Logout. `via` = `web` / `filament` / `mobile` по path. Успех: `login` или `mobile.login`. Неуспех: `login_failed` (`reason` = `credentials` | `inactive`), без пароля. Выход: `logout` с `$event->user` (после logout `Auth::user()` пуст). Mobile token: явный `mobile.logout` (`via=token`), событие Logout не стреляет.
+- Filament CRUD: `AdminPanelAudit` → `admin.{model}.{created|updated|deleted}` через `ActionLog`. Только пока `Filament::isServing()` и `canAccessPanel`. Пароль — имя поля в `changed`, не значение. Query-builder/импортёр события модели не шлёт.
+- CH-only мутации: смены `work_shift.saved`, подстройки `podstroika.*`, НСИ `nsi.*`, журнал `journal.*` + `normative_completed`, учёт `uchet.*`, печать `naryad.print` (лист, не partial), поиск инструктора `instructor_*`.
+- Artisan импорт/выгрузка: одно событие на прогон (`arm.import_dbf`, `arm.export_lsbuh`, `arm.golden_month`), `user_id=0` / `system`. Не логировать каждую строку DBF.
+- ActionLog: документы/обучение/квиз (`quiz_opened` после успешного `playerData`), комментарии/реакции, наряды (`view_naryad_personal`, `view_naryad_pdf`), bug-report, backstage.
+- Нарушения регламента: колонка `action_logs.is_violation` и `ActionLog::violation()`. Имя `violation_*` само ставит флаг. В ClickHouse флаг только в `details.is_violation` (схема `user_actions` не меняется). Клиентский `/api/actions/log` флаг не ставит. Стрим signed URL при 403 не логируется (Range). Алерты (`AdminNotification` / Telegram) — для скачивания, не для каждого отказа в просмотре.
 
 ### Filament
 - Основная панель: `/admin` (`AdminPanelProvider`).
@@ -170,6 +179,7 @@
 ### Роли и доступ
 - CSRF обязателен для web, Filament и Livewire; `X-Livewire` не является основанием для исключения.
 - `CheckUserExistence` проверяет активность также на Livewire; в Filament auth middleware сохраняется при обновлении компонентов.
+- Исключения `CheckDeviceBinding` / `CheckDynamicBarrier` — только `AccessBarrierExemptions` (Livewire/Filament lifecycle и `admin/serve-*` не снимать).
 - Mobile API: после `auth:sanctum` обязателен `EnsureActiveApiUser`. Деактивация через модель отзывает токены;
   массовый query-builder/SQL update не запускает этот отзыв (проверка активности всё равно блокирует запросы).
 - План усиления безопасности и ручная выкладка без CI/CD — `SECURITY_ROADMAP.md`.
@@ -222,6 +232,6 @@ php artisan optimize:clear
 
 ---
 
-**Последнее обновление:** 2026-10-12 (клон: печать наряда RASST/TEXTN/PODPISI; KN 3+/4+, CHTAR, 009)
+**Последнее обновление:** 2026-10-19 (журнал: реальная статистика; ClickHouseService::select)
 
 Этот файл имеет высокий приоритет и будет автоматически подгружаться в контекст AI при работе в директории проекта.

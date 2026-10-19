@@ -225,8 +225,9 @@
         <div class="bg-[#0b1018] w-full max-w-md rounded-3xl p-6 border border-white/10" onclick="event.stopImmediatePropagation()">
             <h3 class="text-orange-400 font-bold mb-2">Сообщить о проблеме в планировании наряда</h3>
             <form id="naryad-bug-form">
+                <input type="hidden" name="page_url" id="naryad-bug-page-url">
                 <textarea name="description" required class="w-full h-28 bg-black/40 border border-white/10 rounded-2xl p-3 text-sm text-white" placeholder="Что не так в сетке / справочниках..."></textarea>
-                <button type="submit" class="mt-3 w-full py-2 bg-orange-600 text-white rounded-2xl text-sm">Отправить</button>
+                <button type="submit" id="naryad-bug-submit" class="mt-3 w-full py-2 bg-orange-600 text-white rounded-2xl text-sm">Отправить</button>
             </form>
         </div>
     </div>
@@ -311,14 +312,37 @@
                 }
             });
 
-            // Обработчик баг-формы (упрощённый)
             const bugForm = document.getElementById('naryad-bug-form');
             if (bugForm) {
                 bugForm.onsubmit = async (e) => {
                     e.preventDefault();
-                    alert('Спасибо! Репорт отправлен (заглушка). В реальном проекте — через /api/bug-report.');
-                    document.getElementById('naryad-bug').classList.add('hidden');
-                    bugForm.reset();
+                    const pageUrl = document.getElementById('naryad-bug-page-url');
+                    if (pageUrl) {
+                        pageUrl.value = window.location.href;
+                    }
+                    const btn = document.getElementById('naryad-bug-submit');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerText = 'Отправка...';
+                    }
+                    try {
+                        const response = await fetch('{{ route("bug.report.store") }}', {
+                            method: 'POST',
+                            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'X-Requested-With': 'XMLHttpRequest' },
+                            body: new FormData(bugForm)
+                        });
+                        const data = await response.json();
+                        alert(data.message || 'Репорт отправлен.');
+                        bugForm.reset();
+                        document.getElementById('naryad-bug').classList.add('hidden');
+                    } catch (error) {
+                        alert('Ошибка сети при отправке репорта.');
+                    } finally {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerText = 'Отправить';
+                        }
+                    }
                 };
             }
 

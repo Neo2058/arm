@@ -1,7 +1,7 @@
 <x-filament::page>
     <div class="space-y-6">
         {{-- Summary Cards --}}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                 <div class="text-sm text-gray-500 dark:text-gray-400">Всего записей</div>
                 <div class="mt-1 text-4xl font-bold text-gray-900 dark:text-white">{{ $this->getStats()['total'] }}</div>
@@ -13,6 +13,10 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
                 <div class="text-sm text-gray-500 dark:text-gray-400">За последние 7 дней</div>
                 <div class="mt-1 text-4xl font-bold text-orange-600">{{ $this->getStats()['last_7d'] }}</div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                <div class="text-sm text-gray-500 dark:text-gray-400">Нарушения</div>
+                <div class="mt-1 text-4xl font-bold text-red-600">{{ $this->getStats()['violations'] }}</div>
             </div>
         </div>
 

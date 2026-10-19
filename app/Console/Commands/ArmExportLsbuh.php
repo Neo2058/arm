@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Arm\LsbuhExportService;
+use App\Services\ClickHouseService;
 use Illuminate\Console\Command;
 
 class ArmExportLsbuh extends Command
@@ -27,6 +28,12 @@ class ArmExportLsbuh extends Command
         $path = $this->resolvePath($this->argument('path'));
         $count = $export->write($path, $month, $kind);
         $this->info("Записано {$count} строк → {$path}");
+        ClickHouseService::log('arm.export_lsbuh', 0, [
+            'month' => $month,
+            'kind' => $kind,
+            'rows' => $count,
+            'file' => basename($path),
+        ]);
 
         return self::SUCCESS;
     }

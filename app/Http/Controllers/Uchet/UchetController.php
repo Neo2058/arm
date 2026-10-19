@@ -386,6 +386,11 @@ class UchetController extends Controller
             'pm0' => $request->input('pm0', '1'),
         ];
         $report = $this->dokmenu->build($kind, $params);
+        ClickHouseService::log('uchet.report.viewed', 0, [
+            'kind' => $kind,
+            'month' => $month,
+            'print' => $request->boolean('print'),
+        ]);
 
         return view('uchet.reports.show', [
             'month' => $month,

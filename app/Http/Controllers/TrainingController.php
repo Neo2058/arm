@@ -154,9 +154,14 @@ class TrainingController extends Controller
             'comment' => 'required|string|max:1000',
         ]);
 
-        $material->comments()->create([
+        $comment = $material->comments()->create([
             'user_id' => Auth::id(),
             'comment' => $request->comment,
+        ]);
+
+        ActionLog::log('training_comment_added', [
+            'material_id' => $material->id,
+            'comment_id' => $comment->id,
         ]);
 
         return back()->with('success', 'Комментарий добавлен.');
@@ -189,6 +194,11 @@ class TrainingController extends Controller
                 'reaction_type' => $request->type,
             ]);
         }
+
+        ActionLog::log('training_reaction_set', [
+            'material_id' => $material->id,
+            'type' => $request->type,
+        ]);
 
         return back();
     }

@@ -58,6 +58,7 @@ class ActionLogTest extends TestCase
             'action' => 'view_document',
         ]);
         $this->assertSame(9, ActionLog::resourceIdFromDetails(['document_id' => 9, 'title' => 'x']));
+        $this->assertSame(4, ActionLog::resourceIdFromDetails(['quiz_id' => 4, 'title' => 'Аттестация']));
         Queue::assertPushedOn('analytics', CallQueuedClosure::class);
         Queue::assertPushed(CallQueuedClosure::class, 1);
     }
@@ -109,5 +110,68 @@ class ActionLogTest extends TestCase
         $this->postJson('/api/actions/log', [
             'action' => 'open_naryad',
         ])->assertUnauthorized();
+    }
+
+    public function test_regular_log_is_not_a_violation(): void
+    {
+        $user = User::factory()->driver()->create();
+        $this->actingAs($user);
+
+        $log = ActionLog::log('view_document', ['document_id' => 1]);
+
+        $this->assertFalse($log->is_violation);
+        $this->assertDatabaseHas('action_logs', [
+            'action' => 'view_document',
+            'is_violation' => false,
+        ]);
+    }
+
+    public function test_violation_helper_sets_flag_and_copies_it_to_clickhouse_details(): void
+    {
+        ClickHouseService::fake();
+        $user = User::factory()->driver()->create();
+        $this->actingAs($user);
+
+        $log = ActionLog::violation('violation_document_download', [
+            'document_id' => 3,
+            'title' => 'Секретно',
+        ]);
+
+        $this->assertTrue($log->is_violation);
+        $this->assertArrayNotHasKey('is_violation', $log->details ?? []);
+        $this->assertDatabaseHas('action_logs', [
+            'user_id' => $user->id,
+            'action' => 'violation_document_download',
+            'is_violation' => true,
+        ]);
+
+        $row = ClickHouseService::recorded()[0];
+        $this->assertSame('violation_document_download', $row['action_type']);
+        $this->assertStringContainsString('"is_violation":true', $row['details']);
+        $this->assertStringContainsString('"document_id":3', $row['details']);
+    }
+
+    public function test_violation_action_prefix_is_flagged_automatically(): void
+    {
+        $user = User::factory()->driver()->create();
+        $this->actingAs($user);
+
+        ActionLog::log('violation_document_access', ['document_id' => 8]);
+
+        $this->assertTrue(ActionLog::query()->sole()->is_violation);
+    }
+
+    public function test_client_ui_action_cannot_be_a_violation(): void
+    {
+        $user = User::factory()->driver()->create();
+
+        $this->actingAs($user)
+            ->postJson('/api/actions/log', [
+                'action' => 'open_naryad',
+                'details' => ['id' => 1],
+            ])
+            ->assertOk();
+
+        $this->assertFalse(ActionLog::query()->sole()->is_violation);
     }
 }

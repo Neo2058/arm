@@ -12,6 +12,7 @@ use App\Services\Arm\AccountBuilder;
 use App\Services\Arm\AccountingImporter;
 use App\Services\Arm\DbfReader;
 use App\Services\Arm\GoldenMonthComparer;
+use App\Services\ClickHouseService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
@@ -75,6 +76,13 @@ class ArmGoldenMonth extends Command
         $this->printDiscrepancies($report['discrepancies']);
 
         $count = count($report['discrepancies']);
+        ClickHouseService::log('arm.golden_month', 0, [
+            'month' => $month,
+            'tabs' => $tabs,
+            'compare_only' => (bool) $this->option('compare-only'),
+            'discrepancies' => $count,
+            'source' => basename($dir),
+        ]);
         if ($count === 0) {
             $this->info('Расхождений нет (порог 0.015).');
 
