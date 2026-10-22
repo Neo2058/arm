@@ -75,6 +75,17 @@
     font-size: 0.87rem;
 }
 
+.carousel-track {
+    touch-action: pan-y;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.carousel-card {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+}
+
 .profile-photo{
     width: 2.8rem;
     height: 2.8rem;

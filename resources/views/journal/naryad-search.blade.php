@@ -44,7 +44,7 @@
 
         <div class="bg-white dark:bg-gray-800 rounded-2xl border p-4">
             <h2 class="font-semibold mb-2">Разбивка смен (PDF или .txt)</h2>
-            <p class="text-xs text-gray-500 mb-2">PDF «Рабочие…» / «Выходные…» разбирается сам, как в прототипе.</p>
+            <p class="text-xs text-gray-500 mb-2">Необязательно: без своих файлов берётся shifts_work.txt и shifts_weekend.txt из проекта. PDF «Рабочие…» / «Выходные…» разбирается сам.</p>
             <form action="{{ route('journal.naryad-search.shifts') }}" method="POST" enctype="multipart/form-data" class="space-y-2">
                 @csrf
                 <input type="file" name="shifts[]" multiple accept=".pdf,.txt,.TXT,application/pdf,text/plain" required
@@ -68,7 +68,7 @@
                         </form>
                     </li>
                 @empty
-                    <li class="text-gray-400">Пока нет</li>
+                    <li class="text-gray-400">Будут взяты файлы из корня проекта</li>
                 @endforelse
             </ul>
         </div>

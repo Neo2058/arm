@@ -234,6 +234,12 @@ class NaryadSearchController extends Controller implements HasMiddleware
                 $work = array_merge($work, $entries);
             }
         }
+        if ($work === []) {
+            $work = ShiftCatalog::loadDefault('work');
+        }
+        if ($weekend === []) {
+            $weekend = ShiftCatalog::loadDefault('weekend');
+        }
 
         $result = SearchEngine::run($naryads, $queryLines, $work, $weekend);
 

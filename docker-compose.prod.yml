@@ -33,6 +33,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      # Redis is cache/sessions only. Jobs must not pile in Redis.
+      - QUEUE_CONNECTION=deferred
       - FILESYSTEM_DISK=s3
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
@@ -163,7 +165,7 @@ services:
     networks:
       - backend
 
-  # Redis (кэш, сессии, очереди)
+  # Redis (кэш и сессии; очереди не хранятся)
   redis:
     image: redis:alpine
     container_name: arm-redis

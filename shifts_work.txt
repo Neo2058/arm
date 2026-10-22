@@ -1,0 +1,3102 @@
+KIND work
+TITLE РАЗБИВКА ГРАФИКА ДВИЖЕНИЯ ПОЕЗДОВ НА РАБОЧИЕ ДНИ с 11 ноября 2025г.
+
+SHIFT
+ROUTE 1
+CODE 1
+ID 1
+PARITY both
+START 5.14 д
+END 9.01 бр
+LINE Л
+DURATION 3.43
+WORK 5.14д 6.04н/с - 8.57бр 9.01док =
+
+SHIFT
+ROUTE 1
+CODE 1
+ID 2
+PARITY both
+START 8.44 бр
+END 17.00 бр
+LINE Л/Р
+DURATION 8.16
+WORK 8.44бр 8.57н/с2п - 11.58д 11.58д-13.05д 13.05д - 13.45д
+WORK Резерв тестирование (физиолог)
+WORK 13.49д 14.33н/с -14.51бр 15.03бр2п-16.58бр 17.00док =
+WORK н/с по 38 мар
+REST 11.58-13.05
+
+SHIFT
+ROUTE 1
+CODE 1
+ID 3
+PARITY both
+START 14.40 бр
+END 22.46 д
+LINE Л
+DURATION 8.06
+WORK 14.40бр 14.51н/с1п - 22.46д =
+REST 19.17влж-19.49влж2п:37мар
+REST 21.34влж-22.06влж2п:23мар
+
+SHIFT
+ROUTE 2
+CODE 2
+ID 2
+PARITY both
+START 6.34 д
+END 14.20 лбл
+LINE Л
+DURATION 7.46
+WORK 6.34д 7.26н/с (резервом до Мр) - 10.55д
+WORK 10.55д-13.21д 13.21д 14.05н/с-14.20лбл =
+WORK Резерв
+WORK (передаёт МЛ для сдачи машинисту 2 мар смена «3»)
+REST 10.55-11.55
+
+SHIFT
+ROUTE 2
+CODE 2
+ID 3
+PARITY both
+START 14.00 бр
+END 21.57 д
+LINE Л
+DURATION 7.57
+WORK 14.00бр 14.20лбл1п н/с - 21.57д =
+REST 18.30влж-19.02влж2п:3мар
+REST 20.45влж-21.17влж2п:30мар
+
+SHIFT
+ROUTE 3
+CODE 3
+ID 1
+PARITY both
+START 4.47 д
+END 8.39 бр
+LINE Л
+DURATION 3.52
+WORK 4.47д 5.37н/с (первый поезд) - 8.35бр 8.39док =
+
+SHIFT
+ROUTE 3
+CODE 3
+ID 2
+PARITY both
+START 8.22 бр
+END 16.29 влж
+LINE Л
+DURATION 8.07
+WORK 8.22бр 8.35н/с2п - 15.27бр 15.54влж1п-16.27влж 16.29док =
+WORK Подмена 28 мар
+REST 12.40влж-13.15влж2п:16мар
+REST *15.27-15.48
+
+SHIFT
+ROUTE 3
+CODE 3
+ID 3
+PARITY both
+START 15.14 бр
+END 22.30 влж
+LINE Л
+DURATION 7.16-чт
+WORK 15.14бр 15.27н/с2п-21.00влж
+WORK 20мар:21.11влж1п-21.47влж
+WORK 36мар:22.03влж1п - 22.28влж-чт 22.30док =
+WORK - 22.35влж-нчт 22.37док =
+REST 19.35бр-20.54бр2п:29мар
+
+SHIFT
+ROUTE 3
+CODE 3
+ID 4+
+PARITY even
+START 18.07 бр
+END 2.24 д
+LINE Л/Р
+DURATION 8.17-чт
+WORK 18.07бр 2мар:18.30влж1п-19.02влж
+WORK 11мар:19.21влж1п-19.52влж
+WORK 31мар:19.57влж1п-20.29влж
+WORK 21.00влж2п н/с - 2.24д-чт =
+REST 20.29-21.00
+REST 22.43влж-23.19влж2п:12мар
+
+SHIFT
+ROUTE 3
+CODE 3
+ID 4+
+PARITY odd
+START 18.07 бр
+END 2.23 д
+LINE Л/Р
+DURATION 8.16-нчт
+WORK 11мар:19.21влж1п-19.52влж
+WORK 31мар:19.57влж1п-20.29влж
+WORK - 2.23д-нчт =
+REST 20.29-21.00
+REST 22.43влж-23.19влж2п:12мар
+
+SHIFT
+ROUTE 4
+CODE 4
+ID 1
+PARITY both
+START 5.08 д
+END 7.24 бр
+LINE Л
+DURATION 2.16
+WORK 5.08д-приемка 4 мар (заявка ДДЭ, контроль ГВ и АКБ)
+WORK 6.00д-приемка 31мар 6.42н/с - 7.20бр 7.24док =
+WORK н/с по 4 мар
+
+SHIFT
+ROUTE 4
+CODE 4
+ID 2
+PARITY both
+START 7.07 бр
+END 13.23 влж
+LINE Л/Р
+DURATION 6.16
+WORK 7.07бр 7.20н/с2п - 11.20влж
+WORK 22мар: 12.06влж 1 п-12.40влж
+WORK 39мар:12.53влж1п-13.21влж 13.23док =
+REST 11.20-12.06
+
+SHIFT
+ROUTE 4
+CODE 4
+ID 2п
+PARITY both
+START 9.54 бр
+END 18.22 бр
+LINE Л
+DURATION 8.28
+WORK 9.54бр 10.17влж1п-10.49влж 11.20влж1п н/с-18.20бр 18.22док =
+WORK Подмена 16 мар
+WORK (меняет машинист с 21 мар)
+REST 13.38влж-14.12влж2п:14мар
+REST 15.58влж-16.31влж2п:П-1
+
+SHIFT
+ROUTE 4
+CODE 4
+ID 4+
+PARITY even
+START 18.28 бр
+END 2.43 збл
+LINE Л
+DURATION 8.15-чт
+WORK 18.28бр 18.41н/с2п - 2.43збл-чт/2гл п ук4 =
+REST 21.16-23.15-чт:отстойДепо,отдых
+
+SHIFT
+ROUTE 4
+CODE 4
+ID 4+
+PARITY odd
+START 18.28 бр
+END 2.42 збл
+LINE Л
+DURATION 8.14-нчт
+WORK 22.25-22.50:ПЗ - 2.42збл-нчт/1гл п ук5 =
+REST 21.16-23.27-нчт
+
+SHIFT
+ROUTE 5
+CODE 5
+ID 1
+PARITY even
+START 5.05 збл
+END 7.58 бр
+LINE Л
+DURATION 2.55-чт
+WORK 5.05збл-чт/2гл п ук4\ 5.49н/с - 7.56бр 7.58док =
+
+SHIFT
+ROUTE 5
+CODE 5
+ID 1
+PARITY odd
+START 4.59 збл
+END 7.58 бр
+LINE Л
+DURATION 3.04-нчт
+WORK 4.59збл-нчт/1гл п ук5\ 5.42н/с
+
+SHIFT
+ROUTE 5
+CODE 5
+ID 2
+PARITY both
+START 7.45 бр
+END 13.50 д
+LINE Л/Р
+DURATION 6.05
+WORK 7.45бр 7.56н/с1п - 11.17д 11.17д-13.00д 13.00д-13.45д 13.50док =
+WORK Резерв АТЗ
+REST 1 1 .17-11.47
+
+SHIFT
+ROUTE 5
+CODE 5
+ID 3
+PARITY both
+START 14.35 д
+END 22.36 влж
+LINE Л
+DURATION 8.01
+WORK 14.35д 15.32н/с-20.14влж
+WORK Резерв:20.20бр-20.55бр
+WORK 22мар:21.10влж1п-21.43влж
+WORK 14мар:22.00влж1п-22.34влж-чт
+WORK -22.33влж-нчт 22.36док =
+REST 18.01влж-18.33влж2п:П-1
+REST *20.14-20.40
+
+SHIFT
+ROUTE 5
+CODE 5
+ID 4+
+PARITY even
+START 18.21 бр
+END 2.43 збл
+LINE Л
+DURATION 8.22-чт
+WORK 18.21бр 25мар:18.42влж1п-19.14влж
+WORK 20.14влж1п н/с - 2.43збл-чт/1ст п ук2 (последний поезд) =
+REST 22.35бр-00.01бр2п-чт:23мар
+REST *19.51-20.14
+
+SHIFT
+ROUTE 5
+CODE 5
+ID 4+
+PARITY odd
+START 18.21 бр
+END 2.35 збл
+LINE Л
+DURATION 8.14-нчт
+WORK 34мар:19.19влж1п-19.51влж
+WORK - 2.35збл-нчт/1ст п ук2 (последний поезд) =
+REST 22.35бр-23.50бр2п-нчт
+REST *19.51-20.14
+
+SHIFT
+ROUTE 6
+CODE 6
+ID 1
+PARITY even
+START 5.05 збл
+END 8.23 бр
+LINE Л
+DURATION 3.18-чт
+WORK 5.05збл-чт/1ст п ук2\ 5.47н/с - 8.21бр 8.23док =
+REST Чт-5.50-6.16:отстой Збл
+
+SHIFT
+ROUTE 6
+CODE 6
+ID 1
+PARITY odd
+START 5.08 збл
+END 8.23 бр
+LINE Л
+DURATION 3.15-нчт
+WORK 5.08збл-нчт/1ст п ук2\ 5.49н/с
+REST Нчт-5.52-6.17
+
+SHIFT
+ROUTE 6
+CODE 6
+ID 2
+PARITY both
+START 8.10 бр
+END 16.32 бр
+LINE Л/Р
+DURATION 8.22
+WORK 8.10бр 8.21н/с1п - 11.40д 11.40д - 13.05д
+WORK резерв
+WORK 13.05д 13.49н/с- 16.30бр 16.32док =
+WORK н/с по 21 мар
+REST 11.40-12.40
+
+SHIFT
+ROUTE 6
+CODE 6
+ID 3
+PARITY both
+START 12.27 д
+END 20.57 д
+LINE Л/Р
+DURATION 8.30
+WORK 12.27д 12.50д - 14.17д 14.17д 15.01н/с - 20.57д =
+WORK Тестирование (психолог)
+REST 15.13влж-15.47влж2п:П-1
+REST 19.46влж-20.17влж2п:21мар
+
+SHIFT
+ROUTE 7
+CODE 7
+ID 1
+PARITY both
+START 4.53 д
+END 8.20 бр
+LINE Л
+DURATION 3.27
+WORK 4.53д 5.43н/с - 8.18бр 8.20док =
+
+SHIFT
+ROUTE 7
+CODE 7
+ID 2
+PARITY both
+START 8.07 бр
+END 15.33 бр
+LINE Л
+DURATION 7.26
+WORK 8.07бр 8.18н/с1п - 15.29бр 15.33док =
+REST 10.25влж-10.57влж2п:П-1
+REST 12.43влж-13.18влж2п:14мар
+
+SHIFT
+ROUTE 7
+CODE 7
+ID 3
+PARITY even
+START 15.16 бр
+END 23.11 влж
+LINE Л
+DURATION 7.55-чт
+WORK 15.16бр 15.29н/с2п - 22.15влж-чт 22.35влж1п-23.11влж-чт =
+WORK (передаёт МЛ для сдачи машинисту 7мар смена «4+»)
+REST 19.32влж-20.04влж2п:7мар
+REST 21.47влж-22.15влж2п-чт:15мар
+
+SHIFT
+ROUTE 7
+CODE 7
+ID 3
+PARITY odd
+START 15.16 бр
+END 23.12 влж
+LINE Л
+DURATION 7.56-нчт
+WORK - 22.16влж-нчт 22.38влж1п-23.12влж-нчт =
+WORK АТЗ по 32 мар
+WORK (передаёт МЛ для сдачи машинисту 7мар смена «4+»)
+REST 19.32влж-20.04влж2п:7мар
+REST 21.47влж-22.16влж2п-нчт
+
+SHIFT
+ROUTE 7
+CODE 7
+ID 4+
+PARITY even
+START 17.01 бр
+END 1.10 д
+LINE Л/Р
+DURATION 8.09-чт
+WORK 17.01бр н/с по 33мар:17.14бр2п - 19.06бр
+WORK резерв:20.20бр-21.20бр
+WORK 11мар:21.37влж1п-22.10влж
+WORK Чт -22.15влж2п - 1.10д =
+WORK н/с по 7 мар
+REST *19.06-19.20
+REST 20.04-21.00
+
+SHIFT
+ROUTE 7
+CODE 7
+ID 4+
+PARITY odd
+START 17.01 бр
+END 1.07 д
+LINE Л/Р
+DURATION 8.06-нчт
+WORK 7мар:19.32влж1п-20.04влж
+WORK резерв:20.20бр-21.20бр
+WORK 11мар:21.37влж1п-22.10влж
+WORK Нчт-22.16влж2п - 1.07д =
+WORK н/с по 7 мар
+REST *19.06-19.20
+REST 20.04-21.00
+
+SHIFT
+ROUTE 8
+CODE 8
+ID 1
+PARITY both
+START 4.40 д
+END 7.52 бр
+LINE Л
+DURATION 3.12
+WORK 4.40д 5.30н/с (выезд на Пч2п) - 7.48бр 7.52док =
+
+SHIFT
+ROUTE 8
+CODE 8
+ID 2
+PARITY both
+START 7.35 бр
+END 14.08 влж
+LINE Л
+DURATION 6.43
+WORK 7.35бр 7.48н/с2п - 11.52влж
+WORK 24мар:12.26влж1п-13.01влж
+WORK 28мар:13.33влж1п-14.06влж 14.08док =
+REST 11.52-12.26
+
+SHIFT
+ROUTE 8
+CODE 8
+ID 3
+PARITY both
+START 10.35 бр
+END 18.52 бр
+LINE Л
+DURATION 8.17
+WORK 10.35бр 10.57влж1п-11.29влж 11.52влж1п-18.50бр 18.52док =
+WORK подмена 12 мар
+REST 14.10влж-14.44влж2п:22мар
+REST 16.31влж-17.03влж2п:37мар
+
+SHIFT
+ROUTE 8
+CODE 8
+ID 4+
+PARITY even
+START 18.39 бр
+END 2.43 збл
+LINE Л
+DURATION 8.04-чт
+WORK 18.39бр 18.50н/с1п - 2.43збл-чт/2гл ст п ук5 =
+REST 21.43-23.27-чт:отстойДепо,отдых
+
+SHIFT
+ROUTE 8
+CODE 8
+ID 4+
+PARITY odd
+START 18.39 бр
+END 2.42 збл
+LINE Л
+DURATION 8.03-нчт
+WORK - 2.42збл-нчт/1гл п ук6 =
+REST 21.43-23.32-нчт
+
+SHIFT
+ROUTE 9
+CODE 9
+ID 1
+PARITY even
+START 5.10 збл
+END 8.24 бр
+LINE Л
+DURATION 3.14-чт
+WORK 5.10збл-чт/2гл ст п ук5\ 5.51н/с (первый поезд) - 8.20бр 8.24док =
+
+SHIFT
+ROUTE 9
+CODE 9
+ID 1
+PARITY odd
+START 4.59 збл
+END 8.24 бр
+LINE Л
+DURATION 3.25-нчт
+WORK 4.59збл-нчт/1гл п ук6\ 5.43н/с
+
+SHIFT
+ROUTE 9
+CODE 9
+ID 2
+PARITY both
+START 8.07 бр
+END 15.26 влж
+LINE Л
+DURATION 7.19
+WORK 8.07бр 8.20н/с2п - 12.29бр (меняет машинист с 33 мар)
+WORK Резерв:12.29бр-13.30бр
+WORK 17мар:13.48влж1п-14.22влж
+WORK 11мар:14.51влж1п-15.24влж 15.26док =
+REST 12.29-13.00
+REST *14.22-14.51
+
+SHIFT
+ROUTE 9
+CODE 9
+ID 3
+PARITY both
+START 14.38 бр
+END 20.39 влж
+LINE Л
+DURATION 6.01
+WORK 14.38бр 14.49н/с1п - 19.46влж 20.05влж1п-20.37влж 20.39док =
+WORK подмена 12 мар
+REST 17.01влж-17.33влж2п:П-1
+
+SHIFT
+ROUTE 9
+CODE 9
+ID 4+
+PARITY even
+START 18.35 бр
+END 2.26 мр
+LINE Л
+DURATION 7.51-чт
+WORK 18.35бр 18.57влж1п-19.29влж
+WORK 19.46влж2п н/с - 2.26мр-чт/2гл ст п ук4 =
+WORK 20.50-21.20:ПЗ
+WORK Сфотографировать новые наряды, разбивку, и отправить
+WORK администратору группы!
+REST 19.57-23.01-чт:отстойДепо,отдых,
+
+SHIFT
+ROUTE 9
+CODE 9
+ID 4+
+PARITY odd
+START 18.35 бр
+END 2.42 збл
+LINE Л
+DURATION 8.07-нчт
+WORK подмена 20 мар
+WORK - 2.42збл-нчт/1гл ст п ук3 =
+WORK 20.50-21.20:ПЗ
+WORK Сфотографировать новые наряды, разбивку, и отправить
+WORK администратору группы!
+REST 19.57-23.15-нчт заезд работников
+
+SHIFT
+ROUTE 10
+CODE 10
+ID 1
+PARITY even
+START 5.06 мр
+END 7.52 бр
+LINE Л
+DURATION 2.46-чт
+WORK 5.06мр-чт/2гл ст п ук4\ 5.47н/с (первый поезд) - 7.50бр 7.52док =
+
+SHIFT
+ROUTE 10
+CODE 10
+ID 1
+PARITY odd
+START 4.59 збл
+END 7.52 бр
+LINE Л
+DURATION 2.53-нчт
+WORK 4.59збл-нчт/1гл ст п ук3\ 5.40н/с
+
+SHIFT
+ROUTE 10
+CODE 10
+ID 2
+PARITY both
+START 7.39 бр
+END 14.35 д
+LINE Л/Р
+DURATION 6.56
+WORK 7.39бр 7.50н/с1п - 11.10д 11.10д-13.45д 13.45д-14.30д 14.35док =
+WORK Резерв АТЗ Т-6
+REST 11.10-11.42
+
+SHIFT
+ROUTE 10
+CODE 10
+ID 3+
+PARITY even
+START 15.54 д
+END 0.05 мр
+LINE Л
+DURATION 8.11-чт
+WORK 15.54д 16.51н/с (выезд работников) - 19.48влж
+WORK 38мар:21.19влж1п-21.51влж
+WORK 29мар:21.56влж2п-23.44влж-чт 0.05мр =
+WORK (проход до к/о: 10, 30 мар) =
+REST 19.58-21.05
+
+SHIFT
+ROUTE 10
+CODE 10
+ID 3+
+PARITY odd
+START 15.54 д
+END 0.07 мр
+LINE Л
+DURATION 8.13-нчт
+WORK Резерв:19.58бр-21.05бр
+WORK 38мар:21.19влж1п-21.51влж
+WORK -23.47влж-нчт 0.07мр =
+WORK (проход до к/о: 10, 30 мар) =
+REST 19.58-21.05
+
+SHIFT
+ROUTE 10
+CODE 10
+ID 4+
+PARITY both
+START 16.20 бр
+END 0.32 збл
+LINE Л
+DURATION 8.12
+WORK 16.20бр 16.33бр2п-18.53влж 19.48влж2п н/с - 0.17збл 0.32збл =
+WORK н/с по 17 мар
+WORK (проход в к/о:10мар, М-4) (меняет машинист с М-3)
+REST *18.53-19.48
+REST 21.31влж-22.03влж2п:30мар
+
+SHIFT
+ROUTE 11
+CODE 11
+ID 1
+PARITY both
+START 5.20 д
+END 9.07 бр
+LINE Л
+DURATION 3.47
+WORK 5.20д 6.10н/с - 9.03бр 9.07док =
+
+SHIFT
+ROUTE 11
+CODE 11
+ID 2
+PARITY both
+START 8.50 бр
+END 17.15 бр
+LINE Л/Р
+DURATION 8.25
+WORK 8.50бр 9.03н/с2п - 12.56д (сцеп) 13.00д-13.45д
+WORK АТЗ Т-6
+WORK 13.55д 14.39н/с- 17.13бр 17.15док =
+WORK (меняет машинист с 22 мар)
+REST 10.52влж-11.25влж2п:22мар
+REST 14.51влж-15.24влж2п:9мар
+
+SHIFT
+ROUTE 11
+CODE 11
+ID 3+
+PARITY even
+START 17.21 бр
+END 1.43 д
+LINE Л
+DURATION 8.22-чт
+WORK 17.21бр 17.34н/с2п - 1.43д-чт =
+REST 19.21влж-19.52влж2п:3мар
+REST 21.37влж-22.10влж2п:7мар
+REST Чт-23.01-23.35:отстой Фзт
+
+SHIFT
+ROUTE 11
+CODE 11
+ID 3+
+PARITY odd
+START 17.21 бр
+END 1.21 д
+LINE Л
+DURATION 8.00-нчт
+WORK - 1.21д-нчт =
+REST 19.21влж-19.52влж2п:3мар
+REST 21.37влж-22.10влж2п:7мар
+
+SHIFT
+ROUTE 12
+CODE 12
+ID 1
+PARITY both
+START 5.28 д
+END 8.52 бр
+LINE Л
+DURATION 3.24
+WORK 5.28д 6.18н/с - 8.50бр 8.52док =
+
+SHIFT
+ROUTE 12
+CODE 12
+ID 2
+PARITY both
+START 8.39 бр
+END 15.43 бр
+LINE Л
+DURATION 7.04
+WORK 8.39бр 8.50н/с1п - 15.41бр 15.43док =
+REST 10.57влж-11.29влж2п:8мар
+REST 13.16влж-13.49влж2п:П-1
+
+SHIFT
+ROUTE 12
+CODE 12
+ID 3
+PARITY both
+START 15.30 бр
+END 23.19 влж
+LINE Л
+DURATION 7.49
+WORK 15.30бр 15.41н/с1п - 21.17д 21.34д-выезжает с 34мар
+WORK 22.43влж1п-23.19влж =
+WORK подмена 3 мар
+WORK (передаёт МЛ для сдачи машинисту 3мар смена «4+»)
+REST 20.05влж-20.37влж2п:9мар
+REST *21.50-22.20
+
+SHIFT
+ROUTE 13
+CODE 13
+ID 2
+PARITY both
+START 6.53 д
+END 12.54 бр
+LINE Л
+DURATION 6.01
+WORK 6.53д 7.46н/с (резервом до Мр) - 12.50бр 12.54док =
+REST 10.03влж-10.35влж2п:14мар
+
+SHIFT
+ROUTE 13
+CODE 13
+ID 3
+PARITY both
+START 12.37 бр
+END 20.51 влж
+LINE Л
+DURATION 8.14
+WORK 12.37бр 12.50н/с2п- 19.16бр
+WORK 19мар: 19.37влж1п-20.09влж
+WORK 26мар:20.17влж1п-20.49влж 20.51док =
+REST 14.41влж-15.14влж2п:26мар
+REST 16.58влж-17.29влж2п:17мар
+
+SHIFT
+ROUTE 13
+CODE 13
+ID 4+
+PARITY even
+START 19.05 бр
+END 2.33 збл
+LINE Л
+DURATION 7.28-чт
+WORK 19.05бр 19.16н/с1п - 2.33збл-чт/2гл п ук2 =
+REST 22.10-01.28-чт:отстойДепо,отдых
+
+SHIFT
+ROUTE 13
+CODE 13
+ID 4+
+PARITY odd
+START 19.05 бр
+END 2.44 мр
+LINE Л
+DURATION 7.39-нчт
+WORK - 2.44мр-нчт/1гл п ук5 =
+REST 22.10-23.46-нчт
+
+SHIFT
+ROUTE 14
+CODE 14
+ID 1
+PARITY even
+START 5.05 збл
+END 7.57 бр
+LINE Л
+DURATION 2.52-чт
+WORK 5.05збл-чт/2гл п ук2\ 5.46н/с (первый поезд) - 7.55бр 7.57док =
+
+SHIFT
+ROUTE 14
+CODE 14
+ID 1
+PARITY odd
+START 5.05 мр
+END 7.57 бр
+LINE Л
+DURATION 2.52-нчт
+WORK 5.05мр-нчт/1гл п ук5\ 5.48н/с
+
+SHIFT
+ROUTE 14
+CODE 14
+ID 2
+PARITY both
+START 7.44 бр
+END 15.22 влж
+LINE Л
+DURATION 7.38
+WORK 7.44бр 7.55н/с1п- 10.02влж
+WORK 13мар:10.03влж1п-10.35влж
+WORK 27мар:10.43влж1п-11.15влж
+WORK 40мар:11.49влж1п-12.22влж
+WORK 7мар:12.43влж1п-13.18влж
+WORK 4мар:13.38влж1п-14.12влж
+WORK 24мар:14.47влж1п-15.20влж 15.22док =
+REST 11.15-11.49
+REST *14.12-14.47
+
+SHIFT
+ROUTE 14
+CODE 14
+ID 2п
+PARITY both
+START 9.01 бр
+END 17.31 влж
+LINE Л
+DURATION 8.30
+WORK 9.01бр 9.23влж1п-9.55влж 10.02влж1п н/с - 17.31влж =
+WORK Подмена 18 мар
+WORK АТЗ:16.00-16.45
+WORK (передаёт МЛ для сдачи машинисту 14мар смена «3+»)
+REST 12.19влж-12.53влж2п:П-1
+REST 15.05-17.19:отстойДепо,отдых,
+REST выезд работников
+
+SHIFT
+ROUTE 14
+CODE 14
+ID 3+
+PARITY even
+START 17.08 бр
+END 1.36 д
+LINE Л
+DURATION 8.28-чт
+WORK 17.08бр 17.31влж1п н/с - 1.36д-чт =
+REST 19.44влж-20.16влж2п:24мар
+REST 22.00влж-22.34влж2п-чт:5мар
+
+SHIFT
+ROUTE 14
+CODE 14
+ID 3+
+PARITY odd
+START 17.08 бр
+END 1.38 д
+LINE Л
+DURATION 8.30-нчт
+WORK - 1.38д-нчт =
+REST 19.44влж-20.16влж2п:24мар
+REST 22.00влж-22.33влж2п-нчт
+
+SHIFT
+ROUTE 15
+CODE 15
+ID 2
+PARITY both
+START 7.03 д
+END 15.32 бр
+LINE Л/Р
+DURATION 8.29
+WORK 7.03д 7.56н/с (резервом до Мр) - 11.25д
+WORK 11.25д-13.45д 13.45д - 14.25д 14.30д 15.14н/с- 15.32бр =
+WORK Резерв тестирование (физиолог) н/с по 31 мар
+WORK (передаёт МЛ для сдачи машинисту 31мар смена «3+»)
+REST 11.25-12.25
+
+SHIFT
+ROUTE 15
+CODE 15
+ID 3
+PARITY both
+START 14.47 д
+END 22.18 влж
+LINE Л
+DURATION 7.31
+WORK 14.47д 15.44н/с (пятница - выезд работников) - 20.57збл/1ст п ук1
+WORK (рацию на пост) 21.47влж1п-22.16влж 22.18док =
+WORK подмена 7 мар
+REST 18.13влж-18.45влж2п:17мар
+REST *21.15-21.47
+
+SHIFT
+ROUTE 16
+CODE 16
+ID 1
+PARITY even
+START 5.10 збл
+END 8.10 бр
+DURATION 3.00-чт
+WORK п ук1\ (кроме понедельника рация на посту) 5.55н/с - 8.08бр
+REST 8.10док =
+
+SHIFT
+ROUTE 16
+CODE 16
+ID 1
+PARITY odd
+START 5.08 збл
+END 8.10 бр
+DURATION 3.02-нчт
+WORK п ук1\ (кроме понедельника рация на посту) 5.55н/с
+REST 8.10док =
+
+SHIFT
+ROUTE 16
+CODE 16
+ID 2
+PARITY both
+START 7.57 бр
+END 14.32 влж
+LINE Л/Р
+DURATION 6.35
+WORK 7.57бр 8.08н/с1п - 12.34влж
+WORK 3мар:12.40влж1п-13.15влж
+WORK Резерв:13.15влж-13.56влж
+WORK 18мар:13.56влж1п-14.30влж 14.32док =
+REST 10.17влж-10.49влж2п:4мар
+
+SHIFT
+ROUTE 16
+CODE 16
+ID 3
+PARITY both
+START 12.11 бр
+END 20.38 д
+LINE Л
+DURATION 8.27
+WORK 12.11бр 12.34влж1п н/с - 20.38д =
+REST 15.22-17.01:отстойДепо,отдых
+
+SHIFT
+ROUTE 17
+CODE 17
+ID 1
+PARITY both
+START 5.27 д
+END 7.34 бр
+LINE Л
+DURATION 2.29
+WORK 5.18д-приёмка 17мар (заявка ДДЭ, контроль ГВ и АКБ)
+WORK 6.10д-приёмка 40мар 6.52н/с - 7.30бр 7.34док =
+WORK н/с по 17 мар
+
+SHIFT
+ROUTE 17
+CODE 17
+ID 2
+PARITY both
+START 7.17 бр
+END 15.01 влж
+LINE Л
+DURATION 7.44
+WORK 7.17бр 7.30н/с2п - 11.32влж
+WORK 19мар:12.11влж1п-12.45влж
+WORK 37мар:13.13влж1п-13.46влж
+WORK 22мар:14.25влж1п-14.59влж 15.01док =
+REST 11.32-12.11
+REST *13.46-14.25
+
+SHIFT
+ROUTE 17
+CODE 17
+ID 2п
+PARITY both
+START 9.32 бр
+END 17.31 влж
+LINE Л
+DURATION 7.59
+WORK 9.32бр 19мар:9.55влж1п-10.27влж
+WORK 39мар:10.32влж1п-11.04влж
+WORK н/с по 17мар:11.32влж1п-16.33бр
+WORK 13мар:16.58влж1п-17.29влж 17.31док =
+WORK (меняет машинист с 10 мар)
+REST *11.04-11.32
+REST 13.48влж-14.22влж2п:9мар
+
+SHIFT
+ROUTE 17
+CODE 17
+ID 3+
+PARITY even
+START 17.49 бр
+END 2.19 д
+LINE Л
+DURATION 8.30-чт
+WORK 17.49бр 18.13влж1п-18.45влж 18.53влж2п н/с - 2.19д-чт =
+REST 20.36влж-21.01влж2п:21мар
+REST 22.46влж-23.37влж2п-чт:30м
+
+SHIFT
+ROUTE 17
+CODE 17
+ID 3+
+PARITY odd
+START 17.49 бр
+END 1.59 д
+LINE Л
+DURATION 8.10-нчт
+WORK подмена 15 мар - 1.59д-нчт =
+REST 20.36влж-21.01влж2п:21мар
+REST 22.46влж-23.14влж2п-нчт
+
+SHIFT
+ROUTE 18
+CODE 18
+ID 2
+PARITY both
+START 6.41 д
+END 13.06 влж
+LINE Л
+DURATION 6.25
+WORK 6.41д (без приёмки, см.20мар) 7.04н/с (резервом до Мр) - 11.38влж
+WORK 32мар:11.47влж1п-12.20влж
+WORK 34мар:12.29влж1п-13.04влж 13.06док =
+REST 9.23влж-9.55влж2п:14мар
+
+SHIFT
+ROUTE 18
+CODE 18
+ID 3
+PARITY both
+START 11.15 бр
+END 19.41 влж
+LINE Л
+DURATION 8.26
+WORK 11.15бр 11.38влж1п н/с-18.51влж 19.06влж1п-19.37влж 19.41док =
+WORK АТЗ:15.15-16.00 подмена 38мар
+WORK (принимает состав из отстоя машинист с 24 маршрута)
+REST 13.56влж-14.30влж2п:16мар
+REST 14.42-16.26:отстойДепо,отдых,
+REST выезд работников
+
+SHIFT
+ROUTE 18
+CODE 18
+ID 4+
+PARITY even
+START 18.28 бр
+END 2.26 мр
+LINE Л
+DURATION 7.58-чт
+WORK 18.28бр 18.51влж1п н/с - 2.26мр-чт/2гл п ук3 =
+REST 21.36влж-23.24влж1п-чт:21мар
+
+SHIFT
+ROUTE 18
+CODE 18
+ID 4+
+PARITY odd
+START 18.28 бр
+END 2.41 мр
+LINE Л
+DURATION 8.13-нчт
+WORK - 2.41мр-нчт/1гл ст п ук3 =
+REST 21.36влж- 23.49влж1п-нчт
+
+SHIFT
+ROUTE 19
+CODE 19
+ID 1
+PARITY even
+START 5.03 мр
+END 7.48 бр
+LINE Л
+DURATION 2.45-чт
+WORK 5.03мр-чт/2гл п ук3\ 5.46н/с - 7.46бр 7.48док =
+
+SHIFT
+ROUTE 19
+CODE 19
+ID 1
+PARITY odd
+START 5.02 мр
+END 7.48 бр
+LINE Л
+DURATION 2.46-нчт
+WORK 5.02мр-нчт/1гл ст п ук3\ 5.43н/с
+
+SHIFT
+ROUTE 19
+CODE 19
+ID 2
+PARITY both
+START 7.35 бр
+END 15.38 бр
+LINE Л
+DURATION 8.03
+WORK 7.35бр 7.46н/с1п - 15.34бр 15.38док =
+REST 9.55влж-10.27влж2п:17мар
+REST 12.11влж-12.45влж2п:17мар
+REST 14.46-15.25:отстой Збл
+
+SHIFT
+ROUTE 19
+CODE 19
+ID 3
+PARITY both
+START 15.21 бр
+END 22.40 влж
+LINE Л
+DURATION 7.19
+WORK 15.21бр 15.34н/с2п - 20.49д 21.34д-выезжает с 34мар
+WORK 21.52печ2п-22.35влж-чт(22.38влж-нчт) 22.40док =
+WORK АТЗ по 32 мар
+REST 19.37 влж-20.09влж2п:13мар
+REST *20.49-21.34
+
+SHIFT
+ROUTE 20
+CODE 20
+ID 1
+PARITY both
+START 5.13 д
+END 7.29 бр
+LINE Л
+DURATION 2.16
+WORK 5.13д-приёмка 20мар (заявка ДДЭ, контроль ГВ и АКБ)
+WORK 6.05д-приёмка 18мар 6.47н/с - 7.25бр 7.29док =
+WORK н/с по 20 мар
+
+SHIFT
+ROUTE 20
+CODE 20
+ID 2
+PARITY both
+START 7.12 бр
+END 10.23 д
+LINE Л/Р
+DURATION 3.11
+WORK 7.12бр 7.25н/с2п - 10.23д =
+
+SHIFT
+ROUTE 20
+CODE 20
+ID 3+
+PARITY both
+START 15.36 д
+END 23.57 д
+LINE Л
+DURATION 8.21
+WORK 15.36д 16.33н/с - 16.50бр 16.52бр1п-23.57д (заезд работников) =
+WORK н/с по 32мар
+REST 18.59влж-19.31влж2п:41мар
+REST (по 32 мар)
+REST 21.13влж-21.49влж2п:24мар
+REST (по 32 мар)
+
+SHIFT
+ROUTE 20
+CODE 20
+ID 4+
+PARITY even
+START 16.39 бр
+END 0.57 д
+LINE Л
+DURATION 8.18-чт
+WORK 16.39бр 16.50н/с1п - 0.57д-чт =
+REST 18.57влж-19.29влж2п:9мар
+REST 21.11влж-21.47влж2п:3мар
+
+SHIFT
+ROUTE 20
+CODE 20
+ID 4+
+PARITY odd
+START 16.39 бр
+END 0.55 д
+LINE Л
+DURATION 8.16-нчт
+WORK - 0.55д-нчт =
+REST 18.57влж-19.29влж2п:9мар
+REST 21.11влж-21.47влж2п:3мар
+
+SHIFT
+ROUTE 21
+CODE 21
+ID 1
+PARITY both
+START 5.36 д
+END 8.59 бр
+LINE Л
+DURATION 3.23
+WORK 5.36д 6.26н/с - 8.57бр 8.59док =
+
+SHIFT
+ROUTE 21
+CODE 21
+ID 2
+PARITY both
+START 8.46 бр
+END 14.35 д
+LINE Л/Р
+DURATION 5.49
+WORK 8.46бр 8.57н/с1п - 12.56д (сцеп) 13.45д-14.30д 14.35док =
+WORK АТЗ
+REST 12.56-13.45
+
+SHIFT
+ROUTE 21
+CODE 21
+ID 3+
+PARITY even
+START 16.19 бр
+END 23.52 д
+LINE Л
+DURATION 7.33-чт
+WORK Понедельник-четверг:
+WORK 16.19бр 16.30н/с1п - 19.03бр
+WORK 6мар:19.46влж1п-20.17влж
+WORK 17мар:20.36влж1п-21.01влж
+WORK 18мар:21.36влж2п-23.24влж-чт
+WORK Чт-23.35влж2п - проезд в депо с 41мар 23.52д =
+REST 19.03-19.33
+REST *21.01-21.36
+
+SHIFT
+ROUTE 21
+CODE 21
+ID 3+
+PARITY odd
+START 16.19 бр
+END 00.22 д
+LINE Л
+DURATION 8.03-нчт
+WORK (принимает в депо машинист с 6 мар)
+WORK 16.19бр 16.30н/с1п - 19.03бр
+WORK 6мар:19.46влж1п-20.17влж
+WORK 17мар:20.36влж1п-21.01влж
+WORK -23.49влж-нчт
+WORK Нчт-00.04влж2п - проезд в депо с 22мар 00.22д =
+REST 19.03-19.33
+REST *21.01-21.36
+
+SHIFT
+ROUTE 21
+CODE 21
+ID 3+
+PARITY even
+START 16.19 бр
+END 0.00 збл
+LINE Л
+DURATION 7.41-чт
+WORK Пятница:
+WORK 16.19бр 16.30н/с1п- 19.03бр
+WORK 6мар:19.46влж1п-20.17влж
+WORK 17мар:20.36влж1п-21.01влж
+WORK 18мар:21.36влж2п-23.24влж-чт 0.00збл-чт =
+WORK (проход в к/о: 21мар, М-1)
+REST 19.03-19.33
+REST *21.01-21.36
+
+SHIFT
+ROUTE 21
+CODE 21
+ID 3+
+PARITY odd
+START 16.19 бр
+END 0.20 збл
+LINE Л
+DURATION 8.01-нчт
+WORK (принимает в депо машинист с 6 мар)
+WORK 16.19бр 16.30н/с1п- 19.03бр
+WORK 6мар:19.46влж1п-20.17влж
+WORK 17мар:20.36влж1п-21.01влж
+WORK -23.49влж-нчт 0.20збл-нчт =
+WORK (проход в к/о: 21мар, М-1)
+REST 19.03-19.33
+REST *21.01-21.36
+
+SHIFT
+ROUTE 21
+CODE 21
+ID 4+
+PARITY even
+START 18.09 бр
+END 2.26 мр
+LINE Л
+DURATION 8.17-чт
+WORK 18.09бр 18.20бр1п-18.41бр 19.03н/с2п - 2.26мр-чт/2гл п ук2 =
+REST 21.36-01.15-чт:отстойДепо,отдых
+
+SHIFT
+ROUTE 21
+CODE 21
+ID 4+
+PARITY odd
+START 18.09 бр
+END 2.35 збл
+LINE Л
+DURATION 8.26-нчт
+WORK н/с по 4 мар - 2.35збл-нчт/3ст п =
+REST 21.36-23.09-нчт
+
+SHIFT
+ROUTE 22
+CODE 22
+ID 1
+PARITY even
+START 5.03 мр
+END 7.47 бр
+LINE Л
+DURATION 2.44-чт
+WORK 5.03мр-чт/2гл п ук2\ 5.44н/с - 7.45бр 7.47док =
+
+SHIFT
+ROUTE 22
+CODE 22
+ID 1
+PARITY odd
+START 4.59 збл
+END 7.47 бр
+LINE Л
+DURATION 2.48-нчт
+WORK 4.59збл-нчт/3ст п\ 5.40н/с (первый поезд)
+
+SHIFT
+ROUTE 22
+CODE 22
+ID 2
+PARITY both
+START 7.34 бр
+END 14.46 влж
+LINE Л
+DURATION 7.12
+WORK 7.34бр 7.45н/с1п - 9.52влж
+WORK 38мар:10.00влж1п-10.32влж
+WORK 11мар:10.52влж1п-11.25влж
+WORK 33мар:12.09влж1п-12.42влж
+WORK 27мар:13.02влж1п-13.36влж
+WORK 8мар:14.10влж1п-14.44влж 14.46док =
+REST 11.25-12.09
+REST *13.36-14.10
+
+SHIFT
+ROUTE 22
+CODE 22
+ID 2п
+PARITY both
+START 9.30 бр
+END 17.38 бр
+LINE Л
+DURATION 8.08
+WORK 9.30бр 9.52влж1п н/с - 16.48бр 17.13бр1п - 17.34бр 17.38док =
+WORK н/с по 11 мар
+REST 12.06влж-12.40влж2п:4мар
+REST 14.25влж-14.59влж2п:17мар
+
+SHIFT
+ROUTE 22
+CODE 22
+ID 3+
+PARITY both
+START 16.37 бр
+END 0.49 д
+LINE Л
+DURATION 8.12
+WORK 16.37бр 16.48н/с1п - 0.49д =
+REST 18.55влж-19.27влж2п:24мар
+REST 21.10влж-21.43влж2п:5мар
+
+SHIFT
+ROUTE 23
+CODE 23
+ID 1
+PARITY both
+START 4.31 д
+END 7.22 бр
+LINE Л
+DURATION 2.51
+WORK 4.31д 5.21н/с (первый поезд, выезд на Пч2п) - 7.20бр 7.22док =
+
+SHIFT
+ROUTE 23
+CODE 23
+ID 2
+PARITY both
+START 7.09 бр
+END 10.40 д
+LINE Л/Р
+DURATION 3.31
+WORK 7.09бр 7.20н/с1п -10.40д =
+
+SHIFT
+ROUTE 23
+CODE 23
+ID 3+
+PARITY both
+START 16.17 бр
+END 0.27 мр
+LINE Л
+DURATION 8.10
+WORK (принимает в депо маш с 35 мар)
+WORK 16.17бр 16.28н/с1п- 18.41бр
+WORK 39мар:19.36влж1п-20.07влж
+WORK 28мар:20.24влж1п-20.58влж
+WORK 1мар:21.34влж1п-22.06влж
+WORK 5мар:22.35бр1п-00.01бр-чт 0.27мр =
+WORK -23.50бр-нчт 0.27мр =
+WORK (проход до к/о: 23, 24мар) =
+REST 18.41-19.25
+REST *20.58-21.34
+REST 22.39-23.59-чт:отстой МР, по 5м
+REST 22.39-23.48-нчт
+
+SHIFT
+ROUTE 23
+CODE 23
+ID 4+
+PARITY even
+START 18.30 бр
+END 2.33 збл
+LINE Л
+DURATION 8.03-чт
+WORK 18.30бр 18.41н/с1п - 2.33збл-чт/4ст п =
+REST 21.21влж-23.08влж1п:37мар
+REST 23.23-23.49-чт:отстой Збл
+
+SHIFT
+ROUTE 23
+CODE 23
+ID 4+
+PARITY odd
+START 18.30 бр
+END 2.41 мр
+LINE Л
+DURATION 8.11-нчт
+WORK - 2.41-мр-нчт/1гл п ук2 =
+REST 21.21влж-23.08влж1п:37мар
+REST 23.23-00.05-нчт
+
+SHIFT
+ROUTE 24
+CODE 24
+ID 1
+PARITY even
+START 5.10 збл
+END 8.27 бр
+LINE Л
+DURATION 3.17-чт
+WORK 5.10збл-чт/4ст п\ 5.57н/с - 8.23бр 8.27док =
+
+SHIFT
+ROUTE 24
+CODE 24
+ID 1
+PARITY odd
+START 5.02 мр
+END 8.27 бр
+LINE Л
+DURATION 3.25-нчт
+WORK 5.02мр-нчт/1гл п ук2\ 5.42н/с (первый поезд)
+
+SHIFT
+ROUTE 24
+CODE 24
+ID 2
+PARITY both
+START 8.10 бр
+END 16.25 д
+LINE Л
+DURATION 8.15
+WORK 8.10бр 8.23н/с2п - 15.50д 15.50д - 16.20д 16.25док =
+WORK приёмка 18мар
+WORK перед выездом из отстоя
+REST 12.26влж-13.01влж2п:8мар
+REST 14.47влж-15.20влж2п:14мар
+REST 15.32-17.14:отстойДепо,отдых
+
+SHIFT
+ROUTE 24
+CODE 24
+ID 3+
+PARITY both
+START 16.12 д
+END 0.27 мр
+LINE Л
+DURATION 8.15
+WORK 16.12д 17.09н/с (приёмка в отстое, выезд работников) - 19.34влж
+WORK 14мар:19.44влж1п-20.16влж
+WORK 32мар:21.13влж1п-21.49влж
+WORK 24мар:22.22влж2п-0.06влж 0.27мр =
+WORK (проход до к/о: 23, 24мар) =
+REST 15.32-17.14:отстойДепо,отдых
+REST 20.16-21.13
+
+SHIFT
+ROUTE 24
+CODE 24
+ID 4+
+PARITY even
+START 18.33 бр
+END 2.26 мр
+LINE Л
+DURATION 7.53-чт
+WORK 18.33бр 18.55влж1п-19.27влж
+WORK 19.34влж1п н/с - 2.26мр-чт/2гл п ук1 =
+REST 22.22влж-0.06влж1п!:24мар
+
+SHIFT
+ROUTE 24
+CODE 24
+ID 4+
+PARITY odd
+START 18.33 бр
+END 2.42 лбл
+LINE Л
+DURATION 8.09-нчт
+WORK Подмена 22 мар
+WORK - 2.42лбл-нчт/1гл п ук4 =
+REST 22.22влж-0.06влж1п!:24мар
+
+SHIFT
+ROUTE 25
+CODE 25
+ID 1
+PARITY even
+START 5.03 мр
+END 7.43 бр
+LINE Л
+DURATION 2.40-чт
+WORK 5.03мр-чт/2гл п ук1\ 5.42н/с (первый поезд) - 7.41бр 7.43док =
+
+SHIFT
+ROUTE 25
+CODE 25
+ID 1
+PARITY odd
+START 5.13 лбл
+END 7.43 бр
+LINE Л
+DURATION 2.30-нчт
+WORK 5.13лбл-нчт/1гл п ук4\ 5.44н/с
+
+SHIFT
+ROUTE 25
+CODE 25
+ID 2
+PARITY both
+START 7.30 бр
+END 15.59 д
+LINE Л/Р
+DURATION 8.29
+WORK 7.30бр 7.41н/с1п - 11.02д 11.02д-11.45д 11.45д - 12.25д
+WORK Резерв тестирование (физиолог)
+WORK 12.25д-13.45д 14.30д-15.15д 15.15д - 15.59д =
+WORK резерв АТЗ приёмка 25мар
+REST 11.02-12.02
+REST *13.45-14.30
+
+SHIFT
+ROUTE 25
+CODE 25
+ID 3
+PARITY both
+START 14.12 д
+END 22.18 д
+DURATION 8.06
+WORK состав машинист смены «2»)
+WORK 14.35д - 16.05д 16.18н/с (выезд работников) - 22.18д =
+WORK Тестирование(психолог)
+REST 18.42влж-19.14влж2п:5мар
+REST 20.56влж-21.38влж2п:27мар
+
+SHIFT
+ROUTE 26
+CODE 26
+ID 1
+PARITY both
+START 5.41 д
+END 9.26 бр
+LINE Л
+DURATION 3.45
+WORK 5.41д 6.31н/с - 9.22бр 9.26док =
+
+SHIFT
+ROUTE 26
+CODE 26
+ID 2
+PARITY both
+START 9.09 бр
+END 17.30 бр
+LINE Л
+DURATION 8.21
+WORK 9.09бр 9.22н/с2п - 13.55бр
+WORK 13мар:14.41влж1п-15.14влж
+WORK н/с по 39мар:15.32бр2п-17.28бр 17.30док =
+REST 11.11влж-11.44влж2п:28мар
+REST *13.55-14.30
+
+SHIFT
+ROUTE 26
+CODE 26
+ID 3
+PARITY both
+START 13.42 бр
+END 21.29 д
+LINE Л
+DURATION 7.47
+WORK 13.42бр 13.55н/с2п-21.29д =
+REST 18.04влж-18.36влж2п:30мар
+REST 20.17влж-20.49влж2п:13мар
+
+SHIFT
+ROUTE 27
+CODE 27
+ID 1
+PARITY both
+START 5.09 д
+END 8.57 бр
+LINE Л
+DURATION 3.48
+WORK 5.09д 5.59н/с - 8.53бр 8.57док =
+
+SHIFT
+ROUTE 27
+CODE 27
+ID 2
+PARITY both
+START 8.40 бр
+END 15.53 бр
+LINE Л
+DURATION 7.13
+WORK 8.40бр 8.53н/с2п- 15.49бр 15.53док =
+REST 10.43влж-11.15влж2п:14мар
+REST 13.02влж-13.36влж2п:22мар
+
+SHIFT
+ROUTE 27
+CODE 27
+ID 3
+PARITY even
+START 15.36 бр
+END 23.27 влж
+LINE Л
+DURATION 7.51-чт
+WORK 15.36бр 15.49н/с2п - 19.58бр
+WORK 25мар:20.56влж1п-21.38влж
+WORK 39мар:21.53влж1п-22.26влж
+WORK 27мар:чт-22.55влж1п-23.27влж =
+WORK (передаёт МЛ для сдачи машинисту 27мар смена «4+»)
+REST 19.58-20.45
+REST *22.26-22.55
+
+SHIFT
+ROUTE 27
+CODE 27
+ID 3
+PARITY odd
+START 15.36 бр
+END 23.30 влж
+LINE Л
+DURATION 7.54-нчт
+WORK 39мар:21.53влж1п-22.26влж
+WORK нчт-22.58влж1п-23.30влж =
+WORK (передаёт МЛ для сдачи машинисту 27мар смена «4+»)
+REST 19.58-20.45
+REST *22.26-22.55
+
+SHIFT
+ROUTE 27
+CODE 27
+ID 4+
+PARITY both
+START 19.47 бр
+END 2.32 д
+LINE Л
+DURATION 6.45
+WORK 19.47бр 19.58н/с1п - 2.32д =
+REST Чт-22.55влж-23.27влж2п:27м
+REST Нчт-22.58влж-23.30влж2п
+REST 21.15-22.02-чт:отстой Фзт
+REST 21.15-22.05-нчт
+
+SHIFT
+ROUTE 28
+CODE 28
+ID 1
+PARITY both
+START 5.47 д
+END 9.09 бр
+LINE Л
+DURATION 3.22
+WORK 5.47д 6.37н/с - 9.07бр 9.09док =
+
+SHIFT
+ROUTE 28
+CODE 28
+ID 2
+PARITY both
+START 8.56 бр
+END 15.04 влж
+LINE Л
+DURATION 6.06
+WORK 8.56бр 9.07н/с1п-11.49влж
+WORK 38мар:12.16влж1п-12.50влж
+WORK 36мар:12.56влж1п-13.30влж
+WORK 32мар:14.06влж1п-15.02влж 15.04док =
+REST 13.30-14.06
+REST 14.21-14.47:отстой Збл, по 32м
+
+SHIFT
+ROUTE 28
+CODE 28
+ID 3
+PARITY both
+START 10.12 бр
+END 18.41 бр
+LINE Л
+DURATION 8.29
+WORK 10.12бр 36мар:10.34влж1п-11.06влж
+WORK 26мар:11.11влж1п-11.44влж
+WORK 11.49влж2п н/с-18.37бр 18.41док =
+REST 13.33влж-14.06влж2п:8мар
+REST 15.54влж-16.27влж2п:3мар
+
+SHIFT
+ROUTE 28
+CODE 28
+ID 4+
+PARITY even
+START 18.24 бр
+END 1.53 лбл
+LINE Л
+DURATION 7.29-чт
+WORK 18.24бр 18.37н/с2п - 1.53лбл-чт/3ст п =
+REST 20.24влж-20.58влж2п:23мар
+REST 21.10-01.19-чт:отстойДепо,отдых
+
+SHIFT
+ROUTE 28
+CODE 28
+ID 4+
+PARITY odd
+START 18.24 бр
+END 2.42 лбл
+LINE Л
+DURATION 8.18-нчт
+WORK - 2.42лбл-нчт/1гл п ук5 =
+WORK 23.00-23.45:ПЗ
+REST 20.24влж-20.58влж2п:23мар
+REST 21.10-00.31-нчт
+
+SHIFT
+ROUTE 29
+CODE 29
+ID 1
+PARITY even
+START 5.14 лбл
+END 8.12 бр
+LINE Л
+DURATION 2.58-чт
+WORK 5.14лбл-чт/3ст п\ 5.45н/с (первый поезд) - 8.10бр 8.12док =
+
+SHIFT
+ROUTE 29
+CODE 29
+ID 1
+PARITY odd
+START 5.13 лбл
+END 8.12 бр
+LINE Л
+DURATION 2.59-нчт
+WORK 5.13лбл-нчт/1гл п ук5\ 5.45н/с (первый поезд)
+
+SHIFT
+ROUTE 29
+CODE 29
+ID 2
+PARITY both
+START 7.59 бр
+END 15.09 бр
+LINE Л
+DURATION 7.10
+WORK 7.59бр 8.10н/с1п -11.30д 11.30д-12.25д 12.25д - 13.05д
+WORK Резерв тестирование (физиолог)
+WORK 13.05д - 13.41д 13.41д 14.25н/с - 15.05бр 15.09док =
+WORK резерв
+REST 11.30-12.00
+REST *13.05-13.41
+
+SHIFT
+ROUTE 29
+CODE 29
+ID 3
+PARITY even
+START 14.52 бр
+END 23.02 бр
+LINE Л
+DURATION 8.10-чт
+WORK 14.52бр 15.05н/с2п-19.15бр
+WORK 30мар:21.23бр1п-23.02бр-чт =
+WORK -23.04бр-нчт =
+REST 16.56влж-17.28влж2п:41мар
+REST 19.44-20.45:отстой Збл, по 3м
+REST *20.54-21.23
+REST 21.32-22.53-чт:отстой Збл, по 30м
+
+SHIFT
+ROUTE 29
+CODE 29
+ID 3
+PARITY odd
+START 14.52 бр
+END 23.04 бр
+LINE Л
+DURATION 8.12-нчт
+WORK 3мар:19.35бр1п-20.54бр
+WORK -23.04бр-нчт =
+WORK (передаёт МЛ для сдачи машинисту 30мар смена «4+»)
+REST 16.56влж-17.28влж2п:41мар
+REST 19.44-20.45:отстой Збл, по 3м
+REST *20.54-21.23
+REST 21.32-22.55-нчт
+
+SHIFT
+ROUTE 29
+CODE 29
+ID 4+
+PARITY even
+START 19.04 бр
+END 2.43 збл
+LINE Л
+DURATION 7.39-чт
+WORK 19.04бр 19.15н/с1п - 2.43збл-чт/2гл п ук3 =
+REST 21.56влж-23.44влж1п!-чт:10м
+
+SHIFT
+ROUTE 29
+CODE 29
+ID 4+
+PARITY odd
+START 19.04 бр
+END 2.42 лбл
+LINE Л
+DURATION 7.38-нчт
+WORK - 2.42лбл-нчт/1гл п ук6 =
+REST 21.56влж-23.47влж1п!-нчт
+REST Нчт-0.02-0.26:отстой Збл
+
+SHIFT
+ROUTE 30
+CODE 30
+ID 1
+PARITY even
+START 5.05 збл
+END 7.32 бр
+LINE Л
+DURATION 2.27-чт
+WORK 5.05збл-чт/2гл п ук3\ 5.48н/с - 7.30бр 7.32док =
+
+SHIFT
+ROUTE 30
+CODE 30
+ID 1
+PARITY odd
+START 5.13 лбл
+END 7.32 бр
+LINE Л
+DURATION 2.19-нчт
+WORK 5.13лбл-нчт/1гл п ук6\ 5.48н/с
+
+SHIFT
+ROUTE 30
+CODE 30
+ID 2
+PARITY both
+START 7.19 бр
+END 15.20 д
+LINE Л/Р
+DURATION 8.01
+WORK 7.19бр 7.30н/с1п - 10.51д 12.25д - 13.05д
+WORK Тестирование (физиолог)
+WORK 14.30д-15.15д 15.20док =
+WORK АТЗ-Т-6
+REST 10.51-11.25
+REST *13.05-13.30
+
+SHIFT
+ROUTE 30
+CODE 30
+ID 3+
+PARITY even
+START 15.42 д
+END 0.05 мр
+LINE Л
+DURATION 8.23-чт
+WORK 15.42д 16.39н/с - 19.04влж
+WORK 2мар:20.45влж1п-21.17влж
+WORK 10мар:21.31влж1п-22.03влж
+WORK 17мар:22.46влж1п-23.37влж-чт 0.05мр =
+WORK (проход до к/о: 10, 30 мар)
+REST 19.04-19.47
+REST *22.03-22.46
+
+SHIFT
+ROUTE 30
+CODE 30
+ID 3+
+PARITY odd
+START 15.42 д
+END 0.07 мр
+LINE Л
+DURATION 8.25-нчт
+WORK 36мар:19.47влж1п-20.19влж
+WORK 2мар:20.45влж1п-21.17влж
+WORK 10мар:21.31влж1п-22.03влж
+WORK -23.14влж-нчт 0.07мр =
+WORK (проход до к/о: 10, 30 мар)
+REST 19.04-19.47
+REST *22.03-22.46
+
+SHIFT
+ROUTE 30
+CODE 30
+ID 4+
+PARITY both
+START 17.44 бр
+END 2.14 д
+LINE Л
+DURATION 8.30
+WORK 17.44бр 18.04влж1п-18.36влж 19.04влж1п н/с - 2.14д =
+WORK подмена 26 мар
+REST 21.23бр-23.02бр2п-чт:29мар
+REST 21.23бр-23.04бр2п-нчт
+
+SHIFT
+ROUTE 31
+CODE 31
+ID 2
+PARITY both
+START 6.34 д
+END 12.55 д
+LINE Л/Р
+DURATION 6.21
+WORK 6.34д (без приёмки, см.4мар) 6.57н/с - 10.33д
+WORK 11.20д - 12.50д 12.55док =
+WORK Тестирование(психолог)
+REST 10.33-11.20
+
+SHIFT
+ROUTE 31
+CODE 31
+ID 3+
+PARITY both
+START 15.21 бр
+END 23.32 д
+LINE Л
+DURATION 8.11
+WORK (принимает в депо машинист с 15 мар)
+WORK 15.21бр 15.32н/с1п - 23.32д (заезд работников) =
+REST 17.44влж-18.16влж2п:41мар
+REST 19.57влж-20.29влж2п:3мар
+
+SHIFT
+ROUTE 32
+CODE 32
+ID 1
+PARITY both
+START 4.35 д
+END 7.25 бр
+LINE Л
+DURATION 2.50
+WORK 4.35д 5.25н/с (выезд на Пч2п) - 7.23бр 7.25док =
+WORK (меняет машинист с М-3)
+
+SHIFT
+ROUTE 32
+CODE 32
+ID 2
+PARITY both
+START 9.25 бр
+END 16.54 бр
+LINE Л
+DURATION 7.29
+WORK 9.25бр 9.36н/с1п - 16.52бр 16.54док =
+WORK (меняет машинист с 20 мар)
+REST 11.47влж-12.20влж2п:18мар
+REST 14.06влж-15.02влж2п:28мар
+
+SHIFT
+ROUTE 33
+CODE 33
+ID 2
+PARITY both
+START 6.43 д
+END 14.51 бр
+LINE Л
+DURATION 8.08
+WORK 6.43д 7.36н/с (резервом до Мр) - 10.25влж
+WORK 37мар:10.55влж1п-11.27влж
+WORK Резерв:11.40бр-12.15бр
+WORK н/с по 9мар:12.29бр1п-14.49бр 14.51док =
+REST 10.25-10.55
+REST *11.27-12.00
+
+SHIFT
+ROUTE 33
+CODE 33
+ID 2п
+PARITY both
+START 9.11 бр
+END 17.18 бр
+LINE Л
+DURATION 8.07
+WORK 9.11бр 9.34влж1п-10.05влж 10.25влж2п н/с - 17.14бр 17.18док =
+WORK подмена 40 мар
+WORK (меняет машинист с 7 мар)
+REST 12.09влж-12.42влж2п:22мар
+REST 14.28влж-15.04влж2п:П-1
+
+SHIFT
+ROUTE 33
+CODE 33
+ID 4+
+PARITY even
+START 18.55 бр
+END 2.36 мр
+LINE Л
+DURATION 7.41-чт
+WORK 18.55бр 19.06н/с1п - 2.36мр-чт/4ст п ук2 =
+REST 21.57-23.38-чт:отстойДепо,отдых
+
+SHIFT
+ROUTE 33
+CODE 33
+ID 4+
+PARITY odd
+START 18.55 бр
+END 2.44 мр
+LINE Л
+DURATION 7.49-нчт
+WORK - 2.44мр-нчт/1гл п ук4 =
+REST 21.57-23.40-нчт
+
+SHIFT
+ROUTE 34
+CODE 34
+ID 1
+PARITY even
+START 5.03 мр
+END 8.29 бр
+LINE Л
+DURATION 3.27
+WORK 5.03мр-чт/4ст п ук2\ 5.43н/с (первый поезд) - 8.25бр 8.29док =
+
+SHIFT
+ROUTE 34
+CODE 34
+ID 1
+PARITY odd
+START 5.05 мр
+END 8.29 бр
+LINE Л
+WORK 5.05мр-нчт/1гл п ук4\ 5.45н/с (первый поезд)
+
+SHIFT
+ROUTE 34
+CODE 34
+ID 2
+PARITY both
+START 8.12 бр
+END 14.56 бр
+LINE Л
+DURATION 6.44
+WORK 8.12бр 8.25н/с2п - 14.54бр 14.56док =
+REST 12.29влж-13.04влж2п:18мар
+
+SHIFT
+ROUTE 34
+CODE 34
+ID 3
+PARITY both
+START 14.43 бр
+END 22.21 збл
+LINE Л
+DURATION 7.38
+WORK 14.43бр 14.54н/с1п - 22.21збл/2ст п ук1 (рацию на пост) =
+WORK 20.20-20.50:ПЗ
+WORK (передаёт МЛ для сдачи маневровому машинисту)
+REST 19.19влж-19.51влж2п:5мар
+REST 20.02-21.34:отстойДепо,отдых
+
+SHIFT
+ROUTE 35
+CODE 35
+ID 1
+PARITY even
+START 5.10 збл
+END 8.30 бр
+DURATION 3.20-чт
+WORK п ук1\ (кроме понедельника рация на посту) 6.26н/с - 8.28бр
+REST 8.30док =
+
+SHIFT
+ROUTE 35
+CODE 35
+ID 1
+PARITY odd
+START 5.08 збл
+END 8.30 бр
+DURATION 3.22-нчт
+WORK п ук1\ (кроме понедельника рация на посту) 6.26н/с
+REST 8.30док =
+
+SHIFT
+ROUTE 35
+CODE 35
+ID 2
+PARITY both
+START 8.17 бр
+END 16.30 бр
+LINE Л/Р
+DURATION 8.13
+WORK 8.17бр 8.28н/с1п - 11.49д 11.49д-13.26д
+WORK Резерв
+WORK 13.16д 14.00н/с- 16.28бр 16.30док =
+WORK н/с по 23 мар
+REST 11.49-12.50
+
+SHIFT
+ROUTE 35
+CODE 35
+ID 3
+PARITY both
+START 14.58 д
+END 21.51 д
+LINE Л
+DURATION 6.53
+WORK 14.58д 15.55н/с (пятница - выезд работников) - 21.51д =
+REST 18.23влж-18.55влж2п:41мар
+
+SHIFT
+ROUTE 36
+CODE 36
+ID 1
+PARITY both
+START 5.02 д
+END 8.28 бр
+LINE Л
+DURATION 3.25
+WORK 5.03д 5.53н/с - 8.26бр 8.28док =
+
+SHIFT
+ROUTE 36
+CODE 36
+ID 2
+PARITY both
+START 8.15 бр
+END 15.48 бр
+LINE Л
+DURATION 7.33
+WORK 8.15бр 8.26н/с1п - 15.44бр 15.48док =
+REST 10.34влж-11.06влж2п:28мар
+REST 12.56влж-13.30влж2п:28мар
+
+SHIFT
+ROUTE 36
+CODE 36
+ID 3+
+PARITY even
+START 15.31 бр
+END 23.13 д
+LINE Л
+DURATION 7.42-чт
+WORK Понедельник-четверг:
+REST 19.47влж-20.19влж2п:30мар
+REST 22.03влж-22.28влж2п-чт:Зм
+
+SHIFT
+ROUTE 36
+CODE 36
+ID 3+
+PARITY odd
+START 15.31 бр
+END 23.21 д
+LINE Л
+DURATION 7.50-нчт
+WORK 15.31бр 15.44н/с2п - 23.13д-чт =
+WORK - 23.21д-нчт =
+REST 19.47влж-20.19влж2п:30мар
+REST 22.03влж-22.35влж2п-нчт
+
+SHIFT
+ROUTE 36
+CODE 36
+ID 3
+PARITY even
+START 15.31 бр
+END 23.08 д
+LINE Л
+DURATION 7.37-чт
+WORK Пятница:
+REST 19.47влж-20.19влж2п:30мар
+REST 22.03влж-22.28влж2п-чт:3м
+
+SHIFT
+ROUTE 36
+CODE 36
+ID 3
+PARITY odd
+START 15.31 бр
+END 23.16 д
+LINE Л
+DURATION 7.45-нчт
+WORK 15.31бр 15.44н/с2п - 23.08д-чт =
+WORK - 23.16д-нчт =
+REST 19.47влж-20.19влж2п:30мар
+REST 22.03влж-22.35влж2п-нчт
+
+SHIFT
+ROUTE 37
+CODE 37
+ID 1
+PARITY both
+START 5.24 д
+END 9.11 бр
+LINE Л
+DURATION 3.47
+WORK 5.24д 6.14н/с - 9.07бр 9.11док =
+
+SHIFT
+ROUTE 37
+CODE 37
+ID 2
+PARITY both
+START 8.54 бр
+END 17.05 влж
+LINE Л
+DURATION 8.11
+WORK 8.54бр 9.07н/с2п - 15.58бр 16.31влж1п-17.03влж 17.05док =
+WORK подмена 8 мар
+REST 1 0.55влж-11.27влж2п:33мар
+REST 13.13влж-13.46влж2п:17мар
+REST *15.58-16.31
+
+SHIFT
+ROUTE 37
+CODE 37
+ID 3+
+PARITY both
+START 15.45 бр
+END 23.29 д
+LINE Л
+DURATION 7.44
+WORK Понедельник-четверг:
+WORK 15.45бр 15.58н/с2п - 20.06бр 21.21влж2п-23.08влж
+WORK подмена 23 мар
+WORK чт- 23.10влж2п - проезд в депо с 32 мар 23.29д =
+WORK нчт- 23.12влж2п - проезд в депо с 32 мар 23.29д =
+REST 20.06-21.06
+
+SHIFT
+ROUTE 37
+CODE 37
+ID 3
+PARITY both
+START 15.45 бр
+END 23.08 влж
+LINE Л
+DURATION 7.23
+WORK Пятница:
+WORK 15.45бр 15.58н/с2п - 20.06бр 21.21влж2п-23.08влж =
+WORK подмена 23 мар
+WORK (передаёт МЛ для сдачи машинисту 23мар смена «4+»)
+REST 20.06-21.06
+
+SHIFT
+ROUTE 37
+CODE 37
+ID 4+
+PARITY even
+START 18.55 бр
+END 2.36 мр
+LINE Л
+DURATION 7.41-чт
+WORK 18.55бр 19.17влж1п-19.49влж 20.06бр1п н/с-2.36мр-чт/2гл п ук5 =
+WORK 21.20-21.55:ПЗ
+REST 20.44-23.06-чт:отстойДепо,отдых
+
+SHIFT
+ROUTE 37
+CODE 37
+ID 4+
+PARITY odd
+START 18.55 бр
+END 2.42 збл
+LINE Л
+DURATION 7.47-нчт
+WORK подмена 1 мар -2.42збл-нчт/1гл п ук4 =
+WORK 21.20-21.55:ПЗ
+REST 20.44-23.22-нчт
+
+SHIFT
+ROUTE 38
+CODE 38
+ID 1
+PARITY even
+START 5.06 мр
+END 7.53 бр
+LINE Л
+DURATION 2.47-чт
+WORK 5.06мр-чт/2гл п ук5\ 5.48н/с - 7.51бр 7.53док =
+
+SHIFT
+ROUTE 38
+CODE 38
+ID 1
+PARITY odd
+START 4.59 збл
+END 7.53 бр
+LINE Л
+DURATION 2.54-нчт
+WORK 4.59збл-нчт/1гл п ук4\ 5.41н/с
+
+SHIFT
+ROUTE 38
+CODE 38
+ID 2
+PARITY both
+START 7.40 бр
+END 15.07 бр
+LINE Л
+DURATION 7.27
+WORK 7.40бр 7.51н/с1п - 15.03бр 15.07док =
+WORK (меняет машинист с 1 мар)
+REST 10.00влж-10.32влж2р:22мар
+REST 12.16влж-12.50влж2п:28мар
+
+SHIFT
+ROUTE 38
+CODE 38
+ID 3+
+PARITY even
+START 16.47 бр
+END 1.02 д
+LINE Л
+DURATION 8.15-чт
+WORK 16.47бр 16.58н/с1п - 1.02д-чт =
+REST 19.06влж-19.37влж2п:18мар
+REST 21.19влж-21.51влж2п:10мар
+
+SHIFT
+ROUTE 38
+CODE 38
+ID 3+
+PARITY odd
+START 16.47 бр
+END 1.00 д
+LINE Л
+DURATION 8.13-нчт
+WORK - 1.00д-нчт =
+REST 19.06влж-19.37влж2п:18мар
+REST 21.19влж-21.51влж2п:10мар
+
+SHIFT
+ROUTE 39
+CODE 39
+ID 1
+PARITY both
+START 4.58 д
+END 8.27 бр
+LINE Л
+DURATION 3.29
+WORK 4.58д 5.48н/с - 8.25бр 8.27док =
+
+SHIFT
+ROUTE 39
+CODE 39
+ID 2
+PARITY both
+START 8.14 бр
+END 15.36 бр
+LINE Л
+DURATION 7.22
+WORK 8.14бр 8.25н/с1п - 15.32бр 15.36док =
+WORK (меняет машинист с 26 маршрута)
+REST 10.32влж-11.04влж2п:17мар
+REST 12.53влж-13.21влж2п:4мар
+
+SHIFT
+ROUTE 39
+CODE 39
+ID 3+
+PARITY even
+START 17.17 бр
+END 1.28 д
+LINE Л
+DURATION 8.11-чт
+WORK 17.17бр 17.28н/с1п - 1.28д-чт =
+REST 19.36влж-20.07влж2п:23мар
+REST 21.53влж-22.26влж2п:27мар
+
+SHIFT
+ROUTE 39
+CODE 39
+ID 3+
+PARITY odd
+START 17.17 бр
+END 1.31 д
+LINE Л
+DURATION 8.14-нчт
+WORK - 1.31д-нчт =
+REST 19.36влж-20.07влж2п:23мар
+REST 21.53влж-22.26влж2п:27мар
+
+SHIFT
+ROUTE 40
+CODE 40
+ID 2
+PARITY both
+START 6.54 д
+END 15.22 д
+LINE Л
+DURATION 8.28
+WORK 6.54д (без приёмки, см.17мар) 7.17н/с (резервом до Мр) - 15.22д =
+REST 9.34влж-10.05влж2п:33мар
+REST 11.49влж-12.22влж2п:14мар
+
+SHIFT
+ROUTE 41
+CODE 41
+ID 3+
+PARITY even
+START 16.32 бр
+END 00.20 д
+LINE Л
+DURATION 7.48-чт
+WORK 16.32бр 29мар:16.56влж1п-17.28влж
+WORK 35мар:18.23влж1п-18.55влж
+WORK 32мар:18.59влж1п-19.31влж
+WORK 20.09влж2п-проезд в депо с 19 мар
+WORK Чт - 21.07д 22.49н/с - 00.20д =
+WORK н/с по 41 мар
+REST *17.28-17.44
+REST 19.31-20.09
+REST Чт-20.21-21.07
+
+SHIFT
+ROUTE 41
+CODE 41
+ID 3+
+PARITY odd
+START 16.32 бр
+END 23.39 д
+LINE Л
+DURATION 7.07-нчт
+WORK 31мар:17.44влж1п-18.16влж
+WORK 32мар:18.59влж1п-19.31влж
+WORK 20.09влж2п-проезд в депо с 19 мар
+WORK Нчт- 20.26д 22.08н/с - 23.39д =
+WORK н/с по 41 мар
+REST *17.28-17.44
+REST 19.31-20.09
+
+SHIFT
+CODE П-1
+ID 3
+PARITY both
+START 10.03 бр
+END 18.33 влж
+DURATION 8.30
+WORK 10.03бр 7мар:10.25влж1п-10.57влж
+WORK Резерв:11.10бр-12.15бр
+WORK 14мар:12.19влж1п-12.53влж
+WORK 12мар:13.16влж1п-13.49влж
+WORK 33мар:14.28влж1п-15.04влж
+WORK 6мар:15.13влж1п-15.47влж
+WORK 4мар:15.58влж1п-16.31влж
+WORK 9мар:17.01влж1п-17.33влж
+WORK 5мар:18.01влж1п-18.33влж =
+WORK (передаёт МЛ для сдачи машинисту 5мар смена «3»)
+REST 13.49-14.28
+REST *16.31-17.01
+
+SHIFT
+CODE М-1
+ID 1
+PARITY even
+START 5.31 збл
+END 8.27 збл
+LINE Л
+DURATION 2.56-чт
+WORK 5.31збл-чт 5.53збл (с 34м) (6м с 1ст п ук2 без оборота) - 8.27збл =
+WORK манёвры в туп
+
+SHIFT
+CODE М-1
+ID 1
+PARITY odd
+START 5.25 збл
+END 8.27 збл
+LINE Л
+DURATION 3.02-нчт
+WORK 5.25збл-нчт 5.47збл (с 24м) (6м с 1ст п ук2 без оборота) - 8.27збл =
+WORK манёвры в туп
+
+SHIFT
+CODE М-1
+ID 2
+PARITY both
+START 8.00 бр
+END 16.30 збл
+LINE Л
+DURATION 8.30
+WORK 8.00бр 8.27збл - 16.30збл =
+WORK манёвры в туп
+REST 10.55-11.55:М-3
+REST 13.05-13.35:М-3
+
+SHIFT
+CODE М-1
+ID 3+
+PARITY both
+START 16.03 бр
+END 23.40 збл
+LINE Л
+DURATION 7.37
+WORK Понедельник-четверг:
+WORK 16.03бр 16.30збл-23.25збл 23.40збл =
+WORK манёвры в туп
+WORK (проход до к/о: М-1, М-2)
+REST 18.45-19.15:М-1
+REST 19.55-20.55:М-1
+
+SHIFT
+CODE М-1
+ID 3+
+PARITY even
+START 16.03 бр
+END 0.00 збл
+LINE Л
+DURATION 7.57-чт
+WORK Пятница:
+WORK (проход до к/о: М-1, 21мар)
+REST 18.45-19.15:М-1
+REST 19.55-20.55:М-1
+
+SHIFT
+CODE М-1
+ID 3+
+PARITY odd
+START 16.03 бр
+END 0.20 збл
+LINE Л
+DURATION 8.17-нчт
+WORK 16.03бр 16.30збл-23.25збл чт-0.00збл =
+WORK манёвры в туп нчт-0.20збл =
+WORK (проход до к/о: М-1, 21мар)
+REST 18.45-19.15:М-1
+REST 19.55-20.55:М-1
+
+SHIFT
+CODE М-1
+ID 4+
+PARITY both
+START 18.18 бр
+END 1.32 збл
+LINE Л
+DURATION 7.14
+WORK 18.18бр М-1 в туп:18.45збл-19.15збл
+WORK М-3 в туп:19.20збл-19.50збл
+WORK М-1 в туп:19.55збл-20.55збл
+WORK М-3 в туп:21.00збл-22.00збл
+WORK 23.25збл-1.10збл (по 54м) 1.32збл =
+WORK манёвры в туп
+WORK (проход до к/о: М-1, М-2)
+REST 22.15-23.10
+
+SHIFT
+CODE М-2
+ID 1
+PARITY even
+START 5.31 збл
+END 8.27 збл
+LINE Л
+DURATION 2.56-чт
+WORK 5.31збл-чт 5.53збл (с 34м) (6м с 1ст п ук2 без оборота) - 8.27збл =
+WORK манёвры из туп
+
+SHIFT
+CODE М-2
+ID 1
+PARITY odd
+START 5.25 збл
+END 8.27 збл
+LINE Л
+DURATION 3.02-нчт
+WORK 5.25збл-нчт 5.47збл (с 24м) (6м с 1ст п ук2 без оборота) - 8.27збл =
+WORK манёвры из туп
+
+SHIFT
+CODE М-2
+ID 2
+PARITY both
+START 8.00 бр
+END 16.30 збл
+LINE Л
+DURATION 8.30
+WORK 8.00бр 8.27збл - 16.30збл =
+WORK манёвры из туп
+REST 11.20-12.20:М-4
+REST 13.30-14.00:М-4
+
+SHIFT
+CODE М-2
+ID 3+
+PARITY both
+START 16.03 бр
+END 23.40 збл
+LINE Л
+DURATION 7.37
+WORK Понедельник-четверг:
+WORK 16.03бр 16.30збл-23.25збл 23.40збл =
+WORK манёвры из туп
+WORK (проход до к/о: М-1, М-2)
+REST 18.45-19.15:М-2
+REST 19.55-20.55:М-2
+
+SHIFT
+CODE М-2
+ID 3
+PARITY both
+START 16.03 бр
+END 23.25 збл
+LINE Л
+DURATION 7.22
+WORK Пятница:
+WORK 16.03бр 16.30збл-23.25збл =
+WORK манёвры из туп
+REST 18.45-19.15:М-2
+REST 19.55-20.55:М-2
+
+SHIFT
+CODE М-2
+ID 4+
+PARITY both
+START 18.18 бр
+END 1.32 збл
+LINE Л
+DURATION 7.14
+WORK 18.18бр М-2 из туп:18.45збл-19.15збл
+WORK М-4 из туп:19.20збл-19.50збл
+WORK М-2 из туп:19.55збл-20.55збл
+WORK М-4 из туп:21.00збл-22.00збл
+WORK 23.25збл-1.10збл (по 54м) 1.32збл =
+WORK манёвры из туп
+WORK (проход до к/о: М-1, М-2)
+REST 22.15-23.10
+
+SHIFT
+CODE М-3
+ID 1
+PARITY both
+START 6.04 збл
+END 9.11 збл
+LINE Л
+DURATION 3.07
+WORK 6.04збл 6.26збл (с 27м) - 9.11збл =
+WORK манёвры в туп
+
+SHIFT
+CODE М-3
+ID 2
+PARITY both
+START 7.12 бр
+END 14.10 збл
+LINE Л
+DURATION 6.58
+WORK 7.12бр 7.23бр1п-9.36бр
+WORK н/с по 32 мар
+WORK М-1 в туп:10.55збл-11.55збл
+WORK М-3 в туп:12.00збл-13.00збл
+WORK М-1 в туп:13.05збл-13.35збл
+WORK М-3 в туп:13.40збл-14.10збл =
+REST 9.36-10.40
+
+SHIFT
+CODE М-3
+ID 2п
+PARITY both
+START 8.44 бр
+END 17.14 збл
+LINE Л
+DURATION 8.30
+WORK 8.44бр 9.11збл-17.14збл =
+WORK манёвры в туп
+REST 12.00-13.00:М-3
+REST 13.40-14.10:М-3
+
+SHIFT
+CODE М-3
+ID 3+
+PARITY even
+START 16.47 бр
+END 1.17 д
+LINE Л
+DURATION 8.30-чт
+WORK 16.47бр 17.14збл - 0.00збл (чт - по 8м, нчт - по 38м)
+WORK чт- 0.17збл2п н/с по 10 мар 1.17д =
+REST 19.20-19.50:М-1
+REST 21.00-22.00:М-1
+
+SHIFT
+CODE М-3
+ID 3+
+PARITY odd
+START 16.47 бр
+END 1.15 д
+LINE Л
+DURATION 8.28-нчт
+WORK манёвры в туп
+WORK нчт- 0.15збл2п н/с по 10 мар 1.15д =
+REST 19.20-19.50:М-1
+REST 21.00-22.00:М-1
+
+SHIFT
+CODE М-4
+ID 1
+PARITY both
+START 6.04 збл
+END 8.00 збл
+LINE Л
+DURATION 1.56
+WORK 6.04збл 6.26збл (с 27м) - 8.00збл =
+WORK манёвры из туп
+
+SHIFT
+CODE М-4
+ID 2
+PARITY both
+START 7.32 бр
+END 14.35 збл
+LINE Л
+DURATION 7.02
+WORK 7.32бр 8.00збл-10.00збл
+WORK Манёвры из туп
+WORK М-2 из туп:11.20збл-12.20збл
+WORK М-4 из туп:12.25збл-13.25збл
+WORK М-2 из туп:13.30збл-14.00збл
+WORK М-4 из туп:14.05збл-14.35збл =
+REST 10.00-11.20
+
+SHIFT
+CODE М-4
+ID 2п
+PARITY both
+START 9.33 бр
+END 17.41 збл
+LINE Л
+DURATION 8.08
+WORK 9.33бр 10.00збл-17.41збл =
+WORK манёвры из туп
+REST 12.25-13.25:М-4
+REST 14.05-14.35:М-4
+
+SHIFT
+CODE М-4
+ID 3+
+PARITY both
+START 17.14 бр
+END 0.32 збл
+LINE Л
+DURATION 7.18
+WORK 17.14бр 17.41збл - 0.00збл (чт - по 8м, нчт - по 38м) 0.32збл =
+WORK манёвры из туп
+WORK (проход до к/о: 10мар, М-4)
+WORK РЕЗЕРВ ЭЛЕКТРОДЕПО «ПЕЧАТНИКИ»
+REST 19.20-19.50:М-2
+REST 21.00-22.00:М-2
+
+SHIFT
+CODE РЭ
+ID 1
+PARITY both
+START 5.00 д
+END 9.00 д
+LINE Р
+DURATION 4.00
+WORK 5.00д – 9.00д =
+
+SHIFT
+CODE РЭ
+ID 2
+PARITY both
+START 8.00 д
+END 16.30 д
+LINE Р
+DURATION 8.30
+WORK 8.00д – 16.30д =
+REST 12.00-13.00
+
+SHIFT
+CODE РЭ
+ID 3
+PARITY both
+START 13.00 д
+END 21.30 д
+LINE Р
+DURATION 8.30
+WORK 13.00д – 21.30д =
+REST 17.00-18.00
+
+SHIFT
+CODE РЭ
+ID 4+
+PARITY both
+START 20.00 д
+END 2.00 д
+LINE Р
+DURATION 6.00
+WORK 20.00д – 2.00д =
+REST 23.00-23.30
+
+SHIFT
+CODE РЭ
+ID 5+
+PARITY both
+START 20.30 д
+END 2.00 д
+LINE Р
+DURATION 5.30
+WORK 20.30д – 2.00д =
+REST 23.00-23.30
+
+SHIFT
+CODE Н1
+ID 1
+PARITY both
+START 6.00 мр
+END 7.30 бр
+LINE Р
+DURATION 1.30
+WORK 6.00мр – 7.30бр =
+
+SHIFT
+CODE Н2
+ID 1
+PARITY both
+START 6.00 мр
+END 7.30 бр
+LINE Р
+DURATION 1.30
+WORK 6.00мр – 7.30бр =
+
+SHIFT
+CODE Н3
+ID 1
+PARITY both
+START 6.00 мр
+END 7.30 бр
+LINE Р
+DURATION 1.30
+WORK 6.00мр – 7.30бр =
+
+SHIFT
+CODE Н4
+ID 1
+PARITY both
+START 6.00 мр
+END 7.30 бр
+LINE Р
+DURATION 1.30
+WORK 6.00мр – 7.30бр =
+
+SHIFT
+CODE РБ
+ID 1
+PARITY both
+START 5.00 д
+END 8.30 бр
+LINE Р
+DURATION 3.30
+WORK 5.00д – 8.30бр =
+
+SHIFT
+CODE РБ
+ID 1
+PARITY both
+START 5.00 д
+END 8.30 бр
+LINE Р
+DURATION 3.30
+WORK 5.00д – 8.30бр =
+
+SHIFT
+CODE РБ
+ID 1п
+PARITY both
+START 5.30 д
+END 9.00 д
+LINE Р
+DURATION 3.30
+WORK 5.30д – 9.00д =
+
+SHIFT
+CODE РБ
+ID 1п
+PARITY both
+START 5.30 д
+END 9.00 д
+LINE Р
+DURATION 3.30
+WORK 5.30д – 9.00д =
+
+SHIFT
+CODE РБ
+ID 1п
+PARITY both
+START 5.30 д
+END 9.00 д
+LINE Р
+DURATION 3.30
+WORK 5.30д – 9.00д =
+
+SHIFT
+CODE РБ
+ID 2
+PARITY both
+START 6.30 бр
+END 15.00 бр
+LINE Р
+DURATION 8.30
+WORK 6.30бр – 15.00бр =
+REST 9.30-10.30
+
+SHIFT
+CODE РБ
+ID 2
+PARITY both
+START 6.30 бр
+END 15.00 бр
+LINE Р
+DURATION 8.30
+WORK 6.30бр – 15.00бр =
+REST 9.30-10.30
+
+SHIFT
+CODE РБ
+ID 2
+PARITY both
+START 6.30 бр
+END 15.00 бр
+LINE Р
+DURATION 8.30
+WORK 6.30бр – 15.00бр =
+REST 9.30-10.30
+
+SHIFT
+CODE РБ
+ID 2п
+PARITY both
+START 8.00 бр
+END 16.30 бр
+LINE Р
+DURATION 8.30
+WORK 8.00бр – 16.30бр =
+REST 11.00-12.00
+
+SHIFT
+CODE РБ
+ID 2п
+PARITY both
+START 8.00 бр
+END 16.30 бр
+LINE Р
+DURATION 8.30
+WORK 8.00бр – 16.30бр =
+REST 11.00-12.00
+
+SHIFT
+CODE РБ
+ID 2п
+PARITY both
+START 8.00 бр
+END 16.30 бр
+LINE Р
+DURATION 8.30
+WORK 8.00бр – 16.30бр =
+REST 11.00-12.00
+
+SHIFT
+CODE РБ
+ID 3
+PARITY both
+START 13.00 бр
+END 21.30 бр
+LINE Р
+DURATION 8.30
+WORK 13.00бр-21.30бр =
+REST 17.00-18.00
+
+SHIFT
+CODE РБ
+ID 3
+PARITY both
+START 13.00 бр
+END 21.30 бр
+LINE Р
+DURATION 8.30
+WORK 13.00бр-21.30бр =
+REST 17.00-18.00
+
+SHIFT
+CODE РБ
+ID 4
+PARITY both
+START 14.00 бр
+END 22.30 бр
+LINE Р
+DURATION 8.30
+WORK 14.00бр-22.30бр =
+REST 17.00-18.00
+
+SHIFT
+CODE РБ
+ID 3+
+PARITY both
+START 18.00 бр
+END 2.00 д
+LINE Р
+DURATION 8.00
+WORK 18.00бр – 2.00д =
+REST 22.00-23.00
+
+SHIFT
+CODE РБ
+ID 3+
+PARITY both
+START 18.00 бр
+END 2.00 д
+LINE Р
+DURATION 8.00
+WORK 18.00бр – 2.00д =
+REST 22.00-23.00
+
+SHIFT
+CODE РБ
+ID 4+
+PARITY both
+START 18.30 бр
+END 2.30 д
+LINE Р
+DURATION 8.00
+WORK 18.30бр – 2.30д =
+REST 22.00-23.00
+
+SHIFT
+CODE РБ
+ID 4+
+PARITY both
+START 18.30 бр
+END 2.30 д
+LINE Р
+DURATION 8.00
+WORK 18.30бр – 2.30д =
+REST 22.00-23.00
+
+SHIFT
+CODE РБ
+ID 4+
+PARITY both
+START 18.30 бр
+END 2.30 д
+LINE Р
+DURATION 8.00
+WORK 18.30бр – 2.30д =
+WORK перерывы для отдыха
+WORK лист
+WORK занятия
+WORK занятия
+REST 22.00-23.00

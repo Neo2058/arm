@@ -96,6 +96,9 @@
         >
             Войти
         </button>
+        <p class="mt-5 text-center text-sm text-white/80">
+            <a href="{{ route('install') }}" class="underline hover:text-white">Приложение на телефон</a>
+        </p>
     </form>
 </div>
 <script>

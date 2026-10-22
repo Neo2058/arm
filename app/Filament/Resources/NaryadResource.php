@@ -83,7 +83,8 @@ class NaryadResource extends Resource
                                 'application/pdf',
                                 'application/octet-stream',
                             ])
-                            ->visibility('private'),
+                            ->visibility('private')
+                            ->helperText('Если пусто — берётся shifts_work.txt из корня проекта.'),
                         Forms\Components\FileUpload::make('weekend_shifts_path')
                             ->label('Разбивка выходных')
                             ->disk('s3')
@@ -93,7 +94,8 @@ class NaryadResource extends Resource
                                 'application/pdf',
                                 'application/octet-stream',
                             ])
-                            ->visibility('private'),
+                            ->visibility('private')
+                            ->helperText('Если пусто — берётся shifts_weekend.txt из корня проекта.'),
                     ])->columns(1),
             ]);
     }

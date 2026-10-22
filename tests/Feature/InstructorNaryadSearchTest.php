@@ -76,9 +76,10 @@ class InstructorNaryadSearchTest extends TestCase
     public function test_search_uses_uploaded_naryad_and_queries(): void
     {
         $instructor = User::factory()->instructor()->create();
+        $pad = static fn (string $s): string => $s.str_repeat(' ', max(0, 90 - mb_strlen($s, 'UTF-8')));
         $naryad = UploadedFile::fake()->createWithContent('2.txt', implode("\n", [
-            '                 НАРЯД ЛОКОМОТИВНЫХ БРИГАД НА 02.09.2026, СРЕДА',
-            '24 27008      БОБРОВ В.А                           16.12ДПЧ   - 0.27 МР',
+            $pad('                 НАРЯД ЛОКОМОТИВНЫХ БРИГАД НА 02.09.2026, СРЕДА'),
+            $pad('24 27008      БОБРОВ В.А                           16.12ДПЧ   - 0.27 МР'),
         ]));
         $names = UploadedFile::fake()->createWithContent('q.txt', "БОБРОВ В.А\n");
 
@@ -96,5 +97,6 @@ class InstructorNaryadSearchTest extends TestCase
 
         $text = session('instructor_naryad_result');
         $this->assertStringContainsString('БОБРОВ В.А', $text);
+        $this->assertStringContainsString('приёмка в отстое', $text);
     }
 }

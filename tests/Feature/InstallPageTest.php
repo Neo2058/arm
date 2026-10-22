@@ -12,7 +12,11 @@ class InstallPageTest extends TestCase
             ->assertOk()
             ->assertSee('ТЧ-15 на телефон')
             ->assertSee('Android')
-            ->assertSee('iPhone');
+            ->assertSee('iPhone')
+            ->assertSee('Ссылка для скачивания')
+            ->assertDontSee('eas build')
+            ->assertDontSee('public/downloads')
+            ->assertDontSee('/api/mobile');
     }
 
     public function test_missing_binaries_return_404(): void

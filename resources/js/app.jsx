@@ -2,7 +2,6 @@ import './bootstrap';
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import Carousel from './Carousel/Carousel.jsx'; // Проверь путь к файлу
 import CountdownTimer from "./CountDownTimer/CountDownTimer.jsx";
 import SecureDocumentViewer from "./DocumentViewer/SecureDocumentViewer.jsx";
 import NaryadViewer from "./NaryadViewer/NaryadViewer.jsx";
@@ -22,17 +21,6 @@ const mountComponent = (id, Component, props = {}) => {
     root.render(<Component {...props} />);
 };
 
-
-// Carousel
-mountComponent(
-    'carousel-menu',
-    Carousel,
-    {
-        role: document
-            .getElementById('carousel-menu')
-            ?.getAttribute('data-role')
-    }
-);
 
 // Countdown
 mountComponent(

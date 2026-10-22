@@ -109,4 +109,17 @@ TXT);
         $this->assertTrue(\App\Services\InstructorNaryad\BreakdownPdfExtractor::isPdf('/tmp/x.pdf', 'график.pdf'));
         $this->assertFalse(\App\Services\InstructorNaryad\BreakdownPdfExtractor::isPdf('/tmp/x.txt', 'shifts_work.txt'));
     }
+
+    public function test_default_catalogs_load_from_repo_root(): void
+    {
+        ShiftCatalog::clearDefaultCache();
+        $work = ShiftCatalog::loadDefault('work');
+        $weekend = ShiftCatalog::loadDefault('weekend');
+        $this->assertNotEmpty($work);
+        $this->assertNotEmpty($weekend);
+        $this->assertNotSame('', $work[0]['code'] ?? '');
+        $this->assertNotSame('', $work[0]['start_clock'] ?? '');
+        $this->assertTrue(is_readable(ShiftCatalog::defaultPath('work')));
+        $this->assertTrue(is_readable(ShiftCatalog::defaultPath('weekend')));
+    }
 }

@@ -4,6 +4,53 @@ namespace App\Services\InstructorNaryad;
 
 final class ShiftCatalog
 {
+    /** @var array<string, list<array<string, mixed>>> */
+    private static array $defaultCache = [];
+
+    /**
+     * Каталог из корня репозитория: shifts_work.txt / shifts_weekend.txt
+     * (также принимаются shift_work.txt / shift_weekend.txt).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function loadDefault(string $kind): array
+    {
+        $kind = $kind === 'weekend' ? 'weekend' : 'work';
+        if (isset(self::$defaultCache[$kind])) {
+            return self::$defaultCache[$kind];
+        }
+        $path = self::defaultPath($kind);
+        if ($path === null) {
+            return self::$defaultCache[$kind] = [];
+        }
+        $bytes = @file_get_contents($path);
+        if (! is_string($bytes) || $bytes === '') {
+            return self::$defaultCache[$kind] = [];
+        }
+
+        return self::$defaultCache[$kind] = self::loadTable(Text::toUtf8Auto($bytes));
+    }
+
+    public static function defaultPath(string $kind): ?string
+    {
+        $names = $kind === 'weekend'
+            ? ['shifts_weekend.txt', 'shift_weekend.txt']
+            : ['shifts_work.txt', 'shift_work.txt'];
+        foreach ($names as $name) {
+            $path = base_path($name);
+            if (is_readable($path)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    public static function clearDefaultCache(): void
+    {
+        self::$defaultCache = [];
+    }
+
     /**
      * @return list<array<string, mixed>>
      */

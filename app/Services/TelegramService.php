@@ -8,6 +8,11 @@ use Illuminate\Support\Facades\Storage;
 
 class TelegramService
 {
+    public static function enabled(): bool
+    {
+        return filled(config('services.telegram.bot_token'));
+    }
+
     /**
      * Универсальный метод отправки сообщения
      */
@@ -16,13 +21,16 @@ class TelegramService
         ?string $chatId = null,
         string $parseMode = 'Markdown'
     ): void {
+        if (! self::enabled()) {
+            return;
+        }
+
         $botToken = config('services.telegram.bot_token');
         $defaultChatId = config('services.telegram.chat_id') ?? config('services.telegram.group_id');
 
         $chatId = $chatId ?? $defaultChatId;
 
-        if (empty($botToken) || empty($chatId)) {
-            Log::warning('Telegram send failed: empty token or chat_id');
+        if (empty($chatId)) {
             return;
         }
 
@@ -144,6 +152,10 @@ class TelegramService
         string $parseMode = 'HTML',
         ?string $filename = null
     ): void {
+        if (! self::enabled()) {
+            return;
+        }
+
         $botToken = config('services.telegram.bot_token');
         $defaultChatId = config('services.telegram.chat_id') ?? config('services.telegram.group_id');
         $relayUrl = config('services.telegram.relay_url');
@@ -151,8 +163,7 @@ class TelegramService
 
         $chatId = $chatId ?? $defaultChatId;
 
-        if (empty($botToken) || empty($chatId)) {
-            Log::warning('Telegram sendFile failed: empty token or chat_id');
+        if (empty($chatId)) {
             return;
         }
 

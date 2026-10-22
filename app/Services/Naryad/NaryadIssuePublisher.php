@@ -28,8 +28,8 @@ class NaryadIssuePublisher
             return 0;
         }
 
-        $work = $this->loadShiftEntries($naryad->work_shifts_path);
-        $weekend = $this->loadShiftEntries($naryad->weekend_shifts_path);
+        $work = $this->loadShiftEntries($naryad->work_shifts_path, 'work');
+        $weekend = $this->loadShiftEntries($naryad->weekend_shifts_path, 'weekend');
         $created = 0;
 
         $users = User::query()
@@ -107,14 +107,14 @@ class NaryadIssuePublisher
     /**
      * @return list<array<string, mixed>>
      */
-    private function loadShiftEntries(?string $path): array
+    private function loadShiftEntries(?string $path, string $fallbackKind): array
     {
         if (! filled($path) || ! Storage::disk('s3')->exists($path)) {
-            return [];
+            return ShiftCatalog::loadDefault($fallbackKind);
         }
         $bytes = Storage::disk('s3')->get($path);
         if (! is_string($bytes) || $bytes === '') {
-            return [];
+            return ShiftCatalog::loadDefault($fallbackKind);
         }
         $original = basename($path);
         if (NaryadDocumentLoader::looksLikePdf($bytes, $original)) {

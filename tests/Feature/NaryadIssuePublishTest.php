@@ -69,7 +69,9 @@ class NaryadIssuePublishTest extends TestCase
 
         $file = NaryadPersonFile::query()->where('user_id', $bobrov->id)->first();
         $this->assertSame('БОБРОВ В.А.txt', $file->file_name);
-        $this->assertStringContainsString('БОБРОВ В.А', Storage::disk('s3')->get($file->file_path));
+        $contents = Storage::disk('s3')->get($file->file_path);
+        $this->assertStringContainsString('БОБРОВ В.А', $contents);
+        $this->assertStringContainsString('приёмка в отстое', $contents);
         $this->assertSame(0, NaryadPersonFile::query()->where('naryad_id', $naryad->id)->where('user_id', '!=', $bobrov->id)->count());
     }
 

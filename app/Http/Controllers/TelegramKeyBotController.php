@@ -37,6 +37,10 @@ class TelegramKeyBotController extends Controller
      */
     public function webhook(Request $request)
     {
+        if (! TelegramService::enabled()) {
+            return response()->json(['ok' => true]);
+        }
+
         $update = $request->all();
 
         if (!isset($update['message'])) {

@@ -182,26 +182,57 @@ export const imagesArray = [
     },
 ];
 
-
 export const imageVariants = {
-    center: { x: "0%", scale: 1, zIndex: 7 },
-    left1: { x: "-30%", scale: 0.7, zIndex: 5 },
-    left2: { x: "-60%", scale: 0.5, zIndex: 4 },
-    left3: { x: "-80%", scale: 0.3, zIndex: 3 },
-    left4: { x: "-95%", scale: 0.2, zIndex: 2 },
-    right4: { x: "95%", scale: 0.2, zIndex: 1 },
-    right3: { x: "80%", scale: 0.3, zIndex: 3 },
-    right2: { x: "60%", scale: 0.5, zIndex: 4 },
-    right1: { x: "30%", scale: 0.7, zIndex: 5 },
+    center: { x: "0%", scale: 1, zIndex: 7, opacity: 1 },
+    left1: { x: "-30%", scale: 0.7, zIndex: 5, opacity: 1 },
+    left2: { x: "-60%", scale: 0.5, zIndex: 4, opacity: 1 },
+    left3: { x: "-80%", scale: 0.3, zIndex: 3, opacity: 1 },
+    right3: { x: "80%", scale: 0.3, zIndex: 3, opacity: 1 },
+    right2: { x: "60%", scale: 0.5, zIndex: 4, opacity: 1 },
+    right1: { x: "30%", scale: 0.7, zIndex: 5, opacity: 1 },
 };
 
+export const mobileVariants = {
+    center: { x: "0%", scale: 1, zIndex: 5, opacity: 1 },
+    left1: { x: "-14%", scale: 0.9, zIndex: 3, opacity: 0.45 },
+    right1: { x: "14%", scale: 0.9, zIndex: 3, opacity: 0.45 },
+};
 
-export const positions = [
-    "center",
-    "left1",
-    "left2",
-    "left3",
-    "right3",
-    "right2",
-    "right1",
-];
+const DESKTOP_SLOT = {
+    0: 'center',
+    [-1]: 'left1',
+    [-2]: 'left2',
+    [-3]: 'left3',
+    1: 'right1',
+    2: 'right2',
+    3: 'right3',
+};
+
+const MOBILE_SLOT = {
+    0: 'center',
+    [-1]: 'left1',
+    1: 'right1',
+};
+
+export function wrappedOffset(index, active, count) {
+    if (count <= 0) {
+        return 0;
+    }
+    let delta = index - active;
+    const half = Math.floor(count / 2);
+    if (delta > half) {
+        delta -= count;
+    }
+    if (delta < -half) {
+        delta += count;
+    }
+    return delta;
+}
+
+export function variantForOffset(offset, narrow) {
+    const slot = (narrow ? MOBILE_SLOT : DESKTOP_SLOT)[offset];
+    if (!slot) {
+        return null;
+    }
+    return (narrow ? mobileVariants : imageVariants)[slot];
+}

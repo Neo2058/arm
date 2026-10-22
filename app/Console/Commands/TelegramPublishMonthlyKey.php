@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Http\Controllers\TelegramKeyBotController;
+use App\Services\TelegramService;
 use Illuminate\Console\Command;
 
 class TelegramPublishMonthlyKey extends Command
@@ -13,6 +14,12 @@ class TelegramPublishMonthlyKey extends Command
 
     public function handle(): int
     {
+        if (! TelegramService::enabled()) {
+            $this->info('Telegram отключён: нет рабочего токена.');
+
+            return self::SUCCESS;
+        }
+
         $controller = app(TelegramKeyBotController::class);
 
         if ($this->option('now')) {

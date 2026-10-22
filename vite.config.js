@@ -10,7 +10,7 @@ export default defineConfig({
     plugins: [
         react(),
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.jsx'],
+            input: ['resources/css/app.css', 'resources/js/app.jsx', 'resources/js/carousel.jsx'],
             refresh: true,
         }),
         tailwindcss(),

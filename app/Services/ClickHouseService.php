@@ -27,7 +27,8 @@ class ClickHouseService
     private static ?array $fake = null;
 
     /**
-     * Analytics event. Queued on `analytics`.
+     * Analytics event. Dispatched after the HTTP response when QUEUE_CONNECTION=deferred
+     * (Redis is cache/sessions only and must not store jobs).
      *
      * $actor — User, user id, or null (Auth::user(), otherwise system: user_id=0).
      * Do not call this after ActionLog::log() for the same event: ActionLog already forwards here.

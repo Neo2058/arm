@@ -75,7 +75,7 @@ services:
     networks:
       - arm
 
-  # Кэш и Очереди (важно для Игр и ИИ)
+  # Кэш и сессии
   redis:
     image: redis:alpine
     container_name: arm-redis
