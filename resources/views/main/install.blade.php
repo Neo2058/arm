@@ -24,7 +24,7 @@
             </p>
             <p class="mt-4 text-sm">
                 <span class="text-[#706f6c] dark:text-[#A1A09A]">Ссылка для скачивания:</span>
-                <a href="{{ url('/install') }}" class="ml-1 font-medium text-orange-600 break-all">{{ url('/install') }}</a>
+                <a href="{{ url('/install') }}" class="ml-1 font-medium text-orange-600 break-all">https://www.тч-15.рф/install</a>
             </p>
         </div>
 

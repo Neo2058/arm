@@ -14,6 +14,7 @@ class InstallPageTest extends TestCase
             ->assertSee('Android')
             ->assertSee('iPhone')
             ->assertSee('Ссылка для скачивания')
+            ->assertSee('тч-15.рф/install')
             ->assertDontSee('eas build')
             ->assertDontSee('public/downloads')
             ->assertDontSee('/api/mobile');
