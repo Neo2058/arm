@@ -78,24 +78,28 @@ class TelegramBotsTest extends TestCase
         {
             protected function runningUnitTests() { return false; }
         });
-        $this->webhook($this->update())->assertOk();
+        $response = $this->webhook($this->update())->assertOk()->assertJsonPath('method', 'sendMessage');
+        $this->assertStringContainsString('Войдите на сайт', (string) $response->json('text'));
         $this->assertGuest();
-        Http::assertSent(fn ($r) => str_contains($r->url(), 'key-test-token') && str_contains($r['text'], 'Войдите на сайт'));
+        Http::assertNothingSent();
     }
 
     public function test_unregistered_sender_never_receives_key(): void
     {
-        $this->webhook($this->update())->assertOk();
-        Http::assertSent(fn ($r) => ! str_contains($r['text'], 'Ключ доступа на') && $r['chat_id'] === '123');
+        $response = $this->webhook($this->update())->assertOk()->assertJsonPath('chat_id', '123');
+        $this->assertStringNotContainsString('Ключ доступа на', $response->json('text'));
+        Http::assertNothingSent();
     }
 
     public function test_active_linked_user_receives_the_same_key_as_barrier(): void
     {
         $this->link(User::factory()->create());
-        $this->webhook($this->update())->assertOk();
         $key = implode(' ', app(MonthlyAccessKey::class)->sequence());
-        Http::assertSent(fn ($r) => str_contains($r->url(), '/botkey-test-token/sendMessage')
-            && str_contains($r['text'], $key) && $r['protect_content'] === true);
+        $response = $this->webhook($this->update())->assertOk()
+            ->assertJsonPath('method', 'sendMessage')
+            ->assertJsonPath('protect_content', true);
+        $this->assertStringContainsString($key, (string) $response->json('text'));
+        Http::assertNothingSent();
         $this->assertStringNotContainsString($key, json_encode(ClickHouseService::recorded()));
     }
 
@@ -104,8 +108,9 @@ class TelegramBotsTest extends TestCase
         $user = User::factory()->create();
         $this->link($user);
         DB::table('users')->where('id', $user->id)->update(['is_active' => false]);
-        $this->webhook($this->update())->assertOk();
-        Http::assertSent(fn ($r) => ! str_contains($r['text'], 'Ключ доступа на'));
+        $response = $this->webhook($this->update())->assertOk();
+        $this->assertStringNotContainsString('Ключ доступа на', (string) $response->json('text'));
+        Http::assertNothingSent();
     }
 
     public function test_groups_cannot_get_key_or_consume_link(): void
@@ -171,24 +176,28 @@ class TelegramBotsTest extends TestCase
     public function test_duplicate_telegram_update_is_not_processed_again(): void
     {
         $this->link(User::factory()->create());
-        $this->webhook($this->update())->assertOk();
-        $this->webhook($this->update())->assertOk();
-        Http::assertSentCount(1);
+        $this->webhook($this->update())->assertOk()->assertJsonPath('method', 'sendMessage');
+        $this->webhook($this->update())->assertOk()->assertJsonMissingPath('method');
+        Http::assertNothingSent();
     }
 
     public function test_sender_rate_limit_does_not_send_more_than_ten_replies_per_minute(): void
     {
+        $replies = 0;
         for ($i = 1; $i <= 11; $i++) {
-            $this->webhook($this->update('/key', 123, $i))->assertOk();
+            $response = $this->webhook($this->update('/key', 123, $i))->assertOk();
+            $replies += $response->json('method') === 'sendMessage' ? 1 : 0;
         }
-        Http::assertSentCount(10);
+        $this->assertSame(10, $replies);
+        Http::assertNothingSent();
     }
 
-    public function test_delivery_error_returns_retryable_status_without_leaking_token(): void
+    public function test_webhook_reply_does_not_call_telegram_api(): void
     {
         Http::swap(new \Illuminate\Http\Client\Factory);
         Http::fake(['*' => Http::response(['ok' => false], 500)]);
-        $this->webhook($this->update())->assertStatus(503)->assertExactJson(['ok' => false]);
+        $this->webhook($this->update())->assertOk()->assertJsonPath('method', 'sendMessage');
+        Http::assertNothingSent();
     }
 
     public function test_notifications_use_other_bot_and_configured_queue(): void

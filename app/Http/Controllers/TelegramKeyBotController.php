@@ -9,7 +9,6 @@ use App\Services\TelegramBotApi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
-use RuntimeException;
 
 class TelegramKeyBotController extends Controller
 {
@@ -66,18 +65,20 @@ class TelegramKeyBotController extends Controller
                 $reply = $user ? 'Команда /key — ключ на текущий месяц. Отвязать Telegram можно в ARM.'
                     : 'Доступ только для зарегистрированных активных пользователей ARM. Войдите на сайт и привяжите Telegram: '.route('telegram.link.show');
             }
-            $api->message('key', (string) $id, $reply, '', true);
             if ($name === 'key' && $user) {
                 ClickHouseService::log('telegram_key_requested', 0, ['telegram_user_id' => $id, 'month' => date('Y-m')], $user);
             }
             Cache::put($done, true, now()->addDay());
-        } catch (RuntimeException) {
-            // Telegram will retry. No exception URL or request payload is exposed.
-            return response()->json(['ok' => false], 503);
+            // Reply in the webhook HTTP response so Telegram delivers it even when
+            // the app server cannot open outbound connections to api.telegram.org.
+            return response()->json([
+                'method' => 'sendMessage',
+                'chat_id' => (string) $id,
+                'text' => mb_substr($reply, 0, 4000),
+                'protect_content' => true,
+            ]);
         } finally {
             $lock->release();
         }
-
-        return response()->json(['ok' => true]);
     }
 }
