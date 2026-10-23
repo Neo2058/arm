@@ -84,13 +84,11 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      const token = await SecureStore.getItemAsync('token');
-      if (!token) {
-        setBoot(false);
-        return;
-      }
       try {
-        setUser(await me());
+        const token = await SecureStore.getItemAsync('token');
+        if (token) {
+          setUser(await me());
+        }
       } catch {
         setUser(null);
       } finally {

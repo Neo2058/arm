@@ -10,7 +10,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Audio, Video, ResizeMode } from 'expo-av';
+import { useEvent } from 'expo';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { client } from '../api';
 
 export default function MaterialScreen({ route }) {
@@ -34,7 +36,7 @@ export default function MaterialScreen({ route }) {
   }, [id]);
 
   useEffect(() => {
-    Audio.setAudioModeAsync({ playsInSilentModeIOS: true }).catch(() => {});
+    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
   }, []);
 
   const send = async () => {
@@ -82,20 +84,10 @@ export default function MaterialScreen({ route }) {
             <Text style={styles.title}>{material.title}</Text>
             {material.description ? <Text style={styles.desc}>{material.description}</Text> : null}
             {material.type === 'video' && material.url ? (
-              <Video
-                source={{ uri: material.url }}
-                style={styles.video}
-                useNativeControls
-                resizeMode={ResizeMode.CONTAIN}
-              />
+              <MaterialVideo key={material.url} uri={material.url} />
             ) : null}
             {material.type === 'audio' && material.url ? (
-              <Video
-                source={{ uri: material.url }}
-                style={styles.audio}
-                useNativeControls
-                resizeMode={ResizeMode.CONTAIN}
-              />
+              <MaterialAudio key={material.url} uri={material.url} />
             ) : null}
             {material.type === 'text' && material.content ? (
               <Text style={styles.body}>{material.content}</Text>
@@ -128,13 +120,59 @@ export default function MaterialScreen({ route }) {
   );
 }
 
+function MaterialVideo({ uri }) {
+  const player = useVideoPlayer({ uri });
+  const { status } = useEvent(player, 'statusChange', { status: player.status });
+  return (
+    <View>
+      <VideoView player={player} style={styles.video} nativeControls contentFit="contain" />
+      {status === 'error' ? <Text style={styles.err}>Не удалось загрузить видео. Откройте материал заново.</Text> : null}
+    </View>
+  );
+}
+
+function MaterialAudio({ uri }) {
+  const player = useAudioPlayer({ uri });
+  const status = useAudioPlayerStatus(player);
+  const [error, setError] = useState('');
+
+  const toggle = async () => {
+    try {
+      setError('');
+      if (status.playing) {
+        player.pause();
+      } else {
+        if (status.duration > 0 && status.currentTime >= status.duration) await player.seekTo(0);
+        player.play();
+      }
+    } catch {
+      setError('Не удалось воспроизвести аудио. Откройте материал заново.');
+    }
+  };
+
+  const time = (value) => {
+    const seconds = Math.max(0, Math.floor(value || 0));
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  };
+
+  return (
+    <View style={styles.audio}>
+      <Pressable onPress={toggle} disabled={!status.isLoaded} accessibilityRole="button" style={styles.send}>
+        <Text style={styles.sendText}>{!status.isLoaded ? 'Загрузка аудио…' : status.playing ? 'Пауза' : 'Воспроизвести'}</Text>
+      </Pressable>
+      <Text style={styles.muted}>{time(status.currentTime)} / {time(status.duration)}</Text>
+      {error ? <Text style={styles.err}>{error}</Text> : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: '#0b1018' },
   center: { flex: 1, backgroundColor: '#0b1018', justifyContent: 'center', alignItems: 'center' },
   title: { color: '#fff', fontSize: 22, fontWeight: '700', marginBottom: 8 },
   desc: { color: '#9ca3af', marginBottom: 12 },
   video: { width: '100%', height: 220, backgroundColor: '#000', borderRadius: 12, marginBottom: 16 },
-  audio: { width: '100%', height: 72, backgroundColor: '#111', borderRadius: 12, marginBottom: 16 },
+  audio: { width: '100%', padding: 16, gap: 12, backgroundColor: '#111', borderRadius: 12, marginBottom: 16 },
   body: { color: '#e5e7eb', lineHeight: 22, marginBottom: 16 },
   section: { color: '#fb923c', fontWeight: '700', marginBottom: 10, marginTop: 8 },
   comment: { backgroundColor: '#151b24', borderRadius: 12, padding: 12, marginBottom: 8 },

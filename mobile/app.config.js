@@ -7,7 +7,7 @@ export default {
   expo: {
     name: 'ТЧ-15',
     slug: 'arm-mobile',
-    version: '1.0.0',
+    version: '1.0.1',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
@@ -20,7 +20,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'ru.tch15.arm',
-      buildNumber: '1',
+      buildNumber: '2',
       infoPlist: {
         NSAppTransportSecurity: isHttp
           ? { NSAllowsLocalNetworking: true, NSAllowsArbitraryLoads: true }
@@ -30,7 +30,7 @@ export default {
     },
     android: {
       package: 'ru.tch15.arm',
-      versionCode: 1,
+      versionCode: 2,
       usesCleartextTraffic: isHttp,
       adaptiveIcon: {
         backgroundColor: '#0b1018',
@@ -39,7 +39,11 @@ export default {
         monochromeImage: './assets/android-icon-monochrome.png',
       },
     },
-    plugins: ['expo-secure-store', 'expo-av'],
+    plugins: [
+      'expo-secure-store',
+      'expo-video',
+      ['expo-audio', { microphonePermission: false, recordAudioAndroid: false }],
+    ],
     extra: {
       apiUrl,
       ...(process.env.EAS_PROJECT_ID

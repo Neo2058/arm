@@ -5,6 +5,10 @@
 
 Адрес API **вшивается в бинарь на сборке**. На телефоне его не поменять — только новой сборкой.
 
+Исправление закрытия Android APK при запуске (1.0.1): [ANDROID_CRASH_FIX.md](ANDROID_CRASH_FIX.md).
+Для Expo 57 используются `expo-video` и `expo-audio`; `expo-av` 16 вызывает native crash с RN 0.86.
+Проверять новый APK установкой и запуском: одного Metro export недостаточно.
+
 По умолчанию в установщике: `https://тч-15.рф/api/mobile`  
 (`eas.json` → `env.EXPO_PUBLIC_API_URL`, punycode `https://xn---15-7edz.xn--p1ai/api/mobile`).
 
