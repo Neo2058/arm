@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
+            \Illuminate\Session\Middleware\AuthenticateSession::class,
             CheckUserExistence::class, // 1. Проверка бана/удаления (для всех web роутов)
         ], replace: [
             ValidateCsrfToken::class => VerifyCsrfToken::class,

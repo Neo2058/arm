@@ -6,6 +6,7 @@ use App\Services\ClickHouseService;
 use App\Services\MonthlyAccessKey;
 use App\Services\TelegramAccountLinker;
 use App\Services\TelegramBotApi;
+use App\Services\TelegramPasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
@@ -50,11 +51,16 @@ class TelegramKeyBotController extends Controller
             }
             RateLimiter::hit($limit, 60);
             $text = trim($message['text'] ?? '');
-            preg_match('/^\/(start|key|help)(?:@[A-Za-z0-9_]+)?(?:\s+(.*))?$/sD', $text, $command);
+            preg_match('/^\/(start|key|help|reset)(?:@[A-Za-z0-9_]+)?(?:\s+(.*))?$/sD', $text, $command);
             $name = $command[1] ?? '';
             $argument = $command[2] ?? '';
             $user = $links->user($id);
-            if ($name === 'start' && $argument !== '') {
+            if ($name === 'reset' || ($name === 'start' && $argument === 'recover')) {
+                $resets = app(TelegramPasswordReset::class);
+                $token = $resets->issue($id);
+                $reply = $token ? "Для смены пароля откройте ссылку (действует 10 минут):\n".$resets->url($token)."\nНе передавайте ссылку другим. Если запрос сделали не вы, ничего не меняйте."
+                    : 'Восстановление доступно активным пользователям с заранее привязанным Telegram. Если вы уже запрашивали ссылку, подождите минуту. Без привязки обратитесь к администратору.';
+            } elseif ($name === 'start' && $argument !== '') {
                 $user = $links->consume($argument, $id);
                 $reply = $user ? 'Telegram привязан к вашей учётной записи ARM. Отправьте /key для получения ключа.'
                     : 'Ссылка недействительна или уже использована. Откройте страницу Telegram в ARM. Если аккаунт уже привязан, отправьте /key.';
@@ -62,7 +68,7 @@ class TelegramKeyBotController extends Controller
                 $reply = 'Ключ доступа на '.date('m.Y').': '.implode(' ', $keys->sequence())."\nДействует до конца месяца. Не передавайте ключ другим.";
                 // Do not put the key or link token into analytics.
             } else {
-                $reply = $user ? 'Команда /key — ключ на текущий месяц. Отвязать Telegram можно в ARM.'
+                $reply = $user ? 'Команда /key — ключ на текущий месяц. /reset — восстановить пароль. Отвязать Telegram можно в ARM.'
                     : 'Доступ только для зарегистрированных активных пользователей ARM. Войдите на сайт и привяжите Telegram: '.route('telegram.link.show');
             }
             if ($name === 'key' && $user) {
@@ -76,6 +82,7 @@ class TelegramKeyBotController extends Controller
                 'chat_id' => (string) $id,
                 'text' => mb_substr($reply, 0, 4000),
                 'protect_content' => true,
+                'link_preview_options' => ['is_disabled' => true],
             ]);
         } finally {
             $lock->release();

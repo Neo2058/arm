@@ -3,9 +3,26 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
+use Illuminate\Support\Facades\File;
 
 class InstallPageTest extends TestCase
 {
+    private string $temporaryPublicPath;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->temporaryPublicPath = sys_get_temp_dir().'/arm-install-test-'.bin2hex(random_bytes(8));
+        File::makeDirectory($this->temporaryPublicPath, 0755, true);
+        $this->app->usePublicPath($this->temporaryPublicPath);
+    }
+
+    protected function tearDown(): void
+    {
+        File::deleteDirectory($this->temporaryPublicPath);
+        parent::tearDown();
+    }
+
     public function test_install_page_renders(): void
     {
         $this->get('/install')

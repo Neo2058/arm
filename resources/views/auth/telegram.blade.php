@@ -24,6 +24,8 @@
                 <p>После привязки обновите эту страницу. Команда /key выдаст ключ на текущий месяц.</p>
             @endif
         @endif
+        <p>После привязки команда /reset позволит восстановить пароль. Не отправляйте пароль сообщением боту.</p>
+        <a class="block underline" href="{{ route('account.show') }}">Мой профиль</a>
         <a class="block underline" href="{{ route('barrier.show') }}">Вернуться к вводу ключа</a>
     </section>
 </main>

@@ -58,6 +58,10 @@
 ### Важные сервисы
 - Telegram: `MonthlyAccessKey` — единый месячный ключ для барьера и бота. Не дублировать алгоритм.
 - `TelegramAccountLinker` — одноразовая привязка активного пользователя к Telegram ID (Postgres); страница `/account/telegram` доступна после auth до device/barrier.
+- `TelegramPasswordReset` — `/reset` только в личном чате ранее привязанного активного пользователя.
+  Хеш одноразового токена в Postgres, срок 10 минут, выпуск не чаще раза в минуту; ссылка содержит fragment,
+  новый пароль вводится на `/password/reset` (CSRF). `APP_URL` должен быть HTTPS. При сбросе удаляются
+  Sanctum-токены, обновляется remember token; `AuthenticateSession` в web проверяет отпечаток пароля.
 - Бот ключей использует отдельные `TELEGRAM_KEY_*`, webhook `/telegram/webhook` защищён secret_token, выдаёт `/key` только привязанному активному пользователю в личке. Групповая публикация отключена.
 - `TelegramService` — административные уведомления отдельным ботом, текстовые jobs `SendTelegramNotification` в database/notifications (нужен worker). Инструкция/relay/команды — `TELEGRAM_SETUP.md`.
 - `ClickHouseService::log($actionType, $resourceId, $details, $actor = null)` — фиксация действия в ClickHouse (очередь `analytics`). `$actor` — `User`, id или null (тогда `Auth::user()`, иначе `user_id=0` / `user_role=system`).

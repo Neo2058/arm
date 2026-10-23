@@ -180,6 +180,15 @@ export const imagesArray = [
             },
         ],
     },
+    {
+        name: "Мой профиль",
+        src: "/images/professionalDriver.jpg",
+        link: '/account',
+        details: [
+            { name: "Данные сотрудника" },
+            { name: "Привязка Telegram и получение ключа" },
+        ],
+    },
 ];
 
 export const imageVariants = {

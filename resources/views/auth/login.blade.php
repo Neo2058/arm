@@ -82,7 +82,7 @@
                 Запомни меня
             </label>
 
-            <a href="#" class="hover:underline">
+            <a href="{{ route('password.request') }}" class="hover:underline">
                 Забыли пароль?
             </a>
         </div>
