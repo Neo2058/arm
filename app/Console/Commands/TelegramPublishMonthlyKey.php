@@ -2,36 +2,16 @@
 
 namespace App\Console\Commands;
 
-use App\Http\Controllers\TelegramKeyBotController;
-use App\Services\TelegramService;
 use Illuminate\Console\Command;
 
 class TelegramPublishMonthlyKey extends Command
 {
-    protected $signature = 'telegram:publish-key {--now : Опубликовать ключ немедленно}';
-
-    protected $description = 'Публикует ежемесячный ключ доступа в Telegram-группу';
+    protected $signature = 'telegram:publish-key {--now}';
+    protected $description = 'Устаревшая групповая публикация ключа (отключена)';
 
     public function handle(): int
     {
-        if (! TelegramService::enabled()) {
-            $this->info('Telegram отключён: нет рабочего токена.');
-
-            return self::SUCCESS;
-        }
-
-        $controller = app(TelegramKeyBotController::class);
-
-        if ($this->option('now')) {
-            $this->info('Публикация ключа сейчас...');
-            $controller->sendMonthlyKeyToGroup();
-            $this->info('Ключ отправлен в группу.');
-            return self::SUCCESS;
-        }
-
-        $this->info('Публикация ключа по расписанию...');
-        $controller->publishMonthlyKey();
-        $this->info('Команда выполнена.');
+        $this->warn('Групповая публикация отключена. Активные привязанные пользователи запрашивают /key в личном чате бота.');
 
         return self::SUCCESS;
     }

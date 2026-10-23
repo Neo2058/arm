@@ -2,246 +2,87 @@
 
 namespace App\Services;
 
+use App\Jobs\SendTelegramNotification;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class TelegramService
 {
+    // Existing callers are administrative alerts; the key bot has a separate transport identity.
     public static function enabled(): bool
     {
-        return filled(config('services.telegram.bot_token'));
+        return app(TelegramBotApi::class)->configured('notifications');
     }
 
-    /**
-     * Универсальный метод отправки сообщения
-     */
-    public static function send(
-        string $message,
-        ?string $chatId = null,
-        string $parseMode = 'Markdown'
-    ): void {
-        if (! self::enabled()) {
+    public static function send(string $message, ?string $chatId = null, string $parseMode = 'Markdown'): void
+    {
+        $chatId ??= config('services.telegram.chat_id') ?: config('services.telegram.group_id');
+        if (! self::enabled() || ! filled($chatId)) {
             return;
         }
-
-        $botToken = config('services.telegram.bot_token');
-        $defaultChatId = config('services.telegram.chat_id') ?? config('services.telegram.group_id');
-
-        $chatId = $chatId ?? $defaultChatId;
-
-        if (empty($chatId)) {
-            return;
-        }
-
-        // Relay mode: forward to another server (in another country) that will call Telegram API
-        $relayUrl = config('services.telegram.relay_url');
-        $relaySecret = config('services.telegram.relay_secret');
-
-        if (!empty($relayUrl)) {
-            try {
-                $payload = [
-                    'secret'    => $relaySecret,
-                    'chat_id'   => $chatId,
-                    'message'   => $message,
-                    'parse_mode' => $parseMode,
-                    'method'    => 'sendMessage',
-                ];
-
-                $response = Http::asForm()->timeout(15)->post($relayUrl, $payload);
-
-                if ($response->failed()) {
-                    Log::error('Telegram relay error', [
-                        'status' => $response->status(),
-                        'body'   => $response->body(),
-                    ]);
-                }
-                return;
-            } catch (\Throwable $e) {
-                Log::error('Telegram relay failed', ['error' => $e->getMessage()]);
-                return;
-            }
-        }
-
-        // Direct mode
-        $apiBase = config('services.telegram.api_url', 'https://api.telegram.org');
-
         try {
-            $response = Http::timeout(10)
-                ->post("{$apiBase}/bot{$botToken}/sendMessage", [
-                    'chat_id'    => $chatId,
-                    'text'       => $message,
-                    'parse_mode' => $parseMode,
-                ]);
-
-            if ($response->failed()) {
-                Log::error('Telegram API error', [
-                    'status' => $response->status(),
-                    'body'   => $response->json(),
-                    'chat_id'=> $chatId
-                ]);
-            }
-        } catch (\Throwable $e) {
-            Log::error('Telegram send failed', [
-                'error' => $e->getMessage(),
-            ]);
+            SendTelegramNotification::dispatch($message, (string) $chatId, $parseMode);
+        } catch (\Throwable) {
+            // Covers sync driver and queue backend failures without breaking login/registration.
+            Log::warning('Telegram notification could not be dispatched');
         }
     }
 
-    /**
-     * Отправка фото
-     */
-    public static function sendPhoto(
-        string $filePathInMinio,
-        ?int $chatId = null,
-        ?string $caption = null,
-        string $parseMode = 'HTML',
-        ?string $filename = null
-    ): void {
+    public static function sendPhoto(string $filePathInMinio, ?int $chatId = null, ?string $caption = null, string $parseMode = 'HTML', ?string $filename = null): void
+    {
         self::sendFile('sendPhoto', 'photo', $filePathInMinio, $chatId, $caption, $parseMode, $filename);
     }
 
-    /**
-     * Отправка видео
-     */
-    public static function sendVideo(
-        string $filePathInMinio,
-        ?int $chatId = null,
-        ?string $caption = null,
-        string $parseMode = 'HTML',
-        ?string $filename = null
-    ): void {
+    public static function sendVideo(string $filePathInMinio, ?int $chatId = null, ?string $caption = null, string $parseMode = 'HTML', ?string $filename = null): void
+    {
         self::sendFile('sendVideo', 'video', $filePathInMinio, $chatId, $caption, $parseMode, $filename);
     }
 
-    /**
-     * Отправка аудио
-     */
-    public static function sendAudio(
-        string $filePathInMinio,
-        ?int $chatId = null,
-        ?string $caption = null,
-        string $parseMode = 'HTML',
-        ?string $filename = null
-    ): void {
+    public static function sendAudio(string $filePathInMinio, ?int $chatId = null, ?string $caption = null, string $parseMode = 'HTML', ?string $filename = null): void
+    {
         self::sendFile('sendAudio', 'audio', $filePathInMinio, $chatId, $caption, $parseMode, $filename);
     }
 
-    /**
-     * Отправка документа (файл любого типа)
-     */
-    public static function sendDocument(
-        string $filePathInMinio,
-        ?int $chatId = null,
-        ?string $caption = null,
-        string $parseMode = 'HTML',
-        ?string $filename = null
-    ): void {
+    public static function sendDocument(string $filePathInMinio, ?int $chatId = null, ?string $caption = null, string $parseMode = 'HTML', ?string $filename = null): void
+    {
         self::sendFile('sendDocument', 'document', $filePathInMinio, $chatId, $caption, $parseMode, $filename);
     }
 
-    /**
-     * Универсальный метод отправки медиафайла
-     */
-    private static function sendFile(
-        string $telegramMethod,   // sendPhoto, sendVideo, sendAudio, sendDocument
-        string $fieldName,        // photo, video, audio, document
-        string $filePathInMinio,
-        ?int $chatId = null,
-        ?string $caption = null,
-        string $parseMode = 'HTML',
-        ?string $filename = null
-    ): void {
-        if (! self::enabled()) {
+    private static function sendFile(string $method, string $field, string $path, ?int $chatId, ?string $caption, string $parseMode, ?string $filename): void
+    {
+        $chatId ??= config('services.telegram.chat_id') ?: config('services.telegram.group_id');
+        if (! self::enabled() || ! filled($chatId)) {
             return;
         }
-
-        $botToken = config('services.telegram.bot_token');
-        $defaultChatId = config('services.telegram.chat_id') ?? config('services.telegram.group_id');
-        $relayUrl = config('services.telegram.relay_url');
-        $relaySecret = config('services.telegram.relay_secret');
-
-        $chatId = $chatId ?? $defaultChatId;
-
-        if (empty($chatId)) {
-            return;
-        }
-
-        // Relay mode for files
-        if (!empty($relayUrl)) {
-            try {
-                $fileStream = Storage::disk('s3')->readStream($filePathInMinio);
-                if ($fileStream === false) {
-                    Log::warning('Telegram file stream failed for relay', ['path' => $filePathInMinio]);
-                    return;
-                }
-
-                $attachFilename = $filename ?: basename($filePathInMinio);
-
-                $payload = [
-                    'secret' => $relaySecret,
-                    'chat_id' => $chatId,
-                    'method' => $telegramMethod,
-                    'caption' => $caption,
-                    'parse_mode' => $parseMode,
-                ];
-
-                $response = Http::asMultipart()->timeout(60)
-                    ->attach('file', $fileStream, $attachFilename)
-                    ->post($relayUrl, $payload);
-
-                if ($response->failed()) {
-                    Log::error('Telegram relay ' . $telegramMethod . ' error', [
-                        'status' => $response->status(),
-                        'body' => $response->body(),
-                    ]);
-                }
-                return;
-            } catch (\Throwable $e) {
-                Log::error('Telegram relay ' . $telegramMethod . ' failed', ['error' => $e->getMessage()]);
-                return;
-            }
-        }
-
-        // Direct
-        $apiBase = config('services.telegram.api_url', 'https://api.telegram.org');
-
+        $stream = null;
         try {
-            $fileStream = Storage::disk('s3')->readStream($filePathInMinio);
-
-            if ($fileStream === false) {
-                Log::warning('Telegram file stream failed', ['path' => $filePathInMinio]);
-                return;
+            $relay = config('services.telegram.relay_url');
+            if ($relay && ! str_starts_with($relay, 'https://')) {
+                throw new \RuntimeException('HTTPS required.');
             }
-
-            $attachFilename = $filename ?: basename($filePathInMinio);
-
-            $payload = [
-                'chat_id'    => $chatId,
-                'parse_mode' => $parseMode,
-            ];
-
-            if ($caption) {
-                $payload['caption'] = $caption;
+            $stream = Storage::disk('s3')->readStream($path);
+            if (! is_resource($stream)) {
+                throw new \RuntimeException('File unavailable.');
             }
-
-            $response = Http::timeout(60)
-                ->attach($fieldName, $fileStream, $attachFilename)
-                ->post("{$apiBase}/bot{$botToken}/{$telegramMethod}", $payload);
-
-            if ($response->failed()) {
-                Log::error('Telegram ' . $telegramMethod . ' API error', [
-                    'status' => $response->status(),
-                    'body'   => $response->json(),
-                    'chat_id'=> $chatId,
-                    'path'   => $filePathInMinio,
-                ]);
+            $payload = ['chat_id' => (string) $chatId, 'caption' => $caption ?? '', 'parse_mode' => $parseMode];
+            if ($relay) {
+                $payload += ['method' => $method, 'secret' => config('services.telegram.relay_secret')];
+                $url = $relay;
+                $field = 'file';
+            } else {
+                $url = rtrim(config('services.telegram.api_url'), '/').'/bot'.config('services.telegram.bot_token').'/'.$method;
             }
-        } catch (\Throwable $e) {
-            Log::error('Telegram ' . $telegramMethod . ' send failed', [
-                'error' => $e->getMessage(),
-                'path'  => $filePathInMinio,
-            ]);
+            $response = Http::withoutRedirecting()->timeout(60)->attach($field, $stream, $filename ?: basename($path))->post($url, $payload);
+            if (! $response->successful() || $response->json('ok') !== true) {
+                throw new \RuntimeException('Telegram file rejected.');
+            }
+        } catch (\Throwable) {
+            Log::warning('Telegram media delivery failed', ['method' => $method]);
+        } finally {
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
         }
     }
 }

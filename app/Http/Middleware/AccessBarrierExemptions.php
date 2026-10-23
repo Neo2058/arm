@@ -21,7 +21,7 @@ final class AccessBarrierExemptions
 
     public static function isExemptPath(Request $request): bool
     {
-        return $request->is(
+        return $request->routeIs('telegram.link.*') || $request->is(
             'device-register*',
             'api/device/register*',
             'barrier*',

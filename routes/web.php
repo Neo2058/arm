@@ -33,6 +33,8 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post')->middleware('throttle:login');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+require __DIR__.'/telegram.php';
+
 /*
 |--------------------------------------------------------------------------
 | Protected (auth + device + barrier)

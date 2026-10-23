@@ -3,10 +3,7 @@
 use App\Http\Controllers\ActionLogController;
 use App\Http\Controllers\BackstageController;
 use App\Http\Controllers\BugReportController;
-use App\Http\Controllers\TelegramKeyBotController;
 use Illuminate\Support\Facades\Route;
-
-Route::post('/telegram/webhook', [TelegramKeyBotController::class, 'webhook']);
 
 Route::post('/api/bug-report', [BugReportController::class, 'store'])->name('bug.report.store');
 Route::post('/api/actions/log', [ActionLogController::class, 'store'])->name('actions.log');

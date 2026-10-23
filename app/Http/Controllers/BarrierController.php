@@ -19,35 +19,6 @@ class BarrierController extends Controller
         return view('auth.barrier');
     }
 
-    /**
-     * Алгоритм генерации правильной комбинации на сегодня (0, 1, 2 или 3 для каждого вопроса)
-     */
-    /**
-     * Алгоритм генерации правильной комбинации на сегодня (улучшенная версия)
-     */
-    private function getDailySequence(): array
-    {
-        $month = (int)date('m');
-        $year  = (int)date('Y');
-
-        // Секретная соль (храни в .env!)
-        $salt = config('app.barrier_salt', 'you-never-win-in-game');
-
-        // Создаём строку, от которой будем брать хеш
-        $baseString = "{$year}-{$month}-{$salt}";
-
-        // Используем SHA-256 и берём первые 8 символов hex
-        $hash = hash('sha256', $baseString);
-
-        // Преобразуем хеш в 4 числа от 0 до 3
-        return [
-            hexdec(substr($hash, 0, 2))  % 4,
-            hexdec(substr($hash, 2, 2))  % 4,
-            hexdec(substr($hash, 4, 2))  % 4,
-            hexdec(substr($hash, 6, 2))  % 4,
-        ];
-    }
-
     public function verify(Request $request)
     {
         $request->validate([
@@ -56,7 +27,7 @@ class BarrierController extends Controller
         ]);
 
         $userAnswers = $request->input('answers');
-        $correctSequence = $this->getDailySequence();
+        $correctSequence = app(\App\Services\MonthlyAccessKey::class)->sequence();
 
         if ($userAnswers === $correctSequence) {
             $request->session()->put('dynamic_barrier_passed', true);

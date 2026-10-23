@@ -1,157 +1,82 @@
 <?php
-/**
- * Telegram Relay - Self-hosted proxy for Telegram Bot API
- * 
- * Security features:
- * - IP whitelist (ALLOWED_IPS)
- * - Shared secret (RELAY_SECRET)
- * 
- * Supports:
- * - sendMessage (text)
- * - sendPhoto, sendDocument, sendVideo, sendAudio (with file upload)
- * 
- * Usage from main app:
- * POST to this URL with:
- *   secret=...
- *   chat_id=...
- *   method=sendMessage (or sendPhoto etc.)
- *   text=...          (for text)
- *   file=...          (multipart for media)
- *   caption=... (optional)
- *   parse_mode=Markdown (optional)
- */
-
-// === CONFIG from environment (robust to inline comments) ===
-function cleanEnvValue($val) {
-    if (!$val) return '';
-    // strip inline # comments and trim
-    $val = preg_replace('/\s*#.*$/', '', $val);
-    return trim($val);
-}
-
-$rawAllowed = cleanEnvValue(getenv('ALLOWED_IPS') ?: '');
-$allowedIps = array_filter(array_map('trim', explode(',', $rawAllowed)));
-
-$relaySecret = cleanEnvValue(getenv('RELAY_SECRET') ?: '');
-$botToken    = cleanEnvValue(getenv('TELEGRAM_BOT_TOKEN') ?: '');
-
-// Parse input early (JSON or form)
-$input = $_POST;
-if (empty($input)) {
-    $raw = file_get_contents('php://input');
-    $json = json_decode($raw, true);
-    if (is_array($json)) {
-        $input = $json;
-    }
-}
-
-// === DEBUG: always log hits (even blocked) ===
-$clientIp   = $_SERVER['REMOTE_ADDR'] ?? '';
-$reqMethod  = $_SERVER['REQUEST_METHOD'] ?? '';
-$reqUri     = $_SERVER['REQUEST_URI'] ?? '';
-error_log("Relay HIT: ip=$clientIp method=$reqMethod uri=$reqUri allowed=[" . implode(',', $allowedIps) . "] input=" . json_encode($input));
-
-// Simple health for GET / (so tests don't 403 just for connectivity)
-if (in_array($reqMethod, ['GET', 'HEAD']) && ($reqUri === '/' || $reqUri === '' || $reqUri === '/index.php')) {
-    http_response_code(200);
-    header('Content-Type: text/plain');
-    echo "TG Relay OK\n";
-    exit;
-}
-
-// === SECURITY ===
-
-// IP whitelist
-if (!empty($allowedIps) && !in_array($clientIp, $allowedIps, true)) {
-    http_response_code(403);
-    header('Content-Type: application/json');
-    echo json_encode(['ok' => false, 'error' => 'IP not allowed: ' . $clientIp]);
-    exit;
-}
-
-// Secret
-$providedSecret = $input['secret'] ?? ($_SERVER['HTTP_X_SECRET'] ?? '');
-if (!empty($relaySecret) && $providedSecret !== $relaySecret) {
-    http_response_code(403);
-    header('Content-Type: application/json');
-    echo json_encode(['ok' => false, 'error' => 'Invalid secret']);
-    exit;
-}
-
-if (empty($botToken)) {
-    http_response_code(500);
-    header('Content-Type: application/json');
-    echo json_encode(['ok' => false, 'error' => 'TELEGRAM_BOT_TOKEN is not set on relay']);
-    exit;
-}
-
-// === INPUT ===
-$method     = $input['method'] ?? 'sendMessage';
-$chatId     = $input['chat_id'] ?? '';
-$parseMode  = $input['parse_mode'] ?? 'Markdown';
-
-if (empty($chatId)) {
-    http_response_code(400);
-    header('Content-Type: application/json');
-    echo json_encode(['ok' => false, 'error' => 'chat_id is required']);
-    exit;
-}
-
-// Debug (remove later)
-error_log("Relay received from $clientIp Allowed=[" . implode(',', $allowedIps) . "] : " . json_encode($input));
-
-$telegramUrl = "https://api.telegram.org/bot{$botToken}/{$method}";
-
-// === BUILD PAYLOAD ===
-$postFields = [
-    'chat_id' => $chatId,
-];
-
-if (!empty($parseMode)) {
-    $postFields['parse_mode'] = $parseMode;
-}
-
-if (isset($_FILES['file'])) {
-    // === MEDIA ===
-    $fileKey = 'photo';
-    if ($method === 'sendDocument') $fileKey = 'document';
-    elseif ($method === 'sendVideo')   $fileKey = 'video';
-    elseif ($method === 'sendAudio')   $fileKey = 'audio';
-
-    $postFields[$fileKey] = new CURLFile(
-        $_FILES['file']['tmp_name'],
-        $_FILES['file']['type'] ?? 'application/octet-stream',
-        $_FILES['file']['name'] ?? 'file'
-    );
-
-    if (!empty($input['caption'])) {
-        $postFields['caption'] = $input['caption'];
-    }
-} else {
-    // === TEXT ===
-    $postFields['text'] = $input['text'] ?? $input['message'] ?? '';
-}
-
-// === FORWARD TO TELEGRAM ===
-$ch = curl_init($telegramUrl);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$err      = curl_error($ch);
-curl_close($ch);
-
-if ($err) {
-    http_response_code(502);
-    header('Content-Type: application/json');
-    echo json_encode(['ok' => false, 'error' => 'Relay cURL error: ' . $err]);
-    exit;
-}
-
-http_response_code($httpCode);
+// One deployment per bot. Put this behind an HTTPS reverse proxy.
 header('Content-Type: application/json');
-echo $response;
+$method = $_SERVER['REQUEST_METHOD'] ?? '';
+if (in_array($method, ['GET', 'HEAD'], true)) {
+    echo json_encode(['ok' => true, 'service' => 'telegram-relay']);
+    exit;
+}
+if ($method !== 'POST') {
+    http_response_code(405);
+    exit;
+}
+$secret = trim(getenv('RELAY_SECRET') ?: '');
+$token = trim(getenv('TELEGRAM_BOT_TOKEN') ?: '');
+$allowed = array_filter(array_map('trim', explode(',', getenv('ALLOWED_IPS') ?: '')));
+$input = $_POST;
+if (! $input) {
+    $input = json_decode(file_get_contents('php://input'), true);
+}
+$input = is_array($input) ? $input : [];
+$provided = $input['secret'] ?? ($_SERVER['HTTP_X_SECRET'] ?? '');
+if ($secret === '' || ! is_string($provided) || ! hash_equals($secret, $provided)
+    || ($allowed && ! in_array($_SERVER['REMOTE_ADDR'] ?? '', $allowed, true))) {
+    http_response_code(403);
+    echo json_encode(['ok' => false]);
+    exit;
+}
+if ($token === '' || ! extension_loaded('curl')) {
+    http_response_code(503);
+    echo json_encode(['ok' => false]);
+    exit;
+}
+$apiMethod = $input['method'] ?? 'sendMessage';
+$fields = [
+    'sendMessage' => ['chat_id', 'text', 'message', 'parse_mode', 'protect_content'],
+    'sendPhoto' => ['chat_id', 'caption', 'parse_mode'],
+    'sendVideo' => ['chat_id', 'caption', 'parse_mode'],
+    'sendAudio' => ['chat_id', 'caption', 'parse_mode'],
+    'sendDocument' => ['chat_id', 'caption', 'parse_mode'],
+    'getMe' => [],
+    'getWebhookInfo' => [],
+    'getUpdates' => ['timeout', 'allowed_updates'],
+    'setWebhook' => ['url', 'secret_token', 'allowed_updates'],
+    'deleteWebhook' => ['drop_pending_updates'],
+];
+if (! is_string($apiMethod) || ! isset($fields[$apiMethod])) {
+    http_response_code(400);
+    echo json_encode(['ok' => false]);
+    exit;
+}
+$payload = array_intersect_key($input, array_flip($fields[$apiMethod]));
+if ($apiMethod === 'sendMessage') {
+    $payload['text'] = $payload['text'] ?? $payload['message'] ?? '';
+    unset($payload['message']);
+}
+if (isset($_FILES['file']) && in_array($apiMethod, ['sendPhoto', 'sendVideo', 'sendAudio', 'sendDocument'], true)) {
+    if (! is_uploaded_file($_FILES['file']['tmp_name'])) {
+        http_response_code(400);
+        exit;
+    }
+    $field = ['sendPhoto' => 'photo', 'sendVideo' => 'video', 'sendAudio' => 'audio', 'sendDocument' => 'document'][$apiMethod];
+    $payload[$field] = new CURLFile($_FILES['file']['tmp_name'], 'application/octet-stream', basename($_FILES['file']['name']));
+}
+foreach ($payload as $key => $value) {
+    if (is_array($value)) $payload[$key] = json_encode($value);
+    if (is_bool($value)) $payload[$key] = $value ? 'true' : 'false';
+}
+$curl = curl_init('https://api.telegram.org/bot'.$token.'/'.$apiMethod);
+curl_setopt_array($curl, [
+    CURLOPT_POST => true, CURLOPT_POSTFIELDS => $payload, CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 60, CURLOPT_SSL_VERIFYPEER => true,
+]);
+$result = curl_exec($curl);
+$status = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
+curl_close($curl);
+if ($result === false || $status < 100) {
+    http_response_code(502);
+    echo json_encode(['ok' => false]);
+    exit;
+}
+http_response_code($status);
+echo $result;

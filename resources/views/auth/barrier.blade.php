@@ -13,6 +13,7 @@
                 </div>
                 <h1 class="text-xl font-bold tracking-tight mb-1">Динамический барьер</h1>
                 <p class="text-xs text-zinc-400">Введите протокол верификации смены</p>
+                <a class="inline-block mt-3 text-sm text-orange-400 underline" href="{{ route('telegram.link.show') }}">Получить ключ через Telegram</a>
             </div>
 
             <!-- Контейнер для React-компонента барьера, если захотите сделать интерактивно, либо простая HTML форма -->

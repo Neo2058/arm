@@ -40,7 +40,6 @@ class CheckDeviceBinding
             if (! $isApprovedDeviceExists) {
                 $msg = "⚠️ *ПОПЫТКА ВХОДА С НЕИЗВЕСТНОГО УСТРОЙСТВА!*\n";
                 $msg .= "👤 Сотрудник: {$user->name} (Email: {$user->email})\n";
-                $msg .= "🔑 Ключ устройства: `{$deviceKey}`\n";
                 $msg .= '🌐 IP: '.$request->ip();
 
                 if (class_exists(TelegramService::class)) {

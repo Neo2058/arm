@@ -4,6 +4,8 @@ namespace App\Listeners;
 
 use App\Models\User;
 use App\Services\ClickHouseService;
+use App\Services\TelegramService;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
@@ -22,6 +24,7 @@ class LogAuthenticationEvents
                 'via' => $via,
                 'ip' => request()->ip(),
             ], $user);
+            $this->alertFailure('inactive');
 
             return;
         }
@@ -31,6 +34,9 @@ class LogAuthenticationEvents
             'guard' => $event->guard,
             'via' => $via,
         ], $user);
+        if ($user) {
+            TelegramService::send("Вход в ARM\nПользователь: {$user->name} (ID {$user->id})\nКанал: {$via}\nIP: ".request()->ip()."\nВремя: ".now()->format('d.m.Y H:i:s'), null, '');
+        }
     }
 
     public function failed(Failed $event): void
@@ -53,6 +59,17 @@ class LogAuthenticationEvents
             'via' => self::via(),
             'ip' => request()->ip(),
         ]);
+        $this->alertFailure($reason);
+    }
+
+    private function alertFailure(string $reason): void
+    {
+        // Limit administrative alerts without suppressing the analytics record.
+        $alertKey = 'telegram-login-failed:'.hash('sha256', (string) request()->ip());
+        if (! RateLimiter::tooManyAttempts($alertKey, 1)) {
+            RateLimiter::hit($alertKey, 60);
+            TelegramService::send("Неуспешный вход в ARM\nКанал: ".self::via()."\nIP: ".request()->ip()."\nПричина: {$reason}", null, '');
+        }
     }
 
     public function logout(Logout $event): void

@@ -53,8 +53,14 @@ return [
     ],
 
     'telegram' => [
-        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
-        'chat_id' => env('TELEGRAM_CHAT_ID'),
+        'bot_token' => env('TELEGRAM_NOTIFICATIONS_BOT_TOKEN') ?: env('TELEGRAM_BOT_TOKEN'),
+        'chat_id' => env('TELEGRAM_NOTIFICATIONS_CHAT_ID') ?: env('TELEGRAM_CHAT_ID'),
+        'key_bot_token' => env('TELEGRAM_KEY_BOT_TOKEN'),
+        'key_bot_username' => env('TELEGRAM_KEY_BOT_USERNAME'),
+        'key_webhook_secret' => env('TELEGRAM_KEY_WEBHOOK_SECRET'),
+        'key_relay_url' => env('TELEGRAM_KEY_RELAY_URL'),
+        'key_relay_secret' => env('TELEGRAM_KEY_RELAY_SECRET'),
+        'notification_queue_connection' => env('TELEGRAM_NOTIFICATIONS_QUEUE_CONNECTION', 'database'),
         'group_id'   => env('TELEGRAM_GROUP_ID'),    // ID закрытой группы
         'bot_username' => env('TELEGRAM_BOT_USERNAME'),
         'api_url' => env('TELEGRAM_API_URL', 'https://api.telegram.org'),

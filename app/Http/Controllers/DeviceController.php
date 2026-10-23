@@ -63,7 +63,6 @@ class DeviceController extends Controller
             $msg = "📱 *НОВАЯ ЗАЯВКА НА ПРИВЯЗКУ УСТРОЙСТВА*\n\n";
             $msg .= "👤 Сотрудник: *{$user->name}*\n";
             $msg .= "🛠️ Устройство: *{$deviceName}*\n";
-            $msg .= "🔑 Ключ: `{$deviceKey}`\n";
             $msg .= "🌐 IP: " . $request->ip();
 
             TelegramService::send($msg);
