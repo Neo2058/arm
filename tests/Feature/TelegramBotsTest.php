@@ -256,6 +256,20 @@ class TelegramBotsTest extends TestCase
         Http::assertSent(fn ($r) => $r->url() === 'https://alerts-relay.example' && $r['secret'] === 'alerts-secret');
     }
 
+    public function test_private_http_relay_is_allowed_and_public_http_is_not(): void
+    {
+        $api = app(TelegramBotApi::class);
+        $this->assertTrue($api->relayUrlAllowed('http://172.18.0.1:18089/'));
+        $this->assertTrue($api->relayUrlAllowed('https://alerts-relay.example/'));
+        $this->assertFalse($api->relayUrlAllowed('http://example.com/'));
+        config([
+            'services.telegram.relay_url' => 'http://example.com/',
+            'services.telegram.relay_secret' => 'alerts-secret',
+        ]);
+        $this->expectException(\RuntimeException::class);
+        $api->message('notifications', '-10012345', 'Алерт');
+    }
+
     public function test_manage_installs_secret_protected_webhook(): void
     {
         Http::swap(new \Illuminate\Http\Client\Factory);

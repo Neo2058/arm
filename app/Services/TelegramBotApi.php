@@ -30,8 +30,8 @@ class TelegramBotApi
             throw new RuntimeException('Telegram bot is not configured.');
         }
         $relay = $this->setting($bot, 'relay_url');
-        if ($relay && ! str_starts_with($relay, 'https://')) {
-            throw new RuntimeException('Telegram relay requires HTTPS.');
+        if ($relay && ! $this->relayUrlAllowed((string) $relay)) {
+            throw new RuntimeException('Telegram relay requires HTTPS or a private HTTP URL.');
         }
         $formatError = false;
         try {
@@ -57,6 +57,18 @@ class TelegramBotApi
         }
 
         throw new RuntimeException('Telegram request failed; check configuration and network.', $formatError ? 400 : 0);
+    }
+
+    public function relayUrlAllowed(string $relay): bool
+    {
+        if (str_starts_with($relay, 'https://')) {
+            return true;
+        }
+        // Private HTTP is for a loopback/SSH tunnel to a relay on an unblocked machine.
+        return (bool) preg_match(
+            '#^http://(127\.0\.0\.1|localhost|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?/#',
+            $relay
+        );
     }
 
     public function message(string $bot, string $chatId, string $text, string $parseMode = '', bool $protect = false): void
