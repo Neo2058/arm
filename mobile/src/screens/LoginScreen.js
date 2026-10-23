@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -9,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { login } from '../api';
+import { API_URL, login } from '../api';
 import { loginErrorMessage } from '../../api-config.cjs';
 
 export default function LoginScreen({ onLoggedIn }) {
@@ -59,6 +60,18 @@ export default function LoginScreen({ onLoggedIn }) {
       <Pressable style={styles.btn} onPress={submit} disabled={loading}>
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Войти</Text>}
       </Pressable>
+      <Pressable
+        accessibilityRole="link"
+        onPress={async () => {
+          try {
+            await Linking.openURL(API_URL.replace(/\/api\/mobile\/?$/, '/password/forgot'));
+          } catch {
+            setError('Не удалось открыть браузер. Откройте сайт АРМ и нажмите «Забыли пароль?» либо отправьте /reset привязанному боту.');
+          }
+        }}
+      >
+        <Text style={styles.recovery}>Забыли пароль?</Text>
+      </Pressable>
     </KeyboardAvoidingView>
   );
 }
@@ -77,6 +90,7 @@ const styles = StyleSheet.create({
     borderColor: '#1f2937',
   },
   error: { color: '#f87171', marginBottom: 12 },
+  recovery: { color: '#93c5fd', textAlign: 'center', padding: 16 },
   btn: { backgroundColor: '#ea580c', borderRadius: 14, padding: 16, alignItems: 'center' },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });
