@@ -18,6 +18,10 @@ enum UserRole: string
 
     case OPERATOR = 'operator';
 
+    case TORMOZNIK = 'tormoznik';
+
+    case NACHALNIK = 'nachalnik';
+
     public function label(): string
     {
         return match ($this) {
@@ -35,6 +39,10 @@ enum UserRole: string
             self::DISPATCHER => 'Нарядчик',
 
             self::OPERATOR => 'Оператор учёта',
+
+            self::TORMOZNIK => 'Тормозник',
+
+            self::NACHALNIK => 'Начальник',
 
             default => 'Неизвестная роль',
         };
@@ -54,7 +62,7 @@ enum UserRole: string
 
             self::DISPATCHER => 'danger',
 
-            self::OPERATOR => 'warning',
+            self::OPERATOR, self::TORMOZNIK, self::NACHALNIK => 'warning',
         };
     }
 

@@ -185,7 +185,7 @@
 - План усиления безопасности и ручная выкладка без CI/CD — `SECURITY_ROADMAP.md`.
 - Роли — `App\Enums\UserRole`. Канонический нарядчик: `dispatcher`. Строка `naryadchik` только как алиас в `UserRole::safeFrom()` (старые JSON `allowed_roles`).
 - Проверки в PHP: `User::isAdmin()`, `isSuperAdmin()`, `isInstructor()`, `isDispatcher()`, `isDriver()`, `isStudent()`, `canBypassAccessBarriers()`, `canViewRospisiStatistics()`, `canAccessByRoles()`.
-- Filament (`canAccessPanel`): только `SUPER_ADMIN` и `ADMIN`.
+- Filament (`canAccessPanel`): основная панель `admin` — только `SUPER_ADMIN` и `ADMIN`. Отдельная панель `discipline` — активные `TORMOZNIK` / `NACHALNIK`, без discovery общих ресурсов и виджетов.
 - Журнал ТЧМ: только `instructor` — `EnsureInstructor` на всех `/journal*` (не дублировать проверку в каждом методе).
 - Поиск по выданным нарядам для инструктора: `/journal/naryad-search`. Файлы (наряды, разбивка, ФИО) принадлежат `user_id`. Логика в `App\Services\InstructorNaryad\` (порт прототипа searching). Не смешивать с планированием `/naryad` нарядчика.
 - PDF разбивки: `scripts/extract_shifts.py` (pdfplumber) вызывается из `BreakdownPdfExtractor`. Нужны python3 + pdfplumber в образе (`Dockerfile`).
@@ -235,3 +235,16 @@ php artisan optimize:clear
 **Последнее обновление:** 2026-10-19 (журнал: реальная статистика; ClickHouseService::select)
 
 Этот файл имеет высокий приоритет и будет автоматически подгружаться в контекст AI при работе в директории проекта.
+
+
+## Исполнительская дисциплина (23 октября 2026)
+
+- Документация и выкладка: `DISCIPLINE.md`.
+- Роли `tormoznik` / `nachalnik` не являются администраторами и не обходят барьеры. Только собственная панель `/discipline-admin/discipline-monitor`.
+- Тормозник управляет своими карточками; начальник — всеми карточками модуля этого экземпляра ARM; инструктор — только своим исполнением. Междеповского разграничения пока нет.
+- `DisciplineCard` → `DisciplineAssignment` (отдельно на инструктора) → `DisciplineReport` → `DisciplineFile`. Не переиспользовать `JournalTask::completeTodo` для сдачи отчётов.
+- Мутации только через `DisciplineService`: транзакция, блокировка, версия, идемпотентность, проверка текущих ролей/активности. Историю не удалять и не переписывать после решения.
+- Внутренние уведомления сохраняются транзакционно в PostgreSQL; мониторинг Filament опрашивает PostgreSQL каждые 15 секунд. Redis и существующая deferred-аналитика не меняются.
+- Новые события `discipline.create|submit|review` идут через ClickHouseService после COMMIT; отказ аналитики не отменяет поручение.
+- MinIO: приватный префикс `discipline/`, выдача через FileProxyService после проверки доступа, скачивание без inline-просмотра. Антивирус обязателен, при недоступности — 503. Compose overlay `docker-compose.discipline.yml` добавляет ClamAV к production-сети backend.
+- Тесты: `DisciplineTest`, `DisciplineScannerTest`; реальные гонки PostgreSQL — `tests/Support/discipline-concurrency.php`, только изолированная база `arm_discipline_test_*`.

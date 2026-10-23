@@ -209,6 +209,7 @@
     ]);
 
     $journalMenu = [
+        ['title' => 'Исполнительская дисциплина', 'route' => 'discipline.index', 'icon' => 'results'],
 
         [
             'title' => 'Журнал',
@@ -291,6 +292,7 @@
     $menu = match (true) {
 
         // Инструктор в разделе документов остаётся в контексте журнала ТЧМ
+        request()->routeIs('discipline.*') && $isInstructor => $journalMenu,
         request()->routeIs('documents.*') && $isInstructor => $journalMenu,
         request()->routeIs('documents.*') => $documentsMenu,
         request()->routeIs('quiz.*') => $documentsMenu,

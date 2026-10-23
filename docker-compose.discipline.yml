@@ -1,0 +1,26 @@
+# Overlay for docker-compose.prod.yml. No externally published scanner ports.
+services:
+  app:
+    image: ${DISCIPLINE_APP_IMAGE:-arm-app}
+    environment:
+      DISCIPLINE_CLAMD_CONFIG: /var/www/docker/clamav/clamd-client.conf
+    depends_on:
+      clamav:
+        condition: service_healthy
+  clamav:
+    image: clamav/clamav:stable
+    restart: unless-stopped
+    mem_limit: 2g
+    cpus: 1.0
+    volumes:
+      - discipline_clamav_data:/var/lib/clamav
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+volumes:
+  discipline_clamav_data:

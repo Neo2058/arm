@@ -27,6 +27,10 @@ class AuthController extends Controller
 
             $user = Auth::user();
 
+            if ($user->canManageDiscipline()) {
+                return redirect()->route('filament.discipline.pages.discipline-monitor');
+            }
+
             if ($user->isDispatcher()) {
                 // Нарядчик попадает сразу в инструмент планирования наряда (с собственным сайдбаром)
                 return redirect()->route('naryad.index');

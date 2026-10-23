@@ -1,13 +1,20 @@
 <?php
 
 use App\Http\Controllers\BarrierController;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\TelegramAccountController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/mainMenu', function () {
+    if (auth()->user()->canManageDiscipline()) {
+        return redirect()->route('filament.discipline.pages.discipline-monitor');
+    }
+
     return view('main.mainMenu');
 })->name('mainMenu');
+
+Route::get('/account', [AccountController::class, 'show'])->name('account.show');
 
 Route::get('/account/telegram', [TelegramAccountController::class, 'show'])->name('telegram.link.show');
 Route::post('/account/telegram', [TelegramAccountController::class, 'issue'])->name('telegram.link.issue')->middleware('throttle:5,10');

@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     python3 \
     python3-pip \
+    clamdscan \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install --break-system-packages --no-cache-dir pdfplumber
 

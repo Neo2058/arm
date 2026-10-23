@@ -141,8 +141,17 @@ class User extends Authenticatable implements FilamentUser
         });
     }
 
+    public function canManageDiscipline(): bool
+    {
+        return $this->is_active && in_array($this->roleEnum(), [UserRole::TORMOZNIK, UserRole::NACHALNIK], true);
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
+        if ($panel->getId() === 'discipline') {
+            return $this->canManageDiscipline();
+        }
+
         return $this->is_active && $this->isAdmin();
     }
 
