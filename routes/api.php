@@ -3,6 +3,9 @@
 use App\Http\Controllers\Api\Mobile\AuthController;
 use App\Http\Controllers\Api\Mobile\DocumentController;
 use App\Http\Controllers\Api\Mobile\FileController;
+use App\Http\Controllers\Api\Mobile\NaryadController;
+use App\Http\Controllers\Api\Mobile\PhoneController;
+use App\Http\Controllers\Api\Mobile\QuizController;
 use App\Http\Controllers\Api\Mobile\TrainingController;
 use App\Http\Middleware\EnsureActiveApiUser;
 use Illuminate\Support\Facades\Route;
@@ -16,6 +19,9 @@ Route::prefix('mobile')->group(function () {
     Route::get('/files/training/{material}', [FileController::class, 'training'])
         ->name('mobile.files.training')
         ->middleware('signed');
+    Route::get('/files/naryads/{naryad}', [FileController::class, 'naryad'])
+        ->name('mobile.files.naryads')
+        ->middleware('signed');
 
     Route::middleware(['auth:sanctum', EnsureActiveApiUser::class])->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
@@ -23,10 +29,21 @@ Route::prefix('mobile')->group(function () {
 
         Route::get('/documents', [DocumentController::class, 'index']);
         Route::get('/documents/{document}', [DocumentController::class, 'show']);
+        Route::post('/documents/{document}/violation', [DocumentController::class, 'reportViolation'])
+            ->middleware('throttle:30,1');
 
         Route::get('/training/topics', [TrainingController::class, 'topics']);
         Route::get('/training/topics/{topic:slug}', [TrainingController::class, 'topic']);
         Route::get('/training/materials/{material}', [TrainingController::class, 'material']);
         Route::post('/training/materials/{material}/comments', [TrainingController::class, 'storeComment']);
+
+        Route::get('/quizzes', [QuizController::class, 'index']);
+        Route::get('/quizzes/{quiz}', [QuizController::class, 'show']);
+        Route::post('/quizzes/{quiz}/results', [QuizController::class, 'submit']);
+
+        Route::get('/naryads', [NaryadController::class, 'index']);
+        Route::get('/naryads/{naryad}', [NaryadController::class, 'show']);
+
+        Route::get('/phones', [PhoneController::class, 'index']);
     });
 });

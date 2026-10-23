@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { login } from '../api';
+import { loginErrorMessage } from '../../api-config.cjs';
 
 export default function LoginScreen({ onLoggedIn }) {
   const [email, setEmail] = useState('');
@@ -24,8 +25,7 @@ export default function LoginScreen({ onLoggedIn }) {
       const user = await login(email.trim(), password);
       onLoggedIn(user);
     } catch (e) {
-      const message = e.response?.data?.message || 'Не удалось войти. Проверьте сеть и данные.';
-      setError(message);
+      setError(loginErrorMessage(e));
     } finally {
       setLoading(false);
     }

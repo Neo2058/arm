@@ -111,6 +111,7 @@ class ActionLogResource extends Resource
                     ->label('Тип действия')
                     ->options([
                         'violation_document_download' => 'Скачивание документа (нарушение)',
+                        'violation_document_screenshot' => 'Снимок или запись экрана (нарушение)',
                         'violation_document_access' => 'Доступ к закрытому документу',
                         'view_naryads_page' => 'Просмотр страницы нарядов',
                         'view_naryads_tab' => 'Вкладка «Наряды»',

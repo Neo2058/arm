@@ -148,6 +148,10 @@ class FileProxyTest extends TestCase
             'action' => 'violation_document_download',
             'is_violation' => true,
         ]);
+        $this->assertDatabaseHas('admin_notifications', [
+            'type' => 'violation',
+            'title' => 'Нарушение регламента: попытка скачивания документа',
+        ]);
     }
 
     public function test_restricted_document_click_is_logged_as_violation(): void

@@ -60,6 +60,9 @@ at expo.modules.av.AVManager.<clinit>
 
 ## Готовый артефакт и результаты
 
+Ниже результаты сборки 1.0.1. Текущий локальный APK по этому пути пересобран в 1.0.2;
+его актуальный хеш и ограничения проверки описаны в `LOGIN_FIX.md`.
+
 - APK: `mobile/android/app/build/outputs/apk/release/app-release.apk` (локальный ignored build output).
 - Пакет `ru.tch15.arm`, версия 1.0.1, versionCode 2, minSdk 24, ABI arm64-v8a + armeabi-v7a.
 - SHA-256 APK: `6904ed590725d18fc149d491372086fa5fc84bdb747c79c92f536fe3ecb04197`.

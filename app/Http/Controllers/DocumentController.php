@@ -6,10 +6,9 @@ use App\Models\ActionLog;
 use App\Models\Document;
 use App\Models\Quiz;
 use App\Models\QuizResult;
-use App\Services\AdminNotificationService;
+use App\Services\DocumentReglamentService;
 use App\Services\FileProxyService;
 use App\Services\QuizService;
-use App\Services\TelegramService;
 
 class DocumentController extends Controller
 {
@@ -234,38 +233,7 @@ class DocumentController extends Controller
         $mime = $this->files->disk()->mimeType($path) ?: 'application/octet-stream';
 
         if (! $isAdmin) {
-            // Violation: log to DB + CH
-            ActionLog::violation('violation_document_download', [
-                'document_id' => $document->id,
-                'title' => $document->title,
-                'user_role' => $userRole,
-            ]);
-
-            // Send alerts to all channels
-            try {
-                AdminNotificationService::notify(
-                    'violation',
-                    'Нарушение регламента: попытка скачивания документа',
-                    "Пользователь {$user->name} (роль: {$userRole}) попытался скачать документ «{$document->title}» (ID: {$document->id}). Доступно только чтение.",
-                    [
-                        'user_id' => $user->id,
-                        'document_id' => $document->id,
-                        'action' => 'download_attempt',
-                    ]
-                );
-
-                // Telegram alert
-                $tgMessage = "🚨 *Нарушение регламента использования документов*\n";
-                $tgMessage .= "👤 Пользователь: {$user->name} (ID: {$user->id}, роль: {$userRole})\n";
-                $tgMessage .= "📄 Документ: {$document->title} (ID: {$document->id})\n";
-                $tgMessage .= "📍 Действие: попытка скачивания (запрещено, только просмотр)\n";
-                $tgMessage .= '⏰ '.now()->format('Y-m-d H:i:s');
-
-                TelegramService::send($tgMessage, null, 'Markdown');
-            } catch (\Throwable $e) {
-                \Log::error('Failed to send download violation alerts', ['error' => $e->getMessage()]);
-            }
-
+            DocumentReglamentService::report($user, $document, 'download', 'web');
             abort(403, 'Скачивание документов запрещено согласно регламенту. Доступно только для чтения.');
         }
 

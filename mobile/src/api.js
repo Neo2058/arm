@@ -1,11 +1,12 @@
 import axios from 'axios';
 import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
+import { resolveApiUrl } from '../api-config.cjs';
 
-export const API_URL =
+export const API_URL = resolveApiUrl(
   process.env.EXPO_PUBLIC_API_URL ||
-  Constants.expoConfig?.extra?.apiUrl ||
-  'https://xn---15-7edz.xn--p1ai/api/mobile';
+  Constants.expoConfig?.extra?.apiUrl
+);
 
 export const client = axios.create({
   baseURL: API_URL,
@@ -23,7 +24,18 @@ client.interceptors.request.use(async (config) => {
 
 export async function login(email, password) {
   const { data } = await client.post('/login', { email, password });
-  await SecureStore.setItemAsync('token', data.token);
+  if (typeof data?.token !== 'string' || !data.token || !data.user || typeof data.user !== 'object') {
+    const error = new Error('Unexpected authentication response');
+    error.code = 'INVALID_AUTH_RESPONSE';
+    throw error;
+  }
+  try {
+    await SecureStore.setItemAsync('token', data.token);
+  } catch {
+    const error = new Error('Authentication storage unavailable');
+    error.code = 'AUTH_STORAGE_FAILED';
+    throw error;
+  }
   return data.user;
 }
 

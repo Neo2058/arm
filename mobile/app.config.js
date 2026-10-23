@@ -1,5 +1,5 @@
-const apiUrl =
-  process.env.EXPO_PUBLIC_API_URL || 'https://xn---15-7edz.xn--p1ai/api/mobile';
+const { resolveApiUrl } = require('./api-config.cjs');
+const apiUrl = resolveApiUrl(process.env.EXPO_PUBLIC_API_URL);
 
 const isHttp = apiUrl.startsWith('http://');
 
@@ -7,7 +7,7 @@ export default {
   expo: {
     name: 'ТЧ-15',
     slug: 'arm-mobile',
-    version: '1.0.1',
+    version: '1.0.3',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
@@ -20,7 +20,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'ru.tch15.arm',
-      buildNumber: '2',
+      buildNumber: '4',
       infoPlist: {
         NSAppTransportSecurity: isHttp
           ? { NSAllowsLocalNetworking: true, NSAllowsArbitraryLoads: true }
@@ -30,7 +30,7 @@ export default {
     },
     android: {
       package: 'ru.tch15.arm',
-      versionCode: 2,
+      versionCode: 4,
       usesCleartextTraffic: isHttp,
       adaptiveIcon: {
         backgroundColor: '#0b1018',

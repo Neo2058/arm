@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api\Mobile;
 use App\Http\Controllers\Controller;
 use App\Models\ActionLog;
 use App\Models\Document;
+use App\Services\DocumentReglamentService;
 use App\Services\FileProxyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class DocumentController extends Controller
 {
@@ -79,5 +81,25 @@ class DocumentController extends Controller
             'title' => $document->title,
             'url' => $url,
         ]);
+    }
+
+    public function reportViolation(Request $request, Document $document): JsonResponse
+    {
+        if (! $request->user()->canAccessByRoles($document->allowed_roles)) {
+            ActionLog::violation('violation_document_access', [
+                'document_id' => $document->id,
+                'title' => $document->title,
+                'via' => 'mobile',
+            ]);
+            abort(403, 'Доступ к документу ограничен.');
+        }
+
+        $data = $request->validate([
+            'kind' => ['required', 'string', Rule::in(DocumentReglamentService::KINDS)],
+        ]);
+
+        DocumentReglamentService::report($request->user(), $document, $data['kind'], 'mobile');
+
+        return response()->json(['ok' => true]);
     }
 }

@@ -10,6 +10,11 @@ import DocumentViewScreen from './src/screens/DocumentViewScreen';
 import TopicsScreen from './src/screens/TopicsScreen';
 import MaterialsScreen from './src/screens/MaterialsScreen';
 import MaterialScreen from './src/screens/MaterialScreen';
+import QuizzesScreen from './src/screens/QuizzesScreen';
+import QuizPlayScreen from './src/screens/QuizPlayScreen';
+import NaryadsScreen from './src/screens/NaryadsScreen';
+import NaryadViewScreen from './src/screens/NaryadViewScreen';
+import PhonesScreen from './src/screens/PhonesScreen';
 import * as SecureStore from 'expo-secure-store';
 import { logout, me } from './src/api';
 
@@ -47,6 +52,37 @@ function TrainingStack() {
   );
 }
 
+function QuizzesStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}>
+      <Stack.Screen name="QuizzesList" component={QuizzesScreen} options={{ title: 'Тесты' }} />
+      <Stack.Screen name="QuizPlay" component={QuizPlayScreen} options={({ route }) => ({ title: route.params?.title || 'Тест' })} />
+    </Stack.Navigator>
+  );
+}
+
+function NaryadsStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}>
+      <Stack.Screen
+        name="NaryadsList"
+        component={NaryadsScreen}
+        options={({ navigation }) => ({
+          title: 'Наряды',
+          headerRight: () => (
+            <Pressable onPress={() => navigation.navigate('Phones')} style={{ marginRight: 16 }}>
+              <Text style={{ color: '#fb923c', fontWeight: '700' }}>Телефоны</Text>
+            </Pressable>
+          ),
+        })}
+      />
+      <Stack.Screen name="NaryadView" component={NaryadViewScreen} options={({ route }) => ({ title: route.params?.title || 'Наряд' })} />
+      <Stack.Screen name="DocumentView" component={DocumentViewScreen} options={({ route }) => ({ title: route.params?.title || 'PDF' })} />
+      <Stack.Screen name="Phones" component={PhonesScreen} options={{ title: 'Телефоны' }} />
+    </Stack.Navigator>
+  );
+}
+
 function MainTabs({ user, onLogout }) {
   return (
     <Tab.Navigator
@@ -58,6 +94,8 @@ function MainTabs({ user, onLogout }) {
       }}
     >
       <Tab.Screen name="DocsTab" component={DocumentsStack} options={{ title: 'Документы' }} />
+      <Tab.Screen name="QuizTab" component={QuizzesStack} options={{ title: 'Тесты' }} />
+      <Tab.Screen name="NaryadTab" component={NaryadsStack} options={{ title: 'Наряды' }} />
       <Tab.Screen name="TrainTab" component={TrainingStack} options={{ title: 'Обучение' }} />
       <Tab.Screen
         name="ProfileTab"

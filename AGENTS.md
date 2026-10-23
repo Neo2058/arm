@@ -56,6 +56,10 @@
 - `Document` (хранится в MinIO)
 
 ### Важные сервисы
+- Telegram: `MonthlyAccessKey` — единый месячный ключ для барьера и бота. Не дублировать алгоритм.
+- `TelegramAccountLinker` — одноразовая привязка активного пользователя к Telegram ID (Postgres); страница `/account/telegram` доступна после auth до device/barrier.
+- Бот ключей использует отдельные `TELEGRAM_KEY_*`, webhook `/telegram/webhook` защищён secret_token, выдаёт `/key` только привязанному активному пользователю в личке. Групповая публикация отключена.
+- `TelegramService` — административные уведомления отдельным ботом, текстовые jobs `SendTelegramNotification` в database/notifications (нужен worker). Инструкция/relay/команды — `TELEGRAM_SETUP.md`.
 - `ClickHouseService::log($actionType, $resourceId, $details, $actor = null)` — фиксация действия в ClickHouse (очередь `analytics`). `$actor` — `User`, id или null (тогда `Auth::user()`, иначе `user_id=0` / `user_role=system`).
 - `ActionLog::log()` — операционный журнал в Postgres (Filament) **и** одна запись в ClickHouse. Не вызывай `ClickHouseService::log()` следом за тем же событием.
 - Клиентский `POST /api/actions/log` — только белый список `ActionLog::CLIENT_ACTIONS`, в БД уходит как `ui.{action}`. Серверные мутации сюда не писать.
@@ -73,8 +77,9 @@
 
 ### Мобильный API (`/api/mobile`)
 - Sanctum personal access token (`Authorization: Bearer`).
-- JSON для логина, документов, тем обучения, материалов, комментариев.
-- Стрим файлов: signed URL (`mobile.files.documents` / `mobile.files.training`) + `FileProxyService`, без сессии и без MinIO URL.
+- JSON для логина, документов, квизов, нарядов, телефонов, тем обучения, материалов, комментариев.
+- Стрим файлов: signed URL (`mobile.files.documents` / `mobile.files.training` / `mobile.files.naryads`) + `FileProxyService`, без сессии и без MinIO URL. Клиент не открывает PDF URL в WebView (это включает DownloadManager); байты читаются в приложении и рисуются PDF.js. Попытки screenshot/recording/download/share/print — `POST .../documents/{id}/violation`.
+- Квизы: `QuizService::playerData` / `grade` (без `is_correct` на клиенте). Наряды: личный TXT + общий PDF. Телефоны: `arm_personnel` (не уволенные, с номером).
 - Клиент: каталог `mobile/` (Expo). Не путать с web-группой (CSRF / device / barrier).
 - Привязка устройства на мобильном прототипе **не** включена.
 - Установщики (не браузер): `eas.json` профиль `preview` → APK/IPA с вшитым `EXPO_PUBLIC_API_URL`. Артефакты класть в `public/downloads/tch15-android.apk` и `tch15-ios.ipa`, страница `/install`.
@@ -159,7 +164,7 @@
 - CH-only мутации: смены `work_shift.saved`, подстройки `podstroika.*`, НСИ `nsi.*`, журнал `journal.*` + `normative_completed`, учёт `uchet.*`, печать `naryad.print` (лист, не partial), поиск инструктора `instructor_*`.
 - Artisan импорт/выгрузка: одно событие на прогон (`arm.import_dbf`, `arm.export_lsbuh`, `arm.golden_month`), `user_id=0` / `system`. Не логировать каждую строку DBF.
 - ActionLog: документы/обучение/квиз (`quiz_opened` после успешного `playerData`), комментарии/реакции, наряды (`view_naryad_personal`, `view_naryad_pdf`), bug-report, backstage.
-- Нарушения регламента: колонка `action_logs.is_violation` и `ActionLog::violation()`. Имя `violation_*` само ставит флаг. В ClickHouse флаг только в `details.is_violation` (схема `user_actions` не меняется). Клиентский `/api/actions/log` флаг не ставит. Стрим signed URL при 403 не логируется (Range). Алерты (`AdminNotification` / Telegram) — для скачивания, не для каждого отказа в просмотре.
+- Нарушения регламента: колонка `action_logs.is_violation` и `ActionLog::violation()`. Имя `violation_*` само ставит флаг. В ClickHouse флаг только в `details.is_violation` (схема `user_actions` не меняется). Клиентский `/api/actions/log` флаг не ставит. Стрим signed URL при 403 не логируется (Range). Алерты (`AdminNotification` / Telegram) — для скачивания и для мобильных попыток снимка/записи/шаринга/печати (`POST /api/mobile/documents/{document}/violation`), не для каждого отказа в просмотре. `DocumentReglamentService` — общая точка.
 
 ### Filament
 - Основная панель: `/admin` (`AdminPanelProvider`).
@@ -232,7 +237,7 @@ php artisan optimize:clear
 
 ---
 
-**Последнее обновление:** 2026-10-19 (журнал: реальная статистика; ClickHouseService::select)
+**Последнее обновление:** 2026-10-24 (мобильный API: квизы, наряды, телефоны, чтение PDF в приложении)
 
 Этот файл имеет высокий приоритет и будет автоматически подгружаться в контекст AI при работе в директории проекта.
 

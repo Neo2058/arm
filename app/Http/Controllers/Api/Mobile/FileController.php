@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Mobile;
 
 use App\Http\Controllers\Controller;
 use App\Models\Document;
+use App\Models\Naryad;
 use App\Models\TrainingMaterial;
 use App\Services\FileProxyService;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -19,6 +20,28 @@ class FileController extends Controller
     public function document(Document $document): StreamedResponse
     {
         $path = $document->file_path;
+        if (! $this->files->exists($path)) {
+            abort(404, 'Файл не найден');
+        }
+
+        $filename = pathinfo($path, PATHINFO_FILENAME).'.pdf';
+
+        return $this->files->respond($path, $filename, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.addslashes($filename).'"',
+            'Accept-Ranges' => 'bytes',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    public function naryad(Naryad $naryad): StreamedResponse
+    {
+        abort_unless($naryad->hasGeneralPdf(), 404);
+
+        $path = $naryad->file_path;
         if (! $this->files->exists($path)) {
             abort(404, 'Файл не найден');
         }

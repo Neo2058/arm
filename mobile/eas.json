@@ -8,7 +8,7 @@
       "distribution": "internal",
       "channel": "preview",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://xn---15-7edz.xn--p1ai/api/mobile"
+        "EXPO_PUBLIC_API_URL": "https://www.xn---15-7edz.xn--p1ai/api/mobile"
       },
       "android": {
         "buildType": "apk"
@@ -20,7 +20,7 @@
     "preview-sim": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://xn---15-7edz.xn--p1ai/api/mobile"
+        "EXPO_PUBLIC_API_URL": "https://www.xn---15-7edz.xn--p1ai/api/mobile"
       },
       "ios": {
         "simulator": true
@@ -30,7 +30,7 @@
       "distribution": "store",
       "channel": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://xn---15-7edz.xn--p1ai/api/mobile"
+        "EXPO_PUBLIC_API_URL": "https://www.xn---15-7edz.xn--p1ai/api/mobile"
       },
       "android": {
         "buildType": "app-bundle"

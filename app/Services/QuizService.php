@@ -18,7 +18,7 @@ class QuizService
         abort_if($quiz->document && ! $user->canAccessByRoles($quiz->document->allowed_roles), 403);
     }
 
-    public function playerData(Quiz $quiz, User $user): array
+    public function playerData(Quiz $quiz, User $user, string $fileRoute = 'documents.file'): array
     {
         $this->authorize($quiz, $user);
         $quiz->loadMissing('questions.answers', 'questions.references.document');
@@ -41,7 +41,8 @@ class QuizService
                     ->map(fn ($reference) => [
                         'anchor_text' => $reference->anchor_text,
                         'page' => $reference->page_number,
-                        'url' => $this->files->temporarySignedRoute('documents.file', 60, $reference->document_id),
+                        'document_id' => $reference->document_id,
+                        'url' => $this->files->temporarySignedRoute($fileRoute, 60, $reference->document_id),
                     ])->values()->all(),
             ])->values()->all(),
         ];
