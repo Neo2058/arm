@@ -72,7 +72,6 @@ curl_setopt_array($curl, [
 ]);
 $result = curl_exec($curl);
 $status = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
-curl_close($curl);
 if ($result === false || $status < 100) {
     http_response_code(502);
     echo json_encode(['ok' => false]);
