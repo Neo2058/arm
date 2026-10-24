@@ -276,7 +276,8 @@ export default function NaryadViewer({ naryads = [], isAdmin = false, userFileNa
                     });
                 }
                 const pdfjs = window.pdfjsLib;
-                const pdf = await pdfjs.getDocument(pdfUrl).promise;
+                // Disable PDF.js font-code evaluation (CVE-2024-4367).
+                const pdf = await pdfjs.getDocument({ url: pdfUrl, isEvalSupported: false }).promise;
                 if (!cancelled) {
                     setPdfDoc(pdf);
                     setNumPages(pdf.numPages);

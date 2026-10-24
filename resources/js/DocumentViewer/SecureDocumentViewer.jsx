@@ -587,7 +587,8 @@ export default function SecureDocumentViewer({
                 if (!response.ok) throw new Error('Failed to fetch document');
                 const arrayBuffer = await response.arrayBuffer();
 
-                const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+                // Disable PDF.js font-code evaluation (CVE-2024-4367).
+                const pdf = await pdfjs.getDocument({ data: arrayBuffer, isEvalSupported: false }).promise;
 
                 if (cancelled) return;
 
