@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Mobile\AuthController;
+use App\Http\Controllers\Api\Mobile\DisciplineController;
 use App\Http\Controllers\Api\Mobile\DocumentController;
 use App\Http\Controllers\Api\Mobile\FileController;
 use App\Http\Controllers\Api\Mobile\NaryadController;
@@ -45,5 +46,13 @@ Route::prefix('mobile')->group(function () {
         Route::get('/naryads/{naryad}', [NaryadController::class, 'show']);
 
         Route::get('/phones', [PhoneController::class, 'index']);
+
+        Route::get('/discipline', [DisciplineController::class, 'index']);
+        Route::get('/discipline/files/{file}', [DisciplineController::class, 'file'])->whereNumber('file');
+        Route::get('/discipline/{assignment}', [DisciplineController::class, 'show'])->whereNumber('assignment');
+        Route::get('/discipline/{assignment}/reports', [DisciplineController::class, 'reports'])->whereNumber('assignment');
+        Route::post('/discipline/{assignment}/read', [DisciplineController::class, 'read'])->whereNumber('assignment');
+        Route::post('/discipline/{assignment}/submit', [DisciplineController::class, 'submit'])->whereNumber('assignment')->middleware('throttle:20,1');
+
     });
 });

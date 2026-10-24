@@ -15,6 +15,9 @@ import QuizPlayScreen from './src/screens/QuizPlayScreen';
 import NaryadsScreen from './src/screens/NaryadsScreen';
 import NaryadViewScreen from './src/screens/NaryadViewScreen';
 import PhonesScreen from './src/screens/PhonesScreen';
+import DisciplineListScreen from './src/screens/DisciplineListScreen';
+import DisciplineDetailScreen from './src/screens/DisciplineDetailScreen';
+import DisciplineAttachmentScreen from './src/screens/DisciplineAttachmentScreen';
 import * as SecureStore from 'expo-secure-store';
 import { logout, me } from './src/api';
 
@@ -83,6 +86,16 @@ function NaryadsStack() {
   );
 }
 
+function DisciplineStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}>
+      <Stack.Screen name="DisciplineList" component={DisciplineListScreen} options={{ title: 'Поручения' }} />
+      <Stack.Screen name="DisciplineDetail" component={DisciplineDetailScreen} options={{ title: 'Карточка исполнения' }} />
+      <Stack.Screen name="DisciplineAttachment" component={DisciplineAttachmentScreen} options={({ route }) => ({ title: route.params.file.name })} />
+    </Stack.Navigator>
+  );
+}
+
 function MainTabs({ user, onLogout }) {
   return (
     <Tab.Navigator
@@ -91,8 +104,10 @@ function MainTabs({ user, onLogout }) {
         tabBarStyle: { backgroundColor: '#0b1018', borderTopColor: '#1f2937' },
         tabBarActiveTintColor: '#fb923c',
         tabBarInactiveTintColor: '#6b7280',
+        tabBarLabelStyle: user.role === 'instructor' ? { fontSize: 10 } : undefined,
       }}
     >
+      {user.role === 'instructor' && <Tab.Screen name="DisciplineTab" component={DisciplineStack} options={{ title: 'Поручения' }} />}
       <Tab.Screen name="DocsTab" component={DocumentsStack} options={{ title: 'Документы' }} />
       <Tab.Screen name="QuizTab" component={QuizzesStack} options={{ title: 'Тесты' }} />
       <Tab.Screen name="NaryadTab" component={NaryadsStack} options={{ title: 'Наряды' }} />
@@ -148,6 +163,7 @@ export default function App() {
       <StatusBar style="light" />
       {user ? (
         <MainTabs
+          key={String(user.id)}
           user={user}
           onLogout={async () => {
             await logout();

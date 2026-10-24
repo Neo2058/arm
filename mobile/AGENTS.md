@@ -8,3 +8,6 @@ Document reading uses PDF.js inside WebView from fetched bytes — never `WebVie
 Tabs: documents, quizzes (`QuizService` on the server), naryads (personal TXT + in-app PDF), training, profile. Phone book is `GET /phones` from `arm_personnel`.
 Native dependency changes require a new APK and an install/start smoke test; JS export alone is insufficient.
 Preserve local native signing configuration when regenerating ignored android/ios directories.
+
+
+Discipline: instructor-only tab, shared Laravel DisciplineService behind Sanctum routes. See DISCIPLINE.md. Keep one frozen operation UUID, version, response and file list on uncertain network errors; never silently replace the request on retry. The current implementation keeps it in memory only; persistent drafts/offline queue are a separate stage. Files use token-authenticated byte requests and in-app viewing, not public MinIO URLs. DocumentPicker/Crypto match SDK 57 and require a new native binary.

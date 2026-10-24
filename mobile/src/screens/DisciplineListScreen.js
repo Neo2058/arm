@@ -1,0 +1,72 @@
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, AppState, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { listAssignments } from '../discipline/api';
+import { LABELS, errorMessage } from '../discipline/contract.cjs';
+import s from '../discipline/styles';
+
+export default function DisciplineListScreen({ navigation }) {
+  const [items, setItems] = useState([]);
+  const [status, setStatus] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [unread, setUnread] = useState(0);
+  const [nextPage, setNextPage] = useState(null);
+  const active = useRef(null);
+
+  useFocusEffect(useCallback(() => {
+    const controller = new AbortController();
+    active.current = { controller, busy: false };
+    const refresh = async () => {
+      if (active.current?.controller !== controller || active.current.busy) return;
+      active.current.busy = true;
+      setBusy(true);
+      try {
+        const data = await listAssignments(1, status, controller.signal);
+        if (controller.signal.aborted) return;
+        setItems(data.assignments); setNextPage(data.pagination.next_page); setUnread(data.unread_count); setError('');
+      } catch (e) { if (!controller.signal.aborted) setError(errorMessage(e)); }
+      finally {
+        if (!controller.signal.aborted) { active.current.busy = false; setBusy(false); setLoading(false); }
+      }
+    };
+    active.current.refresh = refresh;
+    refresh();
+    const timer = setInterval(() => { if (AppState.currentState === 'active') refresh(); }, 30000);
+    const sub = AppState.addEventListener('change', state => { if (state === 'active') refresh(); });
+    return () => { controller.abort(); clearInterval(timer); sub.remove(); };
+  }, [status]));
+
+  const more = async () => {
+    const request = active.current;
+    if (!request || request.busy || !nextPage) return;
+    request.busy = true; setBusy(true);
+    try {
+      const data = await listAssignments(nextPage, status, request.controller.signal);
+      if (request.controller.signal.aborted) return;
+      setItems(old => [...old, ...data.assignments.filter(item => !old.some(x => x.id === item.id))]);
+      setNextPage(data.pagination.next_page); setUnread(data.unread_count); setError('');
+    } catch (e) { if (!request.controller.signal.aborted) setError(errorMessage(e)); }
+    finally { if (!request.controller.signal.aborted) { request.busy = false; setBusy(false); } }
+  };
+  if (loading) return <View style={s.center}><ActivityIndicator color="#fb923c" /></View>;
+  return <FlatList style={s.page} contentContainerStyle={s.content} data={items} keyExtractor={item => item.id}
+    refreshControl={<RefreshControl tintColor="#fb923c" refreshing={busy} onRefresh={() => active.current?.refresh()} />}
+    ListHeaderComponent={<View style={{ gap: 12 }}>
+      <Text style={s.title}>Поручения руководителя</Text>
+      <Text style={s.muted}>Непрочитанных событий: {unread}. Обновление каждые 30 секунд при открытом разделе.</Text>
+      <View style={s.row}>{[['', 'Все'], ...Object.entries(LABELS)].map(([key, label]) => <Pressable key={key} accessibilityRole="button" accessibilityState={{ selected: status === key }} onPress={() => setStatus(key)} style={[s.chip, status === key && s.selected]}><Text style={s.body}>{label}</Text></Pressable>)}</View>
+      {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
+      {!!error && <Pressable style={s.secondary} onPress={() => active.current?.refresh()}><Text style={s.buttonText}>Повторить загрузку</Text></Pressable>}
+    </View>}
+    ListEmptyComponent={<Text style={s.muted}>{error ? 'Данные не обновлены.' : 'Поручений в этом разделе пока нет.'}</Text>}
+    renderItem={({ item }) => <Pressable style={s.card} onPress={() => navigation.navigate('DisciplineDetail', { id: item.id })} accessibilityRole="button">
+      <Text style={s.heading}>{item.unread ? '● ' : ''}{item.title}</Text>
+      <Text style={s.accent}>{item.status_label}</Text>
+      <Text style={s.muted}>Срок: {item.due_date.split('-').reverse().join('.')} · {item.author.name}</Text>
+      {item.is_overdue && <Text style={s.error}>Просрочено</Text>}
+    </Pressable>}
+    ListFooterComponent={nextPage ? <Pressable style={[s.secondary, busy && s.disabled]} disabled={busy} onPress={more}><Text style={s.buttonText}>Загрузить ещё</Text></Pressable> : null}
+  />;
+}

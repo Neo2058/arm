@@ -257,3 +257,12 @@ php artisan optimize:clear
 - Новые события `discipline.create|submit|review` идут через ClickHouseService после COMMIT; отказ аналитики не отменяет поручение.
 - MinIO: приватный префикс `discipline/`, выдача через FileProxyService после проверки доступа, скачивание без inline-просмотра. Антивирус обязателен, при недоступности — 503. Compose overlay `docker-compose.discipline.yml` добавляет ClamAV к production-сети backend.
 - Тесты: `DisciplineTest`, `DisciplineScannerTest`; реальные гонки PostgreSQL — `tests/Support/discipline-concurrency.php`, только изолированная база `arm_discipline_test_*`.
+
+
+## Мобильная исполнительская дисциплина (24 октября 2026)
+
+- `Api/Mobile/DisciplineController`: только текущая роль instructor, только свои исполнения; Sanctum + EnsureActiveApiUser обязательны.
+- `/api/mobile/discipline`: список/карточка/история/прочтение/сдача; файлы через `/discipline/files/{file}` с токеном и новой проверкой доступа, без публичных MinIO/signed URL.
+- Сдача только через общий DisciplineService, те же версии, UUID операций, лимиты и антивирус. Новых таблиц и отдельного обхода проверки нет.
+- Мобильные экраны: DisciplineListScreen / DisciplineDetailScreen / DisciplineAttachmentScreen. Долговременные черновики и офлайн-очередь — отдельный следующий этап; текущий зафиксированный повтор хранится в памяти.
+- Документация: `mobile/DISCIPLINE.md`; тесты `MobileDisciplineTest`, `mobile/tests/discipline.test.cjs`.

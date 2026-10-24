@@ -1,6 +1,6 @@
 {
   "name": "mobile",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "main": "index.js",
   "dependencies": {
     "@react-navigation/bottom-tabs": "^7.19.2",
@@ -11,6 +11,8 @@
     "expo-asset": "57.0.19",
     "expo-audio": "~57.0.5",
     "expo-constants": "~57.0.19",
+    "expo-crypto": "~57.0.4",
+    "expo-document-picker": "~57.0.3",
     "expo-linking": "~57.0.10",
     "expo-screen-capture": "~57.0.4",
     "expo-secure-store": "~57.0.4",

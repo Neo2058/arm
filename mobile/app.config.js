@@ -7,7 +7,7 @@ export default {
   expo: {
     name: 'ТЧ-15',
     slug: 'arm-mobile',
-    version: '1.0.4',
+    version: '1.0.5',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
@@ -20,7 +20,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'ru.tch15.arm',
-      buildNumber: '5',
+      buildNumber: '6',
       infoPlist: {
         NSAppTransportSecurity: isHttp
           ? { NSAllowsLocalNetworking: true, NSAllowsArbitraryLoads: true }
@@ -30,7 +30,7 @@ export default {
     },
     android: {
       package: 'ru.tch15.arm',
-      versionCode: 5,
+      versionCode: 6,
       usesCleartextTraffic: isHttp,
       adaptiveIcon: {
         backgroundColor: '#0b1018',

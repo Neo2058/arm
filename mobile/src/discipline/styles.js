@@ -1,0 +1,22 @@
+import { StyleSheet } from 'react-native';
+export default StyleSheet.create({
+  page: { flex: 1, backgroundColor: '#0b1018' },
+  content: { padding: 16, paddingBottom: 48, gap: 12 },
+  center: { flex: 1, backgroundColor: '#0b1018', justifyContent: 'center', alignItems: 'center', padding: 24, gap: 16 },
+  card: { backgroundColor: '#151b24', borderColor: '#283241', borderWidth: 1, borderRadius: 16, padding: 16, gap: 10 },
+  title: { color: '#fff', fontSize: 20, fontWeight: '700' },
+  heading: { color: '#fff', fontSize: 17, fontWeight: '700' },
+  body: { color: '#e5e7eb', fontSize: 15, lineHeight: 22 },
+  muted: { color: '#9ca3af', fontSize: 13, lineHeight: 19 },
+  accent: { color: '#fb923c', fontWeight: '700' },
+  error: { color: '#fca5a5', lineHeight: 21 },
+  success: { color: '#86efac', lineHeight: 21 },
+  input: { minHeight: 140, borderWidth: 1, borderColor: '#4b5563', borderRadius: 12, padding: 12, color: '#fff', backgroundColor: '#0b1018', textAlignVertical: 'top' },
+  button: { backgroundColor: '#c2410c', padding: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
+  secondary: { backgroundColor: '#253041', padding: 12, borderRadius: 12, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
+  disabled: { opacity: 0.5 },
+  buttonText: { color: '#fff', fontWeight: '700', textAlign: 'center' },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
+  chip: { padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#4b5563' },
+  selected: { borderColor: '#fb923c', backgroundColor: '#3b2115' },
+});
