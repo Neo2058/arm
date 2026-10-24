@@ -264,5 +264,5 @@ php artisan optimize:clear
 - `Api/Mobile/DisciplineController`: только текущая роль instructor, только свои исполнения; Sanctum + EnsureActiveApiUser обязательны.
 - `/api/mobile/discipline`: список/карточка/история/прочтение/сдача; файлы через `/discipline/files/{file}` с токеном и новой проверкой доступа, без публичных MinIO/signed URL.
 - Сдача только через общий DisciplineService, те же версии, UUID операций, лимиты и антивирус. Новых таблиц и отдельного обхода проверки нет.
-- Мобильные экраны: DisciplineListScreen / DisciplineDetailScreen / DisciplineAttachmentScreen. Долговременные черновики и офлайн-очередь — отдельный следующий этап; текущий зафиксированный повтор хранится в памяти.
+- Мобильные экраны: DisciplineListScreen / DisciplineDetailScreen / DisciplineAttachmentScreen. Долговременные черновики и офлайн-очередь: mobile/src/discipline/queue.cjs + storage.js, приватное хранилище по API/user id; запись до отправки, тот же UUID после перезапуска. Повторы только в активном приложении. Повторный вход сохраняет очередь, выход удаляет текущий scope.
 - Документация: `mobile/DISCIPLINE.md`; тесты `MobileDisciplineTest`, `mobile/tests/discipline.test.cjs`.

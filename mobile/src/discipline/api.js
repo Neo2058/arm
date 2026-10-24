@@ -13,9 +13,9 @@ export async function getReports(id, page) {
 export async function markRead(id) {
   await client.post(`/discipline/${encodeURIComponent(id)}/read`);
 }
-export async function submitReport(snapshot) {
+export async function submitReport(snapshot, signal) {
   return (await client.post(`/discipline/${encodeURIComponent(snapshot.assignmentId)}/submit`, multipart(snapshot), {
-    headers: { 'Content-Type': 'multipart/form-data' }, timeout: 360000,
+    headers: { 'Content-Type': 'multipart/form-data' }, timeout: 360000, signal,
   })).data;
 }
 export async function getAttachment(id) {

@@ -24,7 +24,7 @@ export default function LoginScreen({ onLoggedIn }) {
     setLoading(true);
     try {
       const user = await login(email.trim(), password);
-      onLoggedIn(user);
+      await onLoggedIn(user);
     } catch (e) {
       setError(loginErrorMessage(e));
     } finally {

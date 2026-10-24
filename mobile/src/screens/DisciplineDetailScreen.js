@@ -3,9 +3,10 @@ import { ActivityIndicator, Alert, AppState, KeyboardAvoidingView, Platform, Pre
 import { useFocusEffect } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Crypto from 'expo-crypto';
-import { getAssignment, getReports, markRead, submitReport } from '../discipline/api';
-import { CATEGORIES, LIMITS, TYPES, errorMessage, freezeSubmission, validateDraft, validateFiles } from '../discipline/contract.cjs';
+import { getAssignment, getReports, markRead } from '../discipline/api';
+import { CATEGORIES, LIMITS, TYPES, errorMessage, validateFiles } from '../discipline/contract.cjs';
 import s from '../discipline/styles';
+import { useDiscipline } from '../discipline/context';
 
 const dateTime = value => value ? new Date(value).toLocaleString('ru-RU') : '';
 function mergeInfo(old, fresh) {
@@ -16,32 +17,34 @@ function mergeInfo(old, fresh) {
 
 export default function DisciplineDetailScreen({ route, navigation }) {
   const id = String(route.params.id);
-  const [info, setInfo] = useState(null);
+  const { queue, state } = useDiscipline();
+  const entry = state.entries[id];
+  const info = entry?.info;
+  const response = entry?.response || '';
+  const files = entry?.files || [];
+  const pending = entry?.pending;
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
-  const [response, setResponse] = useState('');
-  const [files, setFiles] = useState([]);
-  const [pending, setPending] = useState(null);
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [historyBusy, setHistoryBusy] = useState(false);
+  const [offline, setOffline] = useState(false);
   const active = useRef(null);
-  const pendingRef = useRef(null);
-  const inFlight = useRef(false);
 
   useFocusEffect(useCallback(() => {
     const controller = new AbortController();
     active.current = { controller, busy: false, sequence: 0 };
     const refresh = async () => {
       const request = active.current;
-      if (request?.controller !== controller || request.busy || inFlight.current) return;
+      if (request?.controller !== controller || request.busy) return;
       request.busy = true; const sequence = ++request.sequence; setRefreshing(true);
       try {
         const data = await getAssignment(id, controller.signal);
         if (controller.signal.aborted || sequence !== request.sequence) return;
-        setInfo(old => mergeInfo(old, { ...data, reports_pagination: old && old.reports[0]?.id === data.reports[0]?.id ? old.reports_pagination : data.reports_pagination })); setError('');
+        const old = queue.snapshot().entries[id]?.info;
+        await queue.cache(mergeInfo(old, { ...data, reports_pagination: old && old.reports[0]?.id === data.reports[0]?.id ? old.reports_pagination : data.reports_pagination }));
+        setError(''); setOffline(false);
         markRead(id).catch(() => {});
-      } catch (e) { if (!controller.signal.aborted) setError(errorMessage(e)); }
+      } catch (e) { if (!controller.signal.aborted) { setError(errorMessage(e)); setOffline(true); } }
       finally { if (!controller.signal.aborted) { request.busy = false; setRefreshing(false); } }
     };
     active.current.refresh = refresh;
@@ -49,10 +52,10 @@ export default function DisciplineDetailScreen({ route, navigation }) {
     const timer = setInterval(() => { if (AppState.currentState === 'active') refresh(); }, 30000);
     const sub = AppState.addEventListener('change', state => { if (state === 'active') refresh(); });
     return () => { controller.abort(); clearInterval(timer); sub.remove(); };
-  }, [id]));
+  }, [id, queue]));
 
   const chooseFiles = async category => {
-    if (pendingRef.current || inFlight.current) return;
+    if (pending) return;
     try {
       const result = await DocumentPicker.getDocumentAsync({ type: Object.keys(TYPES), multiple: true, copyToCacheDirectory: true });
       if (result.canceled || active.current?.controller.signal.aborted) return;
@@ -63,44 +66,32 @@ export default function DisciplineDetailScreen({ route, navigation }) {
       const next = [...files, ...chosen];
       const message = validateFiles(next, info.limits || LIMITS);
       if (message) { Alert.alert('Проверьте приложения', message); return; }
-      setFiles(next); setNotice('');
+      await queue.addFiles(id, chosen);
     } catch { Alert.alert('Выбор файла', 'Не удалось прочитать выбранный файл. Повторите выбор.'); }
   };
 
   const send = async () => {
-    if (inFlight.current) return;
-    if (!pendingRef.current) {
-      const message = validateDraft(info.assignment, response, files, info.limits || LIMITS);
-      if (message) { setError(message); return; }
-      pendingRef.current = freezeSubmission(info.assignment, response, files, Crypto.randomUUID());
-      setPending(pendingRef.current);
-    }
-    const snapshot = pendingRef.current;
-    inFlight.current = true; setSending(true); setError(''); setNotice('');
-    // A refresh started before submission must not overwrite its newer result.
-    if (active.current) active.current.sequence += 1;
+    if (sending) return;
+    setSending(true); setError('');
     try {
-      const data = await submitReport(snapshot);
-      setInfo(old => mergeInfo(old, data)); setResponse(''); setFiles([]);
-      pendingRef.current = null; setPending(null);
-      setNotice('Отчёт получен сервером. Он будет завершён после принятия руководителем.');
-    } catch (e) {
-      setError(errorMessage(e));
-      if ([409, 412, 413, 422].includes(e?.response?.status)) {
-        pendingRef.current = null; setPending(null);
-        try { const fresh = await getAssignment(id); setInfo(old => mergeInfo(old, fresh)); } catch { /* preserve the local response */ }
-      }
-    } finally {
-      inFlight.current = false; setSending(false);
-    }
+      if (pending) await queue.retry(id); else await queue.enqueue(id);
+      await queue.flush();
+    } catch (e) { setError(e.message || 'Не удалось сохранить отправку на устройстве.'); }
+    finally { setSending(false); }
   };
+  const unlock = async () => {
+    try { await queue.cache(await getAssignment(id)); await queue.unlock(id); setError(''); }
+    catch (e) { setError(errorMessage(e)); }
+  };
+  const edit = async value => { try { await queue.edit(id, value); } catch { setError('Не удалось сохранить черновик. Повторите ввод.'); } };
+  const remove = async fileId => { try { await queue.removeFile(id, fileId); } catch { setError('Не удалось сохранить изменение вложений.'); } };
 
   const moreHistory = async () => {
     if (historyBusy || !info?.reports_pagination.next_page) return;
     setHistoryBusy(true);
     try {
       const next = await getReports(id, info.reports_pagination.next_page);
-      setInfo(old => mergeInfo(old, next));
+      await queue.cache(mergeInfo(queue.snapshot().entries[id]?.info, next));
     } catch (e) { setError(errorMessage(e)); }
     finally { setHistoryBusy(false); }
   };
@@ -118,15 +109,19 @@ export default function DisciplineDetailScreen({ route, navigation }) {
         <Text style={s.muted}>Обязательно: {[a.requirements.require_response && 'текстовый ответ', a.requirements.require_report_file && 'файл отчёта', a.requirements.require_explanation_file && 'файл объяснения'].filter(Boolean).join(', ') || 'подтверждение выполнения'}.</Text>
       </View>
       {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
-      {!!notice && <Text accessibilityRole="alert" style={s.success}>{notice}</Text>}
+      {offline && <Text style={s.muted}>Сохранённая копия. Данные будут обновлены при восстановлении связи.</Text>}
+      {!!entry?.error && <Text style={s.error}>{entry.error}</Text>}
+      {entry?.status === 'sent' && a.status === 'in_review' && <Text style={s.success}>Отчёт получен сервером. Ожидайте решения руководителя.</Text>}
+      {entry?.status === 'queued' && <Text style={s.muted}>Отчёт сохранён в очереди. Автоматический повтор при доступном интернете, пока приложение открыто.</Text>}
+      {entry?.status === 'draft' && <Text style={s.muted}>Черновик сохраняется на этом устройстве.</Text>}
       {(editable || pending) && <View style={s.card}>
         <Text style={s.heading}>Отправить отчёт</Text>
-        <TextInput accessibilityLabel="Текст отчёта" placeholder="Опишите выполненную работу" placeholderTextColor="#9ca3af" style={s.input} value={response} onChangeText={setResponse} multiline maxLength={20000} editable={!pending && !sending} />
+        <TextInput accessibilityLabel="Текст отчёта" placeholder="Опишите выполненную работу" placeholderTextColor="#9ca3af" style={s.input} key={pending?.operation_id || (entry.status === 'sent' ? 'sent' : 'draft')} defaultValue={response} onChangeText={edit} multiline maxLength={20000} editable={!pending && !sending} />
         <Text style={s.muted}>PDF, JPEG, PNG. До 10 МиБ на файл, максимум пять файлов и 25 МиБ суммарно.</Text>
         {Object.entries(CATEGORIES).map(([category, label]) => <Pressable key={category} style={[s.secondary, !!pending && s.disabled]} disabled={!!pending || sending} onPress={() => chooseFiles(category)}><Text style={s.buttonText}>+ {label}</Text></Pressable>)}
-        {files.map(file => <View key={file.id} style={s.card}><Text style={s.body}>{CATEGORIES[file.category]}: {file.name}</Text><Text style={s.muted}>{(file.size / 1048576).toFixed(2)} МиБ</Text>{!pending && <Pressable accessibilityRole="button" onPress={() => setFiles(old => old.filter(f => f.id !== file.id))}><Text style={s.accent}>Убрать</Text></Pressable>}</View>)}
-        {!!pending && <Text style={s.muted}>Содержимое запроса зафиксировано до ответа сервера. Повтор проверит ту же отправку без дубликата. До подтверждения не закрывайте приложение.</Text>}
-        <Pressable accessibilityRole="button" style={[s.button, sending && s.disabled]} disabled={sending} onPress={send}>{sending ? <ActivityIndicator color="#fff" /> : <Text style={s.buttonText}>{pending ? 'Повторить ту же отправку' : 'Отправить на проверку'}</Text>}</Pressable>
+        {files.map(file => <View key={file.id} style={s.card}><Text style={s.body}>{CATEGORIES[file.category]}: {file.name}</Text><Text style={s.muted}>{(file.size / 1048576).toFixed(2)} МиБ</Text>{!pending && <Pressable accessibilityRole="button" onPress={() => remove(file.id)}><Text style={s.accent}>Убрать</Text></Pressable>}</View>)}
+        {!!pending && <Text style={s.muted}>Содержимое запроса зафиксировано до ответа сервера. Повтор проверит ту же отправку без дубликата. Запрос сохранён на устройстве и восстановится после перезапуска.</Text>}
+        {entry?.status === 'blocked' && [409, 412, 413, 422].includes(entry.httpStatus) ? <Pressable style={s.button} onPress={unlock}><Text style={s.buttonText}>Обновить карточку и исправить отчёт</Text></Pressable> : <Pressable accessibilityRole="button" style={[s.button, sending && s.disabled]} disabled={sending} onPress={send}>{sending ? <ActivityIndicator color="#fff" /> : <Text style={s.buttonText}>{pending ? 'Повторить ту же отправку' : 'Сохранить и отправить'}</Text>}</Pressable>}
       </View>}
       <Text style={s.heading}>История отчётов</Text>
       {!info.reports.length && <Text style={s.muted}>Отчёты ещё не отправлялись.</Text>}

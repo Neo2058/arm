@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -19,7 +19,8 @@ import DisciplineListScreen from './src/screens/DisciplineListScreen';
 import DisciplineDetailScreen from './src/screens/DisciplineDetailScreen';
 import DisciplineAttachmentScreen from './src/screens/DisciplineAttachmentScreen';
 import * as SecureStore from 'expo-secure-store';
-import { logout, me } from './src/api';
+import { API_URL, logout, me } from './src/api';
+import { DisciplineProvider, clearDisciplineData } from './src/discipline/context';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -96,7 +97,7 @@ function DisciplineStack() {
   );
 }
 
-function MainTabs({ user, onLogout }) {
+function MainTabs({ user, onLogout, onReauthenticate }) {
   return (
     <Tab.Navigator
       screenOptions={{
@@ -121,6 +122,8 @@ function MainTabs({ user, onLogout }) {
             <Text style={styles.name}>{user.name}</Text>
             <Text style={styles.meta}>{user.email}</Text>
             <Text style={styles.meta}>Роль: {user.role}</Text>
+            <Pressable style={styles.logout} onPress={onReauthenticate}><Text style={styles.logoutText}>Войти заново без удаления черновиков</Text></Pressable>
+            <Text style={styles.meta}>При выходе черновики и очередь этого пользователя удаляются с устройства.</Text>
             <Pressable style={styles.logout} onPress={onLogout}>
               <Text style={styles.logoutText}>Выйти</Text>
             </Pressable>
@@ -132,6 +135,7 @@ function MainTabs({ user, onLogout }) {
 }
 
 export default function App() {
+  const [reauth, setReauth] = useState(false);
   const [boot, setBoot] = useState(true);
   const [user, setUser] = useState(null);
 
@@ -140,7 +144,15 @@ export default function App() {
       try {
         const token = await SecureStore.getItemAsync('token');
         if (token) {
-          setUser(await me());
+          try {
+            const fresh = await me();
+            await SecureStore.setItemAsync('disciplineIdentity', JSON.stringify({ server: API_URL, user: fresh }));
+            setUser(fresh);
+          } catch (error) {
+            if (error.response) throw error;
+            const saved = JSON.parse(await SecureStore.getItemAsync('disciplineIdentity') || 'null');
+            if (saved?.server === API_URL && saved.user?.role === 'instructor') setUser({ ...saved.user, _offline: true });
+          }
         }
       } catch {
         setUser(null);
@@ -161,17 +173,25 @@ export default function App() {
   return (
     <NavigationContainer theme={navTheme}>
       <StatusBar style="light" />
-      {user ? (
-        <MainTabs
+      {user && !reauth ? (
+        <DisciplineProvider key={String(user.id)} user={user}><MainTabs
           key={String(user.id)}
           user={user}
+          onReauthenticate={() => setReauth(true)}
           onLogout={async () => {
-            await logout();
-            setUser(null);
+            try {
+              await clearDisciplineData();
+              await SecureStore.deleteItemAsync('disciplineIdentity');
+              await logout();
+              setUser(null);
+            } catch { Alert.alert('Выход', 'Не удалось очистить локальные черновики. Повторите выход.'); }
           }}
-        />
+        /></DisciplineProvider>
       ) : (
-        <LoginScreen onLoggedIn={setUser} />
+        <LoginScreen onLoggedIn={async fresh => {
+          await SecureStore.setItemAsync('disciplineIdentity', JSON.stringify({ server: API_URL, user: fresh }));
+          setUser(fresh); setReauth(false);
+        }} />
       )}
     </NavigationContainer>
   );
