@@ -42,3 +42,4 @@ yarn-error.*
 
 # Reviewed local installer artifacts
 /artifacts/
+__pycache__/

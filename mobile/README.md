@@ -65,6 +65,20 @@ bash scripts/publish-installers.sh ~/Downloads/*.apk
 # → public/downloads/tch15-android.apk
 ```
 
+Публикация требует Python 3.8+, Java и Android SDK build-tools (`apksigner`, `aapt` через PATH
+или `ANDROID_HOME`/`ANDROID_SDK_ROOT`; на macOS также ищется стандартный каталог SDK).
+Для Java Android Studio можно задать `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`.
+Проверяются подпись закреплённого release-сертификата, пакет, versionCode и отсутствие debug/testOnly.
+Понижение версии и другой APK с тем же versionCode отклоняются. Идентичная повторная публикация безопасна.
+Сначала проверяется временная копия, затем файл заменяется атомарно. Предыдущий APK сохраняется
+в `installer-backups/` корня проекта (вне public), метаданные — `public/downloads/release-<sha256>.json`.
+Поле publisher_git_commit обозначает checkout публикации, а не доказательство происхождения сборки.
+Если инструментов нет, скрипт отказывает в публикации, а не пропускает проверку.
+При аварийном завершении возможен `.publish-installers.lock`: сначала убедитесь, что публикация не работает,
+затем разберите причину сбоя; автоматически удалять чужой lock нельзя.
+Смена сертификата требует отдельного согласованного изменения закреплённого fingerprint и плана миграции.
+Для изолированной проверки используется `--destination /tmp/arm-publish-check/public/downloads`.
+
 Сотрудник открывает `https://тч-15.рф/install` → «Скачать APK» → разрешить установку из этого источника.
 
 Локальная сборка через Android Studio возможна (`npx expo prebuild -p android`), но для прототипа не нужна.
@@ -84,6 +98,9 @@ npm run build:ios
 bash scripts/publish-installers.sh ~/Downloads/*.ipa
 # → public/downloads/tch15-ios.ipa
 ```
+
+Для IPA проверяется структура архива и bundle identifier, замена также атомарная.
+Проверка Apple-подписи этим скриптом **не выполняется**; она остаётся отдельным шагом iOS-релиза.
 
 На iPhone кнопка `/install` открывает системный установщик (`itms-services`), не сайт в Safari.
 

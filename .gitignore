@@ -27,3 +27,5 @@ Thumbs.db
 
 # Server-specific runtime image pins
 /docker-compose.discipline.runtime.yml
+/installer-backups/
+/public/downloads/release-*.json
