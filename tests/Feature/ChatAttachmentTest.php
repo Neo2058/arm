@@ -77,6 +77,9 @@ class ChatAttachmentTest extends TestCase
         Bus::assertDispatched(ProcessChatAttachment::class, function (ProcessChatAttachment $job) use ($id, $room) {
             return $job->messageId === $id
                 && $job->pendingRelativePath === 'chat-pending/'.$room->id.'/'.$id
+                && $job->originalName === 'photo.jpg'
+                && $job->mime === 'image/jpeg'
+                && $job->caption === 'подпись'
                 && $job->connection === 'database'
                 && $job->queue === 'chat'
                 && $job->tries === 3

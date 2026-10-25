@@ -253,12 +253,6 @@ class ChatService
         UploadedFile $file,
         string $body = '',
     ): array {
-        if ($type !== ChatMessageType::IMAGE && $type !== ChatMessageType::PDF) {
-            throw ValidationException::withMessages([
-                'type' => 'Допустимы только фото и PDF.',
-            ]);
-        }
-
         $validated = $this->assertUpload($type, $file);
         $fingerprint = $this->fingerprint($type->value, $body, $validated['sha256']);
 
@@ -305,17 +299,18 @@ class ChatService
                             fclose($stream);
                         }
                     }
-                    Storage::disk('local')->put($relative.'.meta', json_encode([
-                        'original_name' => $validated['name'],
-                        'mime' => $validated['mime'],
-                        'size' => $validated['size'],
-                        'sha256' => $validated['sha256'],
-                        'caption' => $body,
-                    ], JSON_UNESCAPED_UNICODE));
-                    ProcessChatAttachment::dispatch($message->id, $relative, $validated['sha256']);
+                    ProcessChatAttachment::dispatch(
+                        $message->id,
+                        $relative,
+                        $validated['sha256'],
+                        $validated['name'],
+                        $validated['mime'],
+                        $validated['size'],
+                        $body,
+                    );
                 } catch (UniqueConstraintViolationException) {
                     if ($relative !== null) {
-                        Storage::disk('local')->delete([$relative, $relative.'.meta']);
+                        Storage::disk('local')->delete($relative);
                     }
                     $existing = ChatMessage::query()
                         ->where('room_id', $room->id)
@@ -330,7 +325,7 @@ class ChatService
                     abort(409, 'Этот client_id уже использован с другим содержимым.');
                 } catch (\Throwable $e) {
                     if ($relative !== null) {
-                        Storage::disk('local')->delete([$relative, $relative.'.meta']);
+                        Storage::disk('local')->delete($relative);
                     }
                     throw $e;
                 }

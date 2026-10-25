@@ -1,4 +1,4 @@
-# Overlay к prod + discipline. Не второй image, не брокер.
+# Overlay to docker-compose.prod.yml + docker-compose.discipline.yml.
 services:
   chat-worker:
     image: ${DISCIPLINE_APP_IMAGE:-arm-app}

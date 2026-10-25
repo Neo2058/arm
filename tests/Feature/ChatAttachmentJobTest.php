@@ -47,7 +47,7 @@ class ChatAttachmentJobTest extends TestCase
     public function test_job_is_configured_for_database_chat_queue(): void
     {
         [$message, $relative, $sha] = $this->queued();
-        $job = new ProcessChatAttachment($message->id, $relative, $sha);
+        $job = $this->job($message, $relative, $sha);
 
         $this->assertSame('database', $job->connection);
         $this->assertSame('chat', $job->queue);
@@ -56,7 +56,15 @@ class ChatAttachmentJobTest extends TestCase
         $this->assertSame([10, 60], $job->backoff());
         $this->assertTrue($job->afterCommit);
 
-        ProcessChatAttachment::dispatch($message->id, $relative, $sha);
+        ProcessChatAttachment::dispatch(
+            $message->id,
+            $relative,
+            $sha,
+            'photo.jpg',
+            'image/jpeg',
+            (int) Storage::disk('local')->size($relative),
+            '',
+        );
 
         $this->assertGreaterThan(0, DB::table('jobs')->where('queue', 'chat')->count());
         $payload = json_decode((string) DB::table('jobs')->where('queue', 'chat')->value('payload'), true);
@@ -71,7 +79,7 @@ class ChatAttachmentJobTest extends TestCase
         $scanner = \Mockery::mock(ClamAvScanner::class);
         $scanner->shouldReceive('scan')->once();
 
-        (new ProcessChatAttachment($message->id, $relative, $sha))
+        $this->job($message, $relative, $sha, 'с пути')
             ->handle($scanner, app(ChatCrypto::class));
 
         $fresh = $message->fresh();
@@ -85,7 +93,6 @@ class ChatAttachmentJobTest extends TestCase
         $this->assertTrue(str_starts_with($attachment->path, 'chat/'.$message->room_id.'/'));
         Storage::disk('s3')->assertExists($attachment->path);
         Storage::disk('local')->assertMissing($relative);
-        Storage::disk('local')->assertMissing($relative.'.meta');
         $this->assertSame($user->id, $fresh->sender_id);
     }
 
@@ -97,7 +104,7 @@ class ChatAttachmentJobTest extends TestCase
             ValidationException::withMessages(['file' => 'Вложение отклонено антивирусом.']),
         );
 
-        (new ProcessChatAttachment($message->id, $relative, $sha))
+        $this->job($message, $relative, $sha)
             ->handle($scanner, app(ChatCrypto::class));
 
         $this->assertSame(ChatMessageStatus::REJECTED, $message->fresh()->status);
@@ -114,7 +121,7 @@ class ChatAttachmentJobTest extends TestCase
         $scanner->shouldReceive('scan')->once()->andThrow(
             new HttpException(503, 'Антивирус недоступен. Повторите отправку позже.'),
         );
-        $job = new ProcessChatAttachment($message->id, $relative, $sha);
+        $job = $this->job($message, $relative, $sha);
 
         try {
             $job->handle($scanner, app(ChatCrypto::class));
@@ -130,6 +137,23 @@ class ChatAttachmentJobTest extends TestCase
         $job->failed(new HttpException(503, 'Антивирус недоступен. Повторите отправку позже.'));
 
         $this->assertSame(ChatMessageStatus::REJECTED, $message->fresh()->status);
+        $this->assertSame(0, ChatAttachment::query()->count());
+        $this->assertSame([], Storage::disk('s3')->allFiles());
+        Storage::disk('local')->assertMissing($relative);
+    }
+
+    public function test_handle_skips_non_queued_and_unlinks_pending(): void
+    {
+        [$message, $relative, $sha] = $this->queued();
+        $message->status = ChatMessageStatus::AVAILABLE;
+        $message->save();
+
+        $scanner = \Mockery::mock(ClamAvScanner::class);
+        $scanner->shouldNotReceive('scan');
+
+        $this->job($message, $relative, $sha)->handle($scanner, app(ChatCrypto::class));
+
+        $this->assertSame(ChatMessageStatus::AVAILABLE, $message->fresh()->status);
         $this->assertSame(0, ChatAttachment::query()->count());
         $this->assertSame([], Storage::disk('s3')->allFiles());
         Storage::disk('local')->assertMissing($relative);
@@ -168,14 +192,20 @@ class ChatAttachmentJobTest extends TestCase
         ]);
         $relative = 'chat-pending/'.$room->id.'/'.$message->id;
         Storage::disk('local')->put($relative, $bytes);
-        Storage::disk('local')->put($relative.'.meta', json_encode([
-            'original_name' => 'photo.jpg',
-            'mime' => 'image/jpeg',
-            'size' => strlen($bytes),
-            'sha256' => $sha,
-            'caption' => $caption,
-        ], JSON_UNESCAPED_UNICODE));
 
         return [$message, $relative, $sha, $user];
+    }
+
+    private function job(ChatMessage $message, string $relative, string $sha, string $caption = ''): ProcessChatAttachment
+    {
+        return new ProcessChatAttachment(
+            $message->id,
+            $relative,
+            $sha,
+            'photo.jpg',
+            'image/jpeg',
+            (int) Storage::disk('local')->size($relative),
+            $caption,
+        );
     }
 }
