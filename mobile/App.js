@@ -4,6 +4,7 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
+import JournalScreen, { JournalTasksScreen, JournalCrewScreen } from './src/screens/JournalScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import DocumentsScreen from './src/screens/DocumentsScreen';
 import DocumentViewScreen from './src/screens/DocumentViewScreen';
@@ -91,6 +92,9 @@ function DisciplineStack() {
   return (
     <Stack.Navigator screenOptions={{ headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}>
       <Stack.Screen name="DisciplineList" component={DisciplineListScreen} options={{ title: 'Поручения' }} />
+      <Stack.Screen name="Journal" component={JournalScreen} options={{ title: 'Журнал инструктора' }} />
+      <Stack.Screen name="JournalTasks" component={JournalTasksScreen} options={{ title: 'Личные задачи' }} />
+      <Stack.Screen name="JournalCrew" component={JournalCrewScreen} options={{ title: 'Нормативы' }} />
       <Stack.Screen name="DisciplineDetail" component={DisciplineDetailScreen} options={{ title: 'Карточка исполнения' }} />
       <Stack.Screen name="DisciplineAttachment" component={DisciplineAttachmentScreen} options={({ route }) => ({ title: route.params.file.name })} />
     </Stack.Navigator>

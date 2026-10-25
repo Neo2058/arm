@@ -60,6 +60,7 @@ export default function DisciplineListScreen({ navigation }) {
     refreshControl={<RefreshControl tintColor="#fb923c" refreshing={busy} onRefresh={() => active.current?.refresh()} />}
     ListHeaderComponent={<View style={{ gap: 12 }}>
       <Text style={s.title}>Поручения руководителя</Text>
+      <Pressable style={s.secondary} onPress={() => navigation.navigate('Journal')}><Text style={s.buttonText}>Журнал инструктора</Text></Pressable>
       <Text style={s.muted}>Непрочитанных событий: {unread}. Обновление каждые 30 секунд при открытом разделе.</Text>
       {offline && <Text style={s.muted}>Нет свежих данных. Показаны сохранённые на устройстве карточки.</Text>}
       <Text style={s.muted}>В очереди: {Object.values(state.entries).filter(e => e.pending).length}. Черновиков: {Object.values(state.entries).filter(e => !e.pending && (e.response || e.files.length)).length}.</Text>

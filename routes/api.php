@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Mobile\AuthController;
 use App\Http\Controllers\Api\Mobile\DisciplineController;
 use App\Http\Controllers\Api\Mobile\DocumentController;
 use App\Http\Controllers\Api\Mobile\FileController;
+use App\Http\Controllers\Api\Mobile\JournalController;
 use App\Http\Controllers\Api\Mobile\NaryadController;
 use App\Http\Controllers\Api\Mobile\PhoneController;
 use App\Http\Controllers\Api\Mobile\QuizController;
@@ -44,6 +45,10 @@ Route::prefix('mobile')->group(function () {
 
         Route::get('/naryads', [NaryadController::class, 'index']);
         Route::get('/naryads/{naryad}', [NaryadController::class, 'show']);
+
+        Route::get('/journal', [JournalController::class, 'summary']);
+        Route::get('/journal/tasks', [JournalController::class, 'tasks']);
+        Route::get('/journal/crew', [JournalController::class, 'crew']);
 
         Route::get('/phones', [PhoneController::class, 'index']);
 

@@ -12,6 +12,7 @@ use App\Models\JournalVacation;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Services\ClickHouseService;
+use App\Services\Journal\JournalOverview;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -26,56 +27,18 @@ class TCHMJournalController extends Controller implements HasMiddleware
         ];
     }
 
-    public function index()
+    public function index(JournalOverview $overview)
     {
         $user = Auth::user();
-        $profile = $user->profile;
+        $data = $overview->summary($user);
+        $column = $data['column'];
+        $tasks = $overview->tasks($user)->orderBy('status')->orderBy('due_date')->get();
+        $documents = $column === null ? collect() : JournalDocument::where('user_id', $user->id)->where('column', $column)->latest()->get();
 
-        if (! $profile || ! $profile->column) {
-            return view('journal.index', [
-                'column' => 'Не указана',
-                'tasks' => collect(),
-                'documents' => collect(),
-                'stats' => $this->getDefaultStats(),
-                'error' => 'У вас не указана колонна в профиле. Обратитесь к администратору.',
-            ]);
-        }
-
-        $column = $profile->column;
-
-        // Get column members for stats (drivers/instructors in this column)
-        $columnMembers = UserProfile::where('column', $column)->count();
-
-        $tasks = JournalTask::where('user_id', $user->id)
-            ->where('column', $column)
-            ->orderBy('status')
-            ->orderBy('due_date')
-            ->get();
-
-        $documents = JournalDocument::where('user_id', $user->id)
-            ->where('column', $column)
-            ->latest()
-            ->get();
-
-        $normativesTotal = JournalCrewNormative::where('column', $column)->count();
-        $normativesDone = JournalCrewNormative::where('column', $column)->whereNotNull('last_date')->count();
-
-        $stats = [
-            'column_members' => $columnMembers,
-            'tasks_pending' => $tasks->where('status', 'pending')->count(),
-            'tasks_done' => $tasks->where('status', 'done')->count(),
-            'documents_count' => $documents->count(),
-            'norms_completed' => $normativesTotal > 0
-                ? (int) round($normativesDone * 100 / $normativesTotal)
-                : 0,
-            'reports_written' => JournalTask::where('user_id', $user->id)
-                ->where('column', $column)
-                ->where('source', 'report')
-                ->where('status', 'done')
-                ->count(),
-        ];
-
-        return view('journal.index', compact('column', 'tasks', 'documents', 'stats'));
+        return view('journal.index', [
+            'column' => $column ?? 'Не указана', 'tasks' => $tasks, 'documents' => $documents,
+            'stats' => $data['stats'], 'error' => $data['error'],
+        ]);
     }
 
     public function addTodo(Request $request)
@@ -244,18 +207,6 @@ class TCHMJournalController extends Controller implements HasMiddleware
         }
 
         return implode("\n…\n", array_unique($matches));
-    }
-
-    private function getDefaultStats(): array
-    {
-        return [
-            'column_members' => 0,
-            'tasks_pending' => 0,
-            'tasks_done' => 0,
-            'documents_count' => 0,
-            'norms_completed' => 0,
-            'reports_written' => 0,
-        ];
     }
 
     // ==================== НАСТРОЙКА НОРМАТИВОВ ====================

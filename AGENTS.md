@@ -266,3 +266,12 @@ php artisan optimize:clear
 - Сдача только через общий DisciplineService, те же версии, UUID операций, лимиты и антивирус. Новых таблиц и отдельного обхода проверки нет.
 - Мобильные экраны: DisciplineListScreen / DisciplineDetailScreen / DisciplineAttachmentScreen. Долговременные черновики и офлайн-очередь: mobile/src/discipline/queue.cjs + storage.js, приватное хранилище по API/user id; запись до отправки, тот же UUID после перезапуска. Повторы только в активном приложении. Повторный вход сохраняет очередь, выход удаляет текущий scope.
 - Документация: `mobile/DISCIPLINE.md`; тесты `MobileDisciplineTest`, `mobile/tests/discipline.test.cjs`.
+
+
+## Мобильный просмотр журнала (25 октября 2026)
+
+- JournalOverview — общая сводка веб-журнала и API, только текущая колонна.
+- Api/Mobile/JournalController: GET /journal, /journal/tasks, /journal/crew, Sanctum + активность + свежая роль instructor. Чужую колонну и владельца клиент не выбирает.
+- GET crew не создаёт нормативы/настройки, выдаёт только записи своего instructor_id. Нормативные даты берутся из БД без повторного расчёта.
+- Экраны JournalScreen / JournalTasksScreen / JournalCrewScreen открываются из раздела поручений. Это просмотр без долговременного кеша; мутации журнала пока только в вебе.
+- Документация mobile/JOURNAL.md, тесты MobileJournalTest.
