@@ -447,12 +447,23 @@ class ChatApiTest extends TestCase
         $this->assertNull($system['sender_id']);
         $this->assertSame('Добавлен Сидоров С.С.', $system['body']);
 
+        $searchable = User::factory()->driver()->create(['name' => 'Karen Test']);
+        $searchable->mobile_enrolled_at = now();
+        $searchable->save();
+        UserProfile::create(['user_id' => $searchable->id, 'column' => '15']);
+
         $eligible = $this->api($instructor, 'get', '/chats/'.$room->id.'/eligible-members')->assertOk();
         $ids = collect($eligible->json('users'))->pluck('id')->all();
         $this->assertNotContains($enrolled->id, $ids);
         $this->assertNotContains($instructor->id, $ids);
         $this->assertNotContains($otherColumn->id, $ids);
         $this->assertNotContains($notEnrolled->id, $ids);
+        $this->assertContains($searchable->id, $ids);
+        $this->app['auth']->forgetGuards();
+        $byName = $this->withToken($instructor->createToken('mobile')->plainTextToken)
+            ->getJson('/api/mobile/chats/'.$room->id.'/eligible-members?'.http_build_query(['q' => 'Karen']))
+            ->assertOk();
+        $this->assertSame([$searchable->id], collect($byName->json('users'))->pluck('id')->all());
 
         $this->api($instructor, 'get', '/chats/'.$room->id)
             ->assertOk()

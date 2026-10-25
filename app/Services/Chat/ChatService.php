@@ -13,6 +13,7 @@ use App\Models\ChatRoom;
 use App\Models\ColumnDeputy;
 use App\Models\User;
 use DateTimeInterface;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -161,7 +162,7 @@ class ChatService
             'title' => $room->title,
             'column' => $room->column,
             'can_manage_members' => $this->authz->canManageMembers($user, $room),
-            'members_count' => $this->effectiveMembersCount($room),
+            'members_count' => count($this->members($user, $room)),
         ];
     }
 
@@ -245,17 +246,17 @@ class ChatService
             ]);
         }
 
-        $member = ChatMember::query()
+        ChatMember::query()
             ->where('room_id', $room->id)
             ->where('user_id', $user->id)
-            ->firstOrFail();
-        if ($member->last_read_message_id !== null && $messageId <= (int) $member->last_read_message_id) {
-            return;
-        }
-
-        $member->last_read_message_id = $messageId;
-        $member->last_read_at = now();
-        $member->save();
+            ->where(function ($query) use ($messageId) {
+                $query->whereNull('last_read_message_id')
+                    ->orWhere('last_read_message_id', '<', $messageId);
+            })
+            ->update([
+                'last_read_message_id' => $messageId,
+                'last_read_at' => now(),
+            ]);
     }
 
     /**
@@ -303,7 +304,9 @@ class ChatService
             ->limit(100);
         $q = trim($q);
         if ($q !== '') {
-            $query->where('name', 'like', '%'.addcslashes($q, '%_\\').'%');
+            $pattern = '%'.addcslashes($q, '%_\\').'%';
+            $operator = $query->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
+            $query->where('name', $operator, $pattern);
         }
 
         return $query->get(['id', 'name'])->map(fn (User $candidate) => [
@@ -337,29 +340,37 @@ class ChatService
                 'user_id' => 'Пользователь из другой колонны.',
             ]);
         }
-        if (ChatMember::query()->where('room_id', $room->id)->where('user_id', $target->id)->exists()) {
+
+        try {
+            DB::transaction(function () use ($actor, $room, $target) {
+                ChatRoom::query()->whereKey($room->id)->lockForUpdate()->firstOrFail();
+                if (ChatMember::query()->where('room_id', $room->id)->where('user_id', $target->id)->exists()) {
+                    throw ValidationException::withMessages([
+                        'user_id' => 'Пользователь уже в чате.',
+                    ]);
+                }
+
+                ChatMember::create([
+                    'room_id' => $room->id,
+                    'user_id' => $target->id,
+                    'role' => ChatMemberRole::MEMBER,
+                    'source' => ChatMemberSource::REGULAR,
+                    'added_by' => $actor->id,
+                ]);
+                ChatMessage::create([
+                    'room_id' => $room->id,
+                    'sender_id' => null,
+                    'client_id' => null,
+                    'type' => ChatMessageType::SYSTEM,
+                    'status' => ChatMessageStatus::AVAILABLE,
+                    'body_ciphertext' => $this->crypto->encrypt('Добавлен '.$target->name),
+                ]);
+            });
+        } catch (UniqueConstraintViolationException) {
             throw ValidationException::withMessages([
                 'user_id' => 'Пользователь уже в чате.',
             ]);
         }
-
-        DB::transaction(function () use ($actor, $room, $target) {
-            ChatMember::create([
-                'room_id' => $room->id,
-                'user_id' => $target->id,
-                'role' => ChatMemberRole::MEMBER,
-                'source' => ChatMemberSource::REGULAR,
-                'added_by' => $actor->id,
-            ]);
-            ChatMessage::create([
-                'room_id' => $room->id,
-                'sender_id' => null,
-                'client_id' => null,
-                'type' => ChatMessageType::SYSTEM,
-                'status' => ChatMessageStatus::AVAILABLE,
-                'body_ciphertext' => $this->crypto->encrypt('Добавлен '.$target->name),
-            ]);
-        });
     }
 
     public function removeMember(User $actor, ChatRoom $room, User $target): void
@@ -632,19 +643,6 @@ class ChatService
             ChatMessageType::TEXT => $this->crypto->decrypt((string) $message->body_ciphertext),
             default => '',
         };
-    }
-
-    private function effectiveMembersCount(ChatRoom $room): int
-    {
-        $room->loadMissing(['members.user']);
-        $count = 0;
-        foreach ($room->members as $member) {
-            if ($member->user && $this->authz->isEffectiveMember($member->user, $room)) {
-                $count++;
-            }
-        }
-
-        return $count;
     }
 
     private function iso(mixed $at): string
