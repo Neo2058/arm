@@ -14,7 +14,7 @@ class DisciplineScannerTest extends TestCase
     {
         $script = tempnam(sys_get_temp_dir(), 'discipline-scanner-');
         chmod($script, 0700);
-        config(['discipline.scanner' => $script, 'discipline.clamd_config' => null]);
+        config(['antivirus.scanner' => $script, 'antivirus.clamd_config' => null]);
         $file = UploadedFile::fake()->createWithContent('report.pdf', "%PDF-1.4\n%%EOF");
         try {
             foreach ([0, 1, 2] as $code) {
