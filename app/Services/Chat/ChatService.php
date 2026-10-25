@@ -7,6 +7,7 @@ use App\Enums\ChatMemberSource;
 use App\Enums\ChatMessageStatus;
 use App\Enums\ChatMessageType;
 use App\Enums\ChatType;
+use App\Enums\UserRole;
 use App\Jobs\ProcessChatAttachment;
 use App\Models\ChatMember;
 use App\Models\ChatMessage;
@@ -94,6 +95,104 @@ class ChatService
 
             $this->syncMemberWindows($column, $userId, null, false);
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  list<array<string, mixed>>  $members
+     */
+    public function createRoom(User $creator, array $payload, array $members = []): ChatRoom
+    {
+        $type = $this->resolveType($payload['type'] ?? null);
+        $column = $this->normalizeRoomColumn($type, $payload['column'] ?? null);
+        $title = trim((string) ($payload['title'] ?? ''));
+        if ($title === '') {
+            throw ValidationException::withMessages([
+                'title' => 'Укажите название.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($creator, $type, $column, $title, $payload, $members) {
+            $room = ChatRoom::create([
+                'type' => $type,
+                'title' => $title,
+                'column' => $column,
+                'created_by' => $creator->id,
+                'archived_at' => ! empty($payload['archived']) ? now() : null,
+            ]);
+            $this->syncAdminRegularMembers($room, $creator, $members);
+            $this->seedColumnRoom($room, $creator);
+
+            return $room;
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  list<array<string, mixed>>  $members
+     */
+    public function updateRoom(ChatRoom $room, User $actor, array $payload, array $members = []): ChatRoom
+    {
+        $type = array_key_exists('type', $payload)
+            ? $this->resolveType($payload['type'])
+            : $room->type;
+        $column = array_key_exists('column', $payload)
+            ? $this->normalizeRoomColumn($type, $payload['column'])
+            : $this->normalizeRoomColumn($type, $room->column);
+        $title = array_key_exists('title', $payload)
+            ? trim((string) $payload['title'])
+            : $room->title;
+        if ($title === '') {
+            throw ValidationException::withMessages([
+                'title' => 'Укажите название.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($room, $actor, $type, $column, $title, $payload, $members) {
+            $room = ChatRoom::query()->whereKey($room->id)->lockForUpdate()->firstOrFail();
+            $room->type = $type;
+            $room->title = $title;
+            $room->column = $column;
+            if (array_key_exists('archived', $payload)) {
+                $room->archived_at = ! empty($payload['archived'])
+                    ? ($room->archived_at ?? now())
+                    : null;
+            }
+            $room->save();
+            $this->syncAdminRegularMembers($room, $actor, $members);
+
+            return $room;
+        });
+    }
+
+    public function seedColumnRoom(ChatRoom $room, User $actor): void
+    {
+        if ($room->type !== ChatType::COLUMN) {
+            return;
+        }
+
+        $column = trim((string) $room->column);
+        if ($column === '') {
+            return;
+        }
+
+        $instructorIds = User::query()
+            ->where('is_active', true)
+            ->where('role', UserRole::INSTRUCTOR)
+            ->whereHas('profile', fn ($query) => $query->whereRaw('trim(column) = ?', [$column]))
+            ->pluck('id');
+        foreach ($instructorIds as $userId) {
+            $this->ensureRegularMember($room, (int) $userId, ChatMemberRole::MODERATOR, $actor->id);
+        }
+
+        $deputyUserIds = ColumnDeputy::query()
+            ->whereRaw('trim(column) = ?', [$column])
+            ->where('ends_on', '>=', $this->today())
+            ->pluck('user_id')
+            ->unique();
+        foreach ($deputyUserIds as $userId) {
+            $this->syncMemberWindows($column, (int) $userId, $actor->id, true);
+        }
     }
 
     /**
@@ -509,6 +608,96 @@ class ChatService
         }
 
         $member->delete();
+    }
+
+    private function resolveType(mixed $type): ChatType
+    {
+        if ($type instanceof ChatType) {
+            return $type;
+        }
+        $resolved = ChatType::tryFrom((string) $type);
+        if ($resolved === null) {
+            throw ValidationException::withMessages([
+                'type' => 'Укажите тип чата.',
+            ]);
+        }
+
+        return $resolved;
+    }
+
+    private function normalizeRoomColumn(ChatType $type, mixed $column): ?string
+    {
+        $column = is_string($column) || is_numeric($column) ? trim((string) $column) : '';
+
+        return match ($type) {
+            ChatType::COLUMN => $column !== '' ? $column : throw ValidationException::withMessages([
+                'column' => 'Для чата колонны укажите колонну.',
+            ]),
+            ChatType::LEADERSHIP => null,
+            ChatType::WORK => $column !== '' ? $column : null,
+        };
+    }
+
+    /**
+     * @param  list<array<string, mixed>>|array<string, array<string, mixed>>  $members
+     */
+    private function syncAdminRegularMembers(ChatRoom $room, User $actor, array $members): void
+    {
+        $keep = [];
+        foreach ($members as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $userId = (int) ($row['user_id'] ?? 0);
+            if ($userId === 0) {
+                continue;
+            }
+            $target = User::query()->whereKey($userId)->where('is_active', true)->first();
+            if ($target === null) {
+                continue;
+            }
+            $role = ChatMemberRole::tryFrom((string) ($row['role'] ?? '')) ?? ChatMemberRole::MEMBER;
+            $existing = ChatMember::query()
+                ->where('room_id', $room->id)
+                ->where('user_id', $userId)
+                ->first();
+            if ($existing === null) {
+                ChatMember::create([
+                    'room_id' => $room->id,
+                    'user_id' => $userId,
+                    'role' => $role,
+                    'source' => ChatMemberSource::REGULAR,
+                    'added_by' => $actor->id,
+                ]);
+            } elseif ($existing->source === ChatMemberSource::REGULAR) {
+                $existing->role = $role;
+                $existing->save();
+            }
+            $keep[] = $userId;
+        }
+
+        $query = ChatMember::query()
+            ->where('room_id', $room->id)
+            ->where('source', ChatMemberSource::REGULAR);
+        if ($keep !== []) {
+            $query->whereNotIn('user_id', $keep);
+        }
+        $query->delete();
+    }
+
+    private function ensureRegularMember(ChatRoom $room, int $userId, ChatMemberRole $role, int $addedBy): void
+    {
+        if (ChatMember::query()->where('room_id', $room->id)->where('user_id', $userId)->exists()) {
+            return;
+        }
+
+        ChatMember::create([
+            'room_id' => $room->id,
+            'user_id' => $userId,
+            'role' => $role,
+            'source' => ChatMemberSource::REGULAR,
+            'added_by' => $addedBy,
+        ]);
     }
 
     /**

@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\AccessRequest;
 use App\Models\ActionLog;
+use App\Models\ChatRoom;
+use App\Models\ColumnDeputy;
 use App\Models\DeviationsCatalog;
 use App\Models\Document;
 use App\Models\FormularTask;
@@ -36,6 +38,8 @@ class AdminPanelAudit
         RoutesCatalog::class,
         DeviationsCatalog::class,
         Naryad::class,
+        ChatRoom::class,
+        ColumnDeputy::class,
     ];
 
     /**
@@ -95,6 +99,8 @@ class AdminPanelAudit
             RoutesCatalog::class => 'routes_catalog',
             DeviationsCatalog::class => 'deviations_catalog',
             Naryad::class => 'naryad',
+            ChatRoom::class => 'chat_room',
+            ColumnDeputy::class => 'column_deputy',
             default => strtolower(class_basename($record)),
         };
 
