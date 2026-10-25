@@ -80,6 +80,11 @@ class ChatAuthorization
             abort(404);
         }
 
+        $pilot = trim((string) config('chat.pilot_column'));
+        if ($pilot !== '' && $room->type === ChatType::COLUMN && trim((string) $room->column) !== $pilot) {
+            abort(404);
+        }
+
         $member = $this->member($user, $room);
         if (! $user->is_active || $member === null || ! $this->sourceAllowsAccess($member)) {
             abort(403);
@@ -87,11 +92,6 @@ class ChatAuthorization
 
         if ($room->archived_at !== null) {
             abort(410, 'Чат архивирован.');
-        }
-
-        $pilot = trim((string) config('chat.pilot_column'));
-        if ($pilot !== '' && $room->type === ChatType::COLUMN && trim((string) $room->column) !== $pilot) {
-            abort(404);
         }
     }
 
@@ -101,7 +101,7 @@ class ChatAuthorization
             return false;
         }
 
-        // app.timezone is UTC; deputy windows are inclusive calendar dates in chat.timezone.
+        // inclusive calendar date in chat.timezone, not UTC now()
         $today = now()->timezone((string) config('chat.timezone', 'Europe/Moscow'))->toDateString();
         $start = Carbon::parse($startsOn)->toDateString();
         $end = Carbon::parse($endsOn)->toDateString();
