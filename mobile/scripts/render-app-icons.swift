@@ -10,18 +10,30 @@ func render(_ svg: String, _ filename: String, _ size: Int = 1024) throws {
     let opaque = filename == "icon.png" || filename == "favicon.png" || filename.contains("background") || filename.hasSuffix("/ic_launcher.png")
     guard let image = NSImage(data: Data(svg.utf8)),
           let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: size, pixelsHigh: size,
-            bitsPerSample: 8, samplesPerPixel: opaque ? 3 : 4, hasAlpha: !opaque, isPlanar: false,
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
             colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else {
         fatalError("Cannot render SVG")
     }
     NSGraphicsContext.saveGraphicsState()
-    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmap)
+    guard let graphics = NSGraphicsContext(bitmapImageRep: bitmap) else { fatalError("Cannot create SVG drawing context") }
+    NSGraphicsContext.current = graphics
     if filename.contains("ic_launcher_round") {
         NSBezierPath(ovalIn: NSRect(x: 0, y: 0, width: size, height: size)).addClip()
     }
     image.draw(in: NSRect(x: 0, y: 0, width: size, height: size))
     NSGraphicsContext.restoreGraphicsState()
-    try bitmap.representation(using: .png, properties: [:])!.write(to: assets.appendingPathComponent(filename))
+    var output = bitmap
+    if opaque {
+        // AppKit cannot draw into a three-channel bitmap. Render RGBA first, then flatten.
+        guard let cgImage = bitmap.cgImage,
+              let context = CGContext(data: nil, width: size, height: size, bitsPerComponent: 8,
+                bytesPerRow: size * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { fatalError("Cannot flatten icon") }
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: size, height: size))
+        guard let flattened = context.makeImage() else { fatalError("Cannot export icon") }
+        output = NSBitmapImageRep(cgImage: flattened)
+    }
+    try output.representation(using: .png, properties: [:])!.write(to: assets.appendingPathComponent(filename))
 }
 try render(source, "icon.png")
 let foreground = source
