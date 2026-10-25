@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { IconLabel } from '../components/AppIcon';
 import { useJournal } from '../journal/useJournal';
 import s from '../discipline/styles';
 
@@ -16,7 +17,7 @@ export default function JournalScreen({ navigation }) {
     {data && <><Text style={s.heading}>Колонна: {data.column || 'не указана'}</Text>{!!data.error && <Text style={s.error}>{data.error}</Text>}
       <Text style={s.muted}>Сводка журнала совпадает с веб-версией. Поручения руководителя находятся в отдельном разделе «Поручения».</Text>
       {Object.entries(stats).map(([key, label]) => <View key={key} style={s.card}><Text style={s.muted}>{label}</Text><Text style={s.heading}>{data.stats[key]}{key === 'norms_completed' ? '%' : ''}</Text></View>)}
-      {!!data.column && <><Pressable style={s.button} onPress={() => navigation.navigate('JournalTasks')}><Text style={s.buttonText}>Личные задачи</Text></Pressable><Pressable style={s.secondary} onPress={() => navigation.navigate('JournalCrew')}><Text style={s.buttonText}>Бригада и нормативы</Text></Pressable></>}
+      {!!data.column && <><Pressable style={s.button} onPress={() => navigation.navigate('JournalTasks')}><IconLabel name="tasks" textStyle={s.buttonText}>Личные задачи</IconLabel></Pressable><Pressable style={s.secondary} onPress={() => navigation.navigate('JournalCrew')}><IconLabel name="team" textStyle={s.buttonText}>Бригада и нормативы</IconLabel></Pressable></>}
     </>}
   </ScrollView>;
 }

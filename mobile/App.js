@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import JournalScreen, { JournalTasksScreen, JournalCrewScreen } from './src/screens/JournalScreen';
 import LoginScreen from './src/screens/LoginScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 import DocumentsScreen from './src/screens/DocumentsScreen';
 import DocumentViewScreen from './src/screens/DocumentViewScreen';
 import TopicsScreen from './src/screens/TopicsScreen';
@@ -22,6 +23,7 @@ import DisciplineAttachmentScreen from './src/screens/DisciplineAttachmentScreen
 import * as SecureStore from 'expo-secure-store';
 import { API_URL, logout, me } from './src/api';
 import { DisciplineProvider, clearDisciplineData } from './src/discipline/context';
+import AppIcon, { IconLabel, TAB_ICONS } from './src/components/AppIcon';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -75,8 +77,8 @@ function NaryadsStack() {
         options={({ navigation }) => ({
           title: 'Наряды',
           headerRight: () => (
-            <Pressable onPress={() => navigation.navigate('Phones')} style={{ marginRight: 16 }}>
-              <Text style={{ color: '#fb923c', fontWeight: '700' }}>Телефоны</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Телефоны" hitSlop={10} onPress={() => navigation.navigate('Phones')} style={{ padding: 10 }}>
+              <AppIcon name="phone" />
             </Pressable>
           ),
         })}
@@ -104,13 +106,14 @@ function DisciplineStack() {
 function MainTabs({ user, onLogout, onReauthenticate }) {
   return (
     <Tab.Navigator
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerShown: false,
+        tabBarIcon: ({ focused, color, size }) => <AppIcon name={TAB_ICONS[route.name]} color={color} size={size} strokeWidth={focused ? 2.3 : 1.8} />,
         tabBarStyle: { backgroundColor: '#0b1018', borderTopColor: '#1f2937' },
         tabBarActiveTintColor: '#fb923c',
         tabBarInactiveTintColor: '#6b7280',
         tabBarLabelStyle: user.role === 'instructor' ? { fontSize: 10 } : undefined,
-      }}
+      })}
     >
       {user.role === 'instructor' && <Tab.Screen name="DisciplineTab" component={DisciplineStack} options={{ title: 'Поручения' }} />}
       <Tab.Screen name="DocsTab" component={DocumentsStack} options={{ title: 'Документы' }} />
@@ -122,16 +125,7 @@ function MainTabs({ user, onLogout, onReauthenticate }) {
         options={{ title: 'Профиль', headerShown: true, headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}
       >
         {() => (
-          <View style={styles.profile}>
-            <Text style={styles.name}>{user.name}</Text>
-            <Text style={styles.meta}>{user.email}</Text>
-            <Text style={styles.meta}>Роль: {user.role}</Text>
-            <Pressable style={styles.logout} onPress={onReauthenticate}><Text style={styles.logoutText}>Войти заново без удаления черновиков</Text></Pressable>
-            <Text style={styles.meta}>При выходе черновики и очередь этого пользователя удаляются с устройства.</Text>
-            <Pressable style={styles.logout} onPress={onLogout}>
-              <Text style={styles.logoutText}>Выйти</Text>
-            </Pressable>
-          </View>
+          <ProfileScreen key={user.id} user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} />
         )}
       </Tab.Screen>
     </Tab.Navigator>

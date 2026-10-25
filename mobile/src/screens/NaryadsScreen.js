@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { client } from '../api';
+import { IconHeading } from '../components/AppIcon';
 
 export default function NaryadsScreen({ navigation }) {
   const [naryads, setNaryads] = useState([]);
@@ -55,7 +56,7 @@ export default function NaryadsScreen({ navigation }) {
           style={styles.card}
           onPress={() => navigation.navigate('NaryadView', { id: item.id, title: item.title })}
         >
-          <Text style={styles.title}>{item.title}</Text>
+          <IconHeading name="train" textStyle={styles.title}>{item.title}</IconHeading>
           <Text style={styles.meta}>
             {item.naryad_date || ''}
             {item.has_personal ? ' · есть ваш файл' : ''}

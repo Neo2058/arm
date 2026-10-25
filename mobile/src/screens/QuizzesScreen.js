@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { client } from '../api';
+import { IconHeading } from '../components/AppIcon';
 
 export default function QuizzesScreen({ navigation }) {
   const [quizzes, setQuizzes] = useState([]);
@@ -55,7 +56,7 @@ export default function QuizzesScreen({ navigation }) {
           style={styles.card}
           onPress={() => navigation.navigate('QuizPlay', { id: item.id, title: item.title })}
         >
-          <Text style={styles.title}>{item.title}</Text>
+          <IconHeading name="quiz" textStyle={styles.title}>{item.title}</IconHeading>
           {item.document_title ? <Text style={styles.meta}>{item.document_title}</Text> : null}
           {item.general ? <Text style={styles.meta}>Общая аттестация</Text> : null}
           <Text style={styles.meta}>

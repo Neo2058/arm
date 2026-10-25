@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { client } from '../api';
+import { IconHeading } from '../components/AppIcon';
 
 export default function DocumentsScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
@@ -59,7 +60,7 @@ export default function DocumentsScreen({ navigation }) {
               style={styles.row}
               onPress={() => navigation.navigate('DocumentView', { id: doc.id, title: doc.title })}
             >
-              <Text style={styles.doc}>{doc.title}</Text>
+              <IconHeading name="documents" textStyle={styles.doc}>{doc.title}</IconHeading>
               <Text style={styles.date}>{doc.updated_at}</Text>
             </Pressable>
           ))}

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { client } from '../api';
+import { IconHeading } from '../components/AppIcon';
 
 export default function TopicsScreen({ navigation }) {
   const [topics, setTopics] = useState([]);
@@ -55,7 +56,7 @@ export default function TopicsScreen({ navigation }) {
           style={styles.card}
           onPress={() => navigation.navigate('Materials', { slug: item.slug, title: item.title })}
         >
-          <Text style={styles.title}>{item.title}</Text>
+          <IconHeading name="training" textStyle={styles.title}>{item.title}</IconHeading>
           {item.description ? <Text style={styles.desc}>{item.description}</Text> : null}
         </Pressable>
       )}

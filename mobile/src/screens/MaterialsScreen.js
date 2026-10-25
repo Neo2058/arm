@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { client } from '../api';
+import { IconHeading } from '../components/AppIcon';
 
 const TYPE_LABEL = {
   video: 'Видео',
@@ -49,7 +50,7 @@ export default function MaterialsScreen({ route, navigation }) {
           onPress={() => navigation.navigate('Material', { id: item.id, title: item.title })}
         >
           <Text style={styles.badge}>{TYPE_LABEL[item.type] || item.type}</Text>
-          <Text style={styles.title}>{item.title}</Text>
+          <IconHeading name={{ video: 'video', audio: 'audio', text: 'documents', document: 'documents' }[item.type] || 'documents'} textStyle={styles.title}>{item.title}</IconHeading>
           {item.duration ? <Text style={styles.meta}>{item.duration} сек</Text> : null}
         </Pressable>
       )}

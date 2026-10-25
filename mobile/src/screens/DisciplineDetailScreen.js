@@ -6,6 +6,7 @@ import * as Crypto from 'expo-crypto';
 import { getAssignment, getReports, markRead } from '../discipline/api';
 import { CATEGORIES, LIMITS, TYPES, errorMessage, validateFiles } from '../discipline/contract.cjs';
 import s from '../discipline/styles';
+import { IconLabel } from '../components/AppIcon';
 import { useDiscipline } from '../discipline/context';
 
 const dateTime = value => value ? new Date(value).toLocaleString('ru-RU') : '';
@@ -118,7 +119,7 @@ export default function DisciplineDetailScreen({ route, navigation }) {
         <Text style={s.heading}>Отправить отчёт</Text>
         <TextInput accessibilityLabel="Текст отчёта" placeholder="Опишите выполненную работу" placeholderTextColor="#9ca3af" style={s.input} key={pending?.operation_id || (entry.status === 'sent' ? 'sent' : 'draft')} defaultValue={response} onChangeText={edit} multiline maxLength={20000} editable={!pending && !sending} />
         <Text style={s.muted}>PDF, JPEG, PNG. До 10 МиБ на файл, максимум пять файлов и 25 МиБ суммарно.</Text>
-        {Object.entries(CATEGORIES).map(([category, label]) => <Pressable key={category} style={[s.secondary, !!pending && s.disabled]} disabled={!!pending || sending} onPress={() => chooseFiles(category)}><Text style={s.buttonText}>+ {label}</Text></Pressable>)}
+        {Object.entries(CATEGORIES).map(([category, label]) => <Pressable key={category} style={[s.secondary, !!pending && s.disabled]} disabled={!!pending || sending} onPress={() => chooseFiles(category)}><IconLabel name="attach" textStyle={s.buttonText}>{label}</IconLabel></Pressable>)}
         {files.map(file => <View key={file.id} style={s.card}><Text style={s.body}>{CATEGORIES[file.category]}: {file.name}</Text><Text style={s.muted}>{(file.size / 1048576).toFixed(2)} МиБ</Text>{!pending && <Pressable accessibilityRole="button" onPress={() => remove(file.id)}><Text style={s.accent}>Убрать</Text></Pressable>}</View>)}
         {!!pending && <Text style={s.muted}>Содержимое запроса зафиксировано до ответа сервера. Повтор проверит ту же отправку без дубликата. Запрос сохранён на устройстве и восстановится после перезапуска.</Text>}
         {entry?.status === 'blocked' && [409, 412, 413, 422].includes(entry.httpStatus) ? <Pressable style={s.button} onPress={unlock}><Text style={s.buttonText}>Обновить карточку и исправить отчёт</Text></Pressable> : <Pressable accessibilityRole="button" style={[s.button, sending && s.disabled]} disabled={sending} onPress={send}>{sending ? <ActivityIndicator color="#fff" /> : <Text style={s.buttonText}>{pending ? 'Повторить ту же отправку' : 'Сохранить и отправить'}</Text>}</Pressable>}

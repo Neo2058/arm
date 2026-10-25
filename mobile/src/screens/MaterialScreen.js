@@ -14,6 +14,7 @@ import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { client } from '../api';
+import { IconLabel } from '../components/AppIcon';
 
 export default function MaterialScreen({ route }) {
   const { id } = route.params;
@@ -113,7 +114,7 @@ export default function MaterialScreen({ route }) {
           onChangeText={setComment}
         />
         <Pressable style={styles.send} onPress={send} disabled={sending}>
-          <Text style={styles.sendText}>{sending ? '…' : 'Отправить'}</Text>
+          <IconLabel name="send" textStyle={styles.sendText}>{sending ? '…' : 'Отправить'}</IconLabel>
         </Pressable>
       </View>
     </KeyboardAvoidingView>
@@ -158,7 +159,7 @@ function MaterialAudio({ uri }) {
   return (
     <View style={styles.audio}>
       <Pressable onPress={toggle} disabled={!status.isLoaded} accessibilityRole="button" style={styles.send}>
-        <Text style={styles.sendText}>{!status.isLoaded ? 'Загрузка аудио…' : status.playing ? 'Пауза' : 'Воспроизвести'}</Text>
+        <IconLabel name={status.playing ? 'pause' : 'play'} textStyle={styles.sendText}>{!status.isLoaded ? 'Загрузка аудио…' : status.playing ? 'Пауза' : 'Воспроизвести'}</IconLabel>
       </Pressable>
       <Text style={styles.muted}>{time(status.currentTime)} / {time(status.duration)}</Text>
       {error ? <Text style={styles.err}>{error}</Text> : null}

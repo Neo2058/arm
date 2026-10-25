@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { client } from '../api';
+import { IconLabel } from '../components/AppIcon';
 
 export default function NaryadViewScreen({ route, navigation }) {
   const { id, title } = route.params;
@@ -53,7 +54,7 @@ export default function NaryadViewScreen({ route, navigation }) {
             })
           }
         >
-          <Text style={styles.primaryText}>Открыть общий PDF</Text>
+          <IconLabel name="documents" textStyle={styles.primaryText}>Открыть общий PDF</IconLabel>
         </Pressable>
       ) : null}
       {naryad.personal_text ? (

@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { client } from '../api';
+import { IconLabel } from '../components/AppIcon';
 
 export default function PhonesScreen() {
   const [phones, setPhones] = useState([]);
@@ -69,12 +70,12 @@ export default function PhonesScreen() {
               {item.position ? <Text style={styles.meta}>{item.position}</Text> : null}
               {item.phone ? (
                 <Pressable onPress={() => call(item.phone)}>
-                  <Text style={styles.phone}>{item.phone}</Text>
+                  <IconLabel name="phone" color="#fb923c" textStyle={styles.phone} style={{ justifyContent: 'flex-start', minHeight: 44 }}>{item.phone}</IconLabel>
                 </Pressable>
               ) : null}
               {item.phone2 ? (
                 <Pressable onPress={() => call(item.phone2)}>
-                  <Text style={styles.phone}>{item.phone2}</Text>
+                  <IconLabel name="phone" color="#fb923c" textStyle={styles.phone} style={{ justifyContent: 'flex-start', minHeight: 44 }}>{item.phone2}</IconLabel>
                 </Pressable>
               ) : null}
             </View>

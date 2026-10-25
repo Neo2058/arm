@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { listAssignments } from '../discipline/api';
 import { LABELS, errorMessage } from '../discipline/contract.cjs';
 import s from '../discipline/styles';
+import { IconHeading, IconLabel } from '../components/AppIcon';
 import { useDiscipline } from '../discipline/context';
 
 export default function DisciplineListScreen({ navigation }) {
@@ -60,7 +61,7 @@ export default function DisciplineListScreen({ navigation }) {
     refreshControl={<RefreshControl tintColor="#fb923c" refreshing={busy} onRefresh={() => active.current?.refresh()} />}
     ListHeaderComponent={<View style={{ gap: 12 }}>
       <Text style={s.title}>Поручения руководителя</Text>
-      <Pressable style={s.secondary} onPress={() => navigation.navigate('Journal')}><Text style={s.buttonText}>Журнал инструктора</Text></Pressable>
+      <Pressable style={s.secondary} onPress={() => navigation.navigate('Journal')}><IconLabel name="journal" textStyle={s.buttonText}>Журнал инструктора</IconLabel></Pressable>
       <Text style={s.muted}>Непрочитанных событий: {unread}. Обновление каждые 30 секунд при открытом разделе.</Text>
       {offline && <Text style={s.muted}>Нет свежих данных. Показаны сохранённые на устройстве карточки.</Text>}
       <Text style={s.muted}>В очереди: {Object.values(state.entries).filter(e => e.pending).length}. Черновиков: {Object.values(state.entries).filter(e => !e.pending && (e.response || e.files.length)).length}.</Text>
@@ -70,7 +71,7 @@ export default function DisciplineListScreen({ navigation }) {
     </View>}
     ListEmptyComponent={<Text style={s.muted}>{error ? 'Данные не обновлены.' : 'Поручений в этом разделе пока нет.'}</Text>}
     renderItem={({ item }) => <Pressable style={s.card} onPress={() => navigation.navigate('DisciplineDetail', { id: item.id })} accessibilityRole="button">
-      <Text style={s.heading}>{item.unread ? '● ' : ''}{item.title}</Text>
+      <IconHeading name="tasks" textStyle={s.heading}>{item.unread ? '● ' : ''}{item.title}</IconHeading>
       <Text style={s.accent}>{item.status_label}</Text>
       <Text style={s.muted}>Срок: {item.due_date.split('-').reverse().join('.')} · {item.author.name}</Text>
       {item.is_overdue && <Text style={s.error}>Просрочено</Text>}

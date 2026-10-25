@@ -13,3 +13,7 @@ Preserve local native signing configuration when regenerating ignored android/io
 Discipline: instructor-only tab, shared Laravel DisciplineService behind Sanctum routes. See DISCIPLINE.md. Keep one frozen operation UUID, version, response and file list on uncertain network errors; never silently replace the request on retry. Persistent drafts and frozen operations use the private FileSystem journal (storage.js), scoped to API URL + user ID; queue.cjs is tested with injected storage. Persist before sending, keep UUID/version/files across restarts. Automatic retries run only while active; auth/conflict failures block. Reauthenticate preserves drafts, logout deletes current scope. See DISCIPLINE.md. Files use token-authenticated byte requests and in-app viewing, not public MinIO URLs. DocumentPicker/Crypto match SDK 57 and require a new native binary.
 
 Journal read views: JournalScreen exports overview/tasks/crew, reached from DisciplineList without adding another bottom tab. Token-only GET /journal{,/tasks,/crew}; no long-lived journal cache or mutations. See JOURNAL.md; keep journal tasks distinct from discipline submissions.
+
+ProfileScreen manages Telegram through token-authenticated /account/telegram GET/POST/DELETE.
+One-time bot links stay in memory only, never logs or persistent drafts; refresh status on return from Telegram.
+Version is visible in profile. Icons use local react-native-svg paths in components/AppIcon.js.

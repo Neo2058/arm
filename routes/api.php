@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Mobile\NaryadController;
 use App\Http\Controllers\Api\Mobile\PhoneController;
 use App\Http\Controllers\Api\Mobile\QuizController;
 use App\Http\Controllers\Api\Mobile\TrainingController;
+use App\Http\Controllers\Api\Mobile\TelegramAccountController;
 use App\Http\Middleware\EnsureActiveApiUser;
 use Illuminate\Support\Facades\Route;
 
@@ -28,6 +29,10 @@ Route::prefix('mobile')->group(function () {
     Route::middleware(['auth:sanctum', EnsureActiveApiUser::class])->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
+
+        Route::get('/account/telegram', [TelegramAccountController::class, 'show']);
+        Route::post('/account/telegram', [TelegramAccountController::class, 'issue'])->middleware('throttle:5,10');
+        Route::delete('/account/telegram', [TelegramAccountController::class, 'destroy'])->middleware('throttle:5,10');
 
         Route::get('/documents', [DocumentController::class, 'index']);
         Route::get('/documents/{document}', [DocumentController::class, 'show']);

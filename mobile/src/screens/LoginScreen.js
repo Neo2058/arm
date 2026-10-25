@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { API_URL, login } from '../api';
 import { loginErrorMessage } from '../../api-config.cjs';
+import { IconLabel } from '../components/AppIcon';
 
 export default function LoginScreen({ onLoggedIn }) {
   const [email, setEmail] = useState('');
@@ -58,7 +59,7 @@ export default function LoginScreen({ onLoggedIn }) {
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Pressable style={styles.btn} onPress={submit} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Войти</Text>}
+        {loading ? <ActivityIndicator color="#fff" /> : <IconLabel name="login" textStyle={styles.btnText}>Войти</IconLabel>}
       </Pressable>
       <Pressable
         accessibilityRole="link"
