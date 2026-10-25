@@ -50,6 +50,9 @@ RUN echo 'date.timezone = UTC' > /usr/local/etc/php/conf.d/timezone.ini
 # PHP2Shell: disable session upload progress before request parse (CVE-2026-109618/109619)
 COPY docker/php/zz-php2shell.ini /usr/local/etc/php/conf.d/zz-php2shell.ini
 
+# Chat photos + ClamAV on the same FPM pool; image default pm.max_children=5 is too small.
+COPY docker/php-fpm/www.conf /usr/local/etc/php-fpm.d/zz-www.conf
+
 # Entrypoint for storage preparation (permissions + livewire-tmp dir)
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
