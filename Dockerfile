@@ -1,4 +1,4 @@
-FROM php:8.2-fpm
+FROM php:8.2.35-fpm
 
 # Устанавливаем системные зависимости + библиотеки для интл и картинок
 RUN apt-get update && apt-get install -y \
@@ -23,8 +23,12 @@ RUN apt-get update && apt-get install -y \
 RUN docker-php-ext-configure gd --with-jpeg \
     && docker-php-ext-install pdo pdo_pgsql zip xml intl gd
 
-# Redis
-RUN pecl install redis && docker-php-ext-enable redis
+# Redis: GitHub tarball — pecl.php.net недоступен из build-контейнера
+RUN curl -fsSL https://github.com/phpredis/phpredis/archive/refs/tags/6.3.0.tar.gz -o /tmp/redis.tar.gz \
+    && mkdir -p /usr/src/php/ext/redis \
+    && tar -xzf /tmp/redis.tar.gz -C /usr/src/php/ext/redis --strip-components=1 \
+    && rm /tmp/redis.tar.gz \
+    && docker-php-ext-install redis
 
 # Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -42,6 +46,9 @@ RUN { \
 
 # Timezone (removes the "Invalid date.timezone value ''" warning)
 RUN echo 'date.timezone = UTC' > /usr/local/etc/php/conf.d/timezone.ini
+
+# PHP2Shell: disable session upload progress before request parse (CVE-2026-109618/109619)
+COPY docker/php/zz-php2shell.ini /usr/local/etc/php/conf.d/zz-php2shell.ini
 
 # Entrypoint for storage preparation (permissions + livewire-tmp dir)
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh

@@ -50,6 +50,7 @@ services:
     volumes:
       - .:/var/www
       - app_storage:/var/www/storage
+      - ./docker/php/zz-php2shell.ini:/usr/local/etc/php/conf.d/zz-php2shell.ini:ro
     entrypoint: ["/usr/local/bin/entrypoint.sh"]
     depends_on:
       postgres:
