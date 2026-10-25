@@ -17,8 +17,10 @@ class EditColumnDeputy extends EditRecord
     {
         return [
             Actions\DeleteAction::make()
-                ->using(function (ColumnDeputy $record): void {
+                ->using(function (ColumnDeputy $record): bool {
                     app(ChatService::class)->revoke($record);
+
+                    return true;
                 }),
         ];
     }

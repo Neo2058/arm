@@ -28,7 +28,7 @@
                                 @endif
                             </div>
                             <div class="mt-1 whitespace-pre-wrap break-words">
-                                {{ $this->presentBody($message) }}
+                                {{ $message->feed_body }}
                             </div>
                         </div>
                         @if ($message->deleted_at === null && $message->status->value !== 'rejected')

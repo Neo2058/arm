@@ -3,12 +3,16 @@
 namespace App\Filament\Resources\ChatRoomResource\Pages;
 
 use App\Enums\ChatMessageStatus;
+use App\Enums\ChatMessageType;
 use App\Filament\Resources\ChatRoomResource;
 use App\Models\ChatMessage;
+use App\Services\Chat\ChatCrypto;
 use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Livewire\WithPagination;
+use RuntimeException;
 
 class ViewChatRoom extends ViewRecord
 {
@@ -17,9 +21,6 @@ class ViewChatRoom extends ViewRecord
     protected static string $resource = ChatRoomResource::class;
 
     protected static string $view = 'filament.resources.chat-room-resource.pages.view-chat-room';
-
-    /** @var array<int, string> */
-    private array $presented = [];
 
     public function getSubheading(): ?string
     {
@@ -38,24 +39,18 @@ class ViewChatRoom extends ViewRecord
      */
     public function getFeed(): LengthAwarePaginator
     {
-        return ChatMessage::query()
+        $feed = ChatMessage::query()
             ->where('room_id', $this->getRecord()->id)
             ->where('status', '!=', ChatMessageStatus::QUEUED)
             ->with('sender:id,name')
             ->orderByDesc('id')
             ->paginate(50);
-    }
 
-    public function presentBody(ChatMessage $message): string
-    {
-        if (array_key_exists($message->id, $this->presented)) {
-            return $this->presented[$message->id];
+        foreach ($feed as $message) {
+            $message->setAttribute('feed_body', $this->presentFeedBody($message));
         }
 
-        $body = ChatRoomResource::presentFeedBody($message);
-        $this->presented[$message->id] = $body;
-
-        return $body;
+        return $feed;
     }
 
     public function deleteMessage(int $messageId): void
@@ -71,5 +66,30 @@ class ViewChatRoom extends ViewRecord
         $message->deleted_at = now();
         $message->deleted_by = auth()->id();
         $message->save();
+    }
+
+    private function presentFeedBody(ChatMessage $message): string
+    {
+        if ($message->status === ChatMessageStatus::REJECTED) {
+            return 'Отклонено антивирусом';
+        }
+
+        if ($message->type === ChatMessageType::IMAGE) {
+            return 'Фото';
+        }
+        if ($message->type === ChatMessageType::PDF) {
+            return 'PDF';
+        }
+
+        $cipher = $message->body_ciphertext;
+        if (! is_string($cipher) || $cipher === '') {
+            return '';
+        }
+
+        try {
+            return app(ChatCrypto::class)->decrypt($cipher);
+        } catch (DecryptException|RuntimeException) {
+            return 'не удалось расшифровать';
+        }
     }
 }
