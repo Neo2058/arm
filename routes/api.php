@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Mobile\AuthController;
+use App\Http\Controllers\Api\Mobile\ChatController;
 use App\Http\Controllers\Api\Mobile\DisciplineController;
 use App\Http\Controllers\Api\Mobile\DocumentController;
 use App\Http\Controllers\Api\Mobile\FileController;
@@ -64,6 +65,18 @@ Route::prefix('mobile')->group(function () {
         Route::get('/discipline/{assignment}/reports', [DisciplineController::class, 'reports'])->whereNumber('assignment');
         Route::post('/discipline/{assignment}/read', [DisciplineController::class, 'read'])->whereNumber('assignment');
         Route::post('/discipline/{assignment}/submit', [DisciplineController::class, 'submit'])->whereNumber('assignment')->middleware('throttle:20,1');
+
+        Route::get('/chats/sync', [ChatController::class, 'sync'])
+            ->middleware('throttle:60,1');
+        Route::get('/chats/{room}', [ChatController::class, 'show']);
+        Route::get('/chats/{room}/messages', [ChatController::class, 'messages']);
+        Route::post('/chats/{room}/messages', [ChatController::class, 'store'])
+            ->middleware('throttle:30,1');
+        Route::post('/chats/{room}/read', [ChatController::class, 'read']);
+        Route::get('/chats/{room}/members', [ChatController::class, 'members']);
+        Route::get('/chats/{room}/eligible-members', [ChatController::class, 'eligible']);
+        Route::post('/chats/{room}/members', [ChatController::class, 'addMember']);
+        Route::delete('/chats/{room}/members/{user}', [ChatController::class, 'removeMember']);
 
     });
 });
