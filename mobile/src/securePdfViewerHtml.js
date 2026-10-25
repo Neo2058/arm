@@ -217,10 +217,6 @@ function createPdfTransfer(base64) {
   } };
 }
 
-function buildChatPdfHtml(base64, origin) {
-  return buildSecurePdfHtml(base64, origin, { reportViolations: false });
-}
-
 module.exports = {
   __esModule: true,
   apiOrigin,
@@ -228,5 +224,4 @@ module.exports = {
   isAllowedViewerUrl,
   buildSecurePdfHtml,
   createPdfTransfer,
-  buildChatPdfHtml,
 };

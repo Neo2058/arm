@@ -83,6 +83,17 @@ function createChatPoller(options) {
     for (const fn of listeners) fn(snap);
   }
 
+  async function mergeAndAck(roomId, incoming) {
+    state.messagesByRoom = {
+      ...state.messagesByRoom,
+      [roomId]: mergeMessages(state.messagesByRoom[roomId] || [], incoming),
+    };
+    emit();
+    if (ackOutbox) {
+      try { await ackOutbox(state.messagesByRoom[roomId]); } catch { /* next tick retries ACK */ }
+    }
+  }
+
   function disarm() {
     if (intervalId != null) {
       clearIntervalFn(intervalId);
@@ -130,22 +141,16 @@ function createChatPoller(options) {
         try {
           const page = await fetchThread(roomId);
           const incoming = (page && page.messages) || page || [];
-          state.messagesByRoom = {
-            ...state.messagesByRoom,
-            [roomId]: mergeMessages(state.messagesByRoom[roomId] || [], incoming),
-          };
-          if (ackOutbox) {
-            try { await ackOutbox(state.messagesByRoom[roomId]); } catch { /* next tick retries ACK */ }
-          }
+          await mergeAndAck(roomId, incoming);
           const last = maxAvailableId(state.messagesByRoom[roomId]);
           if (last && markRead && focusedRoomId === roomId) {
             try {
               await markRead(roomId, last);
               state.rooms = state.rooms.map((room) => (room.id === roomId ? { ...room, unread: 0 } : room));
               state.unread = unreadTotal(state.rooms);
+              emit();
             } catch { /* next tick retries read */ }
           }
-          emit();
         } catch (error) {
           const status = error && error.response && error.response.status;
           if (status === 429) backoffUntil = now() + backoffMs;
@@ -184,11 +189,7 @@ function createChatPoller(options) {
       else emit();
     },
     mergeThread(roomId, incoming) {
-      state.messagesByRoom = {
-        ...state.messagesByRoom,
-        [roomId]: mergeMessages(state.messagesByRoom[roomId] || [], incoming),
-      };
-      emit();
+      return mergeAndAck(roomId, incoming);
     },
     syncNow() { return tick(); },
     isRunning() { return intervalId != null; },

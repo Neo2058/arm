@@ -224,4 +224,4 @@ function createOutbox({ storage, send, uuid, digest, userId, onAck, now = Date.n
   return api;
 }
 
-module.exports = { fingerprintPayload, uploadHeld, createFileStorage, createOutbox };
+module.exports = { fingerprintPayload, createFileStorage, createOutbox };

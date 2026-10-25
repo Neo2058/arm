@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { createChatPoller, shouldPoll, mergeMessages, canManageMembers, POLL_MS } = require('../src/chatPoller');
-const { createOutbox, fingerprintPayload } = require('../src/chatOutbox');
+const { createOutbox, fingerprintPayload, uploadHeld } = require('../src/chatOutbox');
 
 const uuid = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
 const digest = (value) => crypto.createHash('sha256').update(value, 'utf8').digest('hex');
@@ -322,6 +322,10 @@ test('replay 200 with queued also holds and 200 rejected drops the item', async 
   assert.equal(box.snapshot().items[0].type, 'image');
 });
 
+test('uploadHeld stays private to the outbox module', () => {
+  assert.equal(uploadHeld, undefined);
+});
+
 test('poller ACKs outbox when the thread shows available or rejected', async () => {
   const storage = memoryStorage();
   const rejectedId = '11111111-1111-4111-8111-111111111111';
@@ -361,6 +365,116 @@ test('poller ACKs outbox when the thread shows available or rejected', async () 
   assert.equal(box.snapshot().items.length, 0);
   assert.equal(poller.getState().messagesByRoom[10].find((msg) => msg.client_id === rejectedId).status, 'rejected');
   assert.equal(canManageMembers(poller.getState().rooms[0]), true);
+});
+
+test('thread snapshot contains client_id before ackOutbox resolves', async () => {
+  const clientId = '33333333-3333-4333-8333-333333333333';
+  const storage = memoryStorage();
+  const box = createOutbox({
+    storage,
+    userId: 5,
+    uuid: () => clientId,
+    digest: async (value) => digest(value),
+    send: async (item) => ({ status: 202, data: { id: 12, client_id: item.client_id, status: 'queued' } }),
+  });
+  await box.load();
+  await box.enqueue({ room_id: 10, type: 'image', body: '', fileSha256: 'cc' });
+  assert.equal(box.snapshot().items[0].status, 'queued');
+
+  let ackStarted = false;
+  let ackResolved = false;
+  let listenerSawClientBeforeAck = false;
+  let resolveAck;
+  const poller = createChatPoller({
+    featuresChat: true,
+    userId: 5,
+    setIntervalFn: () => 1,
+    clearIntervalFn: () => {},
+    syncInbox: async () => ({ rooms: [{ id: 10, unread: 1 }] }),
+    fetchThread: async () => ({
+      messages: [{ id: 12, client_id: clientId, status: 'available', type: 'image' }],
+    }),
+    ackOutbox: (messages) => {
+      ackStarted = true;
+      return new Promise((resolve) => {
+        resolveAck = async () => {
+          await box.ack(messages);
+          ackResolved = true;
+          resolve();
+        };
+      });
+    },
+    markRead: async () => {},
+  });
+  poller.subscribe((state) => {
+    const has = (state.messagesByRoom[10] || []).some((msg) => msg.client_id === clientId);
+    if (has && !ackResolved) listenerSawClientBeforeAck = true;
+  });
+  poller.setAppState('active');
+  await flushed();
+  poller.setFocusedRoomId(10);
+  await flushed();
+  assert.equal(ackStarted, true);
+  assert.equal(ackResolved, false);
+  assert.equal(listenerSawClientBeforeAck, true);
+  assert.equal(box.snapshot().items.length, 1);
+  await resolveAck();
+  await flushed();
+  assert.equal(ackResolved, true);
+  assert.equal(box.snapshot().items.length, 0);
+});
+
+test('mergeThread ACKs available and rejected client_ids', async () => {
+  const storage = memoryStorage();
+  const rejectedId = '44444444-4444-4444-8444-444444444444';
+  const availableId = '55555555-5555-4555-8555-555555555555';
+  let n = 0;
+  const ids = [rejectedId, availableId];
+  const box = createOutbox({
+    storage,
+    userId: 5,
+    uuid: () => ids[n++] || crypto.randomUUID(),
+    digest: async (value) => digest(value),
+    send: async (item) => ({ status: 202, data: { id: item.body === 'r' ? 8 : 9, client_id: item.client_id, status: 'queued' } }),
+  });
+  await box.load();
+  await box.enqueue({ room_id: 10, type: 'image', body: 'r', fileSha256: 'r2' });
+  await box.enqueue({ room_id: 10, type: 'pdf', body: 'a', fileSha256: 'a2' });
+  assert.equal(box.snapshot().items.length, 2);
+
+  const poller = createChatPoller({
+    featuresChat: true,
+    userId: 5,
+    setIntervalFn: () => 1,
+    clearIntervalFn: () => {},
+    syncInbox: async () => ({ rooms: [] }),
+    ackOutbox: (messages) => box.ack(messages),
+  });
+  await poller.mergeThread(10, [
+    { id: 8, client_id: rejectedId, status: 'rejected' },
+    { id: 9, client_id: availableId, status: 'available', type: 'pdf' },
+  ]);
+  assert.equal(box.snapshot().items.length, 0);
+  assert.equal(poller.getState().messagesByRoom[10].find((msg) => msg.client_id === rejectedId).status, 'rejected');
+});
+
+test('rejected stub without sender_id is treated as own message', () => {
+  const src = fs.readFileSync(path.join(__dirname, '../src/screens/ChatThreadScreen.js'), 'utf8');
+  assert.match(src, /item\.status === 'rejected' \|\| \(item\.sender_id === userId && item\.type !== 'system'\)/);
+  const mine = (item, userId) => item.status === 'rejected' || (item.sender_id === userId && item.type !== 'system');
+  const stub = { id: 8, client_id: '11111111-1111-4111-8111-111111111111', status: 'rejected' };
+  assert.equal(mine(stub, 5), true);
+  assert.equal(mine({ id: 9, sender_id: 5, type: 'text' }, 5), true);
+  assert.equal(mine({ id: 10, sender_id: 7, type: 'text' }, 5), false);
+  assert.equal(mine({ id: 11, sender_id: 5, type: 'system' }, 5), false);
+});
+
+test('composer caption stays until enqueueFile succeeds', () => {
+  const src = fs.readFileSync(path.join(__dirname, '../src/screens/ChatThreadScreen.js'), 'utf8');
+  const pickPhoto = src.slice(src.indexOf('const pickPhoto'), src.indexOf('const pickPdf'));
+  const pickPdf = src.slice(src.indexOf('const pickPdf'), src.indexOf('const openPdf'));
+  assert.ok(pickPhoto.indexOf("setText('')") > pickPhoto.indexOf('await enqueueFile'));
+  assert.ok(pickPdf.indexOf("setText('')") > pickPdf.indexOf('await enqueueFile'));
 });
 
 test('manage UI follows can_manage_members from inbox JSON', async () => {

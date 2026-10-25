@@ -5,7 +5,7 @@ import { API_URL } from '../api';
 import {
   apiOrigin,
   arrayBufferToBase64,
-  buildChatPdfHtml,
+  buildSecurePdfHtml,
   isAllowedViewerUrl,
 } from '../securePdfViewerHtml';
 
@@ -28,7 +28,7 @@ export default function ChatPdfScreen({ route }) {
         if (!response.ok) throw new Error('pdf http');
         const buffer = await response.arrayBuffer();
         if (cancelled) return;
-        setHtml(buildChatPdfHtml(arrayBufferToBase64(buffer), origin));
+        setHtml(buildSecurePdfHtml(arrayBufferToBase64(buffer), origin, { reportViolations: false }));
       } catch {
         if (!cancelled) setError('Файл недоступен');
       }

@@ -49,6 +49,7 @@ export default {
         {
           photosPermission: 'ТЧ-15 использует фото, чтобы отправить снимок в рабочий чат колонны.',
           cameraPermission: false,
+          microphonePermission: false,
         },
       ],
       'expo-document-picker',

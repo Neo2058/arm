@@ -2,10 +2,10 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { buildChatPdfHtml, buildSecurePdfHtml } = require('../src/securePdfViewerHtml');
+const { buildSecurePdfHtml } = require('../src/securePdfViewerHtml');
 
 test('chat PDF html embeds pdf.js and has no postMessage download/share/print', () => {
-  const html = buildChatPdfHtml('QQ==', 'https://www.xn---15-7edz.xn--p1ai');
+  const html = buildSecurePdfHtml('QQ==', 'https://www.xn---15-7edz.xn--p1ai', { reportViolations: false });
   assert.match(html, /https:\/\/www\.xn---15-7edz\.xn--p1ai\/vendor\/pdfjs\/pdf\.min\.js/);
   assert.match(html, /https:\/\/www\.xn---15-7edz\.xn--p1ai\/vendor\/pdfjs\/pdf\.worker\.min\.js/);
   assert.match(html, /"QQ=="/);
@@ -26,7 +26,9 @@ test('document viewer html still reports download/share/print', () => {
 
 test('ChatPdfScreen fetches capability URL bytes and does not lock screenshots', () => {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/ChatPdfScreen.js'), 'utf8');
-  assert.match(src, /buildChatPdfHtml/);
+  assert.match(src, /buildSecurePdfHtml/);
+  assert.match(src, /reportViolations:\s*false/);
+  assert.doesNotMatch(src, /buildChatPdfHtml/);
   assert.match(src, /fetch\(url/);
   assert.doesNotMatch(src, /expo-screen-capture/);
   assert.doesNotMatch(src, /DocumentViewScreen/);
@@ -42,6 +44,9 @@ test('APK 1.1.0 uses versionCode 8, picker plugins, and no screen-capture plugin
   assert.match(config, /version:\s*'1\.1\.0'/);
   assert.match(config, /versionCode:\s*8/);
   assert.match(config, /expo-image-picker/);
+  const picker = config.slice(config.indexOf('expo-image-picker'), config.indexOf('expo-document-picker'));
+  assert.match(picker, /cameraPermission:\s*false/);
+  assert.match(picker, /microphonePermission:\s*false/);
   assert.match(config, /expo-document-picker/);
   assert.match(config, /expo-file-system/);
   assert.match(config, /ТЧ-15 использует фото, чтобы отправить снимок в рабочий чат колонны\./);

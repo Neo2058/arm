@@ -157,7 +157,7 @@ export default function ChatThreadScreen({ route, navigation }) {
       const page = await listChatMessages(roomId, { before_id: oldest, limit: 50 });
       const incoming = page.messages || [];
       if (!incoming.length) setHasOlder(false);
-      poller?.mergeThread(roomId, incoming);
+      await poller?.mergeThread(roomId, incoming);
     } catch {
       setHasOlder(true);
     } finally {
@@ -218,7 +218,6 @@ export default function ChatThreadScreen({ route, navigation }) {
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
       );
       const caption = text.trim().slice(0, 500);
-      setText('');
       try {
         await enqueueFile({
           type: 'image',
@@ -227,8 +226,9 @@ export default function ChatThreadScreen({ route, navigation }) {
           mime: 'image/jpeg',
           caption,
         });
+        setText('');
       } catch {
-        setText(caption);
+        /* caption stays in composer */
       }
     } catch {
       Alert.alert('Фото', 'Не удалось прочитать снимок. Повторите выбор.');
@@ -250,7 +250,6 @@ export default function ChatThreadScreen({ route, navigation }) {
         return;
       }
       const caption = text.trim().slice(0, 500);
-      setText('');
       try {
         await enqueueFile({
           type: 'pdf',
@@ -259,8 +258,9 @@ export default function ChatThreadScreen({ route, navigation }) {
           mime: asset.mimeType || 'application/pdf',
           caption,
         });
+        setText('');
       } catch {
-        setText(caption);
+        /* caption stays in composer */
       }
     } catch {
       Alert.alert('PDF', 'Не удалось прочитать выбранный файл. Повторите выбор.');
@@ -297,7 +297,7 @@ export default function ChatThreadScreen({ route, navigation }) {
         ) : null}
         ListEmptyComponent={<Text style={styles.muted}>Напишите первое сообщение</Text>}
         renderItem={({ item }) => {
-          const mine = item.sender_id === userId && item.type !== 'system';
+          const mine = item.status === 'rejected' || (item.sender_id === userId && item.type !== 'system');
           const pending = item.local && item.status === 'pending';
           const queued = item.local && item.status === 'queued';
           const failed = item.local && item.status === 'error';
