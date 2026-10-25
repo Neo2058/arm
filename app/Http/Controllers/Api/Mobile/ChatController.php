@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Mobile;
 
+use App\Enums\ChatMessageType;
 use App\Http\Controllers\Controller;
 use App\Models\ChatRoom;
 use App\Models\User;
@@ -55,6 +56,30 @@ class ChatController extends Controller
     public function store(Request $request, ChatRoom $room): JsonResponse
     {
         $user = $this->guard($request, $room);
+        if (in_array($request->input('type'), ['image', 'pdf'], true)) {
+            $data = $request->validate([
+                'client_id' => ['required', 'uuid'],
+                'type' => ['required', 'string', Rule::in(['image', 'pdf'])],
+                'body' => ['sometimes', 'nullable', 'string', 'max:500'],
+                'file' => ['required', 'file'],
+            ]);
+            $result = $this->chats->sendAttachment(
+                $user,
+                $room,
+                $data['client_id'],
+                ChatMessageType::from($data['type']),
+                $request->file('file'),
+                (string) ($data['body'] ?? ''),
+            );
+            $message = $result['message'];
+
+            return $this->json([
+                'id' => $message->id,
+                'client_id' => $message->client_id,
+                'status' => $message->status->value,
+            ], $result['created'] ? 202 : 200);
+        }
+
         $data = $request->validate([
             'client_id' => ['required', 'uuid'],
             'type' => ['required', 'string', Rule::in(['text'])],

@@ -1,0 +1,53 @@
+# Overlay к prod + discipline. Не второй image, не брокер.
+services:
+  chat-worker:
+    image: ${DISCIPLINE_APP_IMAGE:-arm-app}
+    container_name: arm-chat-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - APP_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # MUST победить env_file / .env (там deferred) и не наследовать deferred с app.
+      - QUEUE_CONNECTION=database
+      - DB_QUEUE_RETRY_AFTER=120
+      - FILESYSTEM_DISK=s3
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - AWS_BUCKET=${AWS_BUCKET}
+      - AWS_ENDPOINT=http://minio:9000
+      - AWS_USE_PATH_STYLE_ENDPOINT=true
+      - DISCIPLINE_CLAMD_CONFIG=/var/www/docker/clamav/clamd-client.conf
+    volumes:
+      - .:/var/www
+      - app_storage:/var/www/storage
+      - ./docker/chat-worker-entrypoint.sh:/usr/local/bin/chat-worker-entrypoint.sh:ro
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
+    # НЕ docker/entrypoint.sh: он publish Filament/Livewire, storage:link, config:clear —
+    # гонка с arm-app и exec php-fpm вместо queue:work (см. TELEGRAM_SETUP.md).
+    entrypoint: ["/usr/local/bin/chat-worker-entrypoint.sh"]
+    command:
+      [
+        "php", "artisan", "queue:work", "database",
+        "--queue=chat",
+        "--sleep=3",
+        "--tries=3",
+        "--timeout=90",
+        "--max-time=3600"
+      ]

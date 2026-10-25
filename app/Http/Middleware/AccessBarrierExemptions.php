@@ -29,6 +29,7 @@ final class AccessBarrierExemptions
             'logout',
             'admin/serve-document',
             'admin/serve-training-material',
+            'admin/serve-chat-attachment',
         );
     }
 
