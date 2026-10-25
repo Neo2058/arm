@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\Mobile;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Services\Chat\ChatEnrollment;
 use App\Services\ClickHouseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,6 +13,8 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
+    public function __construct(private ChatEnrollment $enrollment) {}
+
     public function login(Request $request): JsonResponse
     {
         $credentials = $request->validate([
@@ -36,6 +40,7 @@ class AuthController extends Controller
 
         $user->tokens()->where('name', 'mobile')->delete();
         $token = $user->createToken('mobile')->plainTextToken;
+        $this->enrollment->remember($user);
 
         return response()->json([
             'token' => $token,
@@ -45,8 +50,11 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
+        $user = $request->user();
+        $this->enrollment->remember($user);
+
         return response()->json([
-            'user' => $this->payload($request->user()),
+            'user' => $this->payload($user),
         ]);
     }
 
@@ -64,13 +72,22 @@ class AuthController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    private function payload($user): array
+    private function payload(User $user): array
     {
+        $user->loadMissing('profile');
+        $column = trim((string) ($user->profile?->column ?? ''));
+        $column = $column === '' ? null : $column;
+
         return [
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->roleValue(),
+            'column' => $column,
+            'features' => [
+                'chat' => filter_var(config('chat.enabled'), FILTER_VALIDATE_BOOLEAN),
+            ],
+            'can_manage_column_chats' => $user->isInstructor() && $column !== null,
         ];
     }
 }
