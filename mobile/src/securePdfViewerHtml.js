@@ -140,15 +140,10 @@ function buildSecurePdfHtml(base64, origin, options) {
 </html>`;
 }
 
-function buildChatPdfHtml(base64, origin) {
-  return buildSecurePdfHtml(base64, origin, { reportViolations: false });
-}
-
 module.exports = {
   __esModule: true,
   apiOrigin,
   arrayBufferToBase64,
   isAllowedViewerUrl,
   buildSecurePdfHtml,
-  buildChatPdfHtml,
 };
