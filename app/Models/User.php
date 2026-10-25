@@ -28,6 +28,7 @@ class User extends Authenticatable implements FilamentUser
         'password' => 'hashed',
         'role' => UserRole::class,
         'is_active' => 'boolean',
+        'mobile_enrolled_at' => 'datetime',
     ];
 
     public function profile()
