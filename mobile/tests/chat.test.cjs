@@ -1,7 +1,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
-const { createChatPoller, shouldPoll, mergeMessages, POLL_MS } = require('../src/chatPoller');
+const fs = require('node:fs');
+const path = require('node:path');
+const { createChatPoller, shouldPoll, mergeMessages, canManageMembers, POLL_MS } = require('../src/chatPoller');
 const { createOutbox, fingerprintPayload } = require('../src/chatOutbox');
 
 const uuid = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
@@ -244,6 +246,146 @@ test('second text enqueued during an in-flight POST is flushed without waiting f
   await second;
   assert.deepEqual(sent, ['A', 'B']);
   assert.equal(box.snapshot().items.length, 0);
+});
+
+test('attachment fingerprint includes file sha256', () => {
+  assert.equal(fingerprintPayload('image', '', 'deadbeef'), 'image\n\ndeadbeef');
+  assert.equal(fingerprintPayload('pdf', 'подпись', 'abc'), 'pdf\nподпись\nabc');
+  assert.equal(digest(fingerprintPayload('image', '', 'deadbeef')), digest('image\n\ndeadbeef'));
+});
+
+test('HTTP 202 keeps the attachment queued and does not re-POST', async () => {
+  const storage = memoryStorage();
+  const sent = [];
+  let acks = 0;
+  let clock = 0;
+  const box = createOutbox({
+    storage,
+    userId: 5,
+    uuid: () => uuid,
+    digest: async (value) => digest(value),
+    now: () => clock,
+    onAck: () => { acks += 1; },
+    send: async (item) => {
+      sent.push({ client_id: item.client_id, localUri: item.localUri });
+      return { status: 202, data: { id: 11, client_id: item.client_id, status: 'queued' } };
+    },
+  });
+  await box.load();
+  await box.enqueue({
+    room_id: 10,
+    type: 'image',
+    body: '',
+    localUri: 'file:///tmp/photo.jpg',
+    fileName: 'photo.jpg',
+    mime: 'image/jpeg',
+    fileSha256: 'deadbeef',
+  });
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].localUri, 'file:///tmp/photo.jpg');
+  assert.equal(box.snapshot().items.length, 1);
+  assert.equal(box.snapshot().items[0].status, 'queued');
+  assert.equal(box.snapshot().items[0].localUri, undefined);
+  assert.equal(box.snapshot().items[0].client_id, uuid);
+  assert.equal(box.snapshot().items[0].fingerprint, digest('image\n\ndeadbeef'));
+  assert.equal(acks, 0);
+  clock += 20000;
+  await box.flush();
+  assert.equal(sent.length, 1);
+  assert.equal(box.snapshot().items[0].status, 'queued');
+});
+
+test('replay 200 with queued also holds and 200 rejected drops the item', async () => {
+  const storage = memoryStorage();
+  const sent = [];
+  let n = 0;
+  const box = createOutbox({
+    storage,
+    userId: 5,
+    uuid: () => `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}`,
+    digest: async (value) => digest(value),
+    send: async (item) => {
+      sent.push(item.type);
+      if (item.type === 'image') {
+        return { status: 200, data: { id: 3, client_id: item.client_id, status: 'queued' } };
+      }
+      return { status: 200, data: { id: 4, client_id: item.client_id, status: 'rejected' } };
+    },
+  });
+  await box.load();
+  await box.enqueue({ room_id: 10, type: 'image', body: '', fileSha256: 'aa' });
+  assert.equal(box.snapshot().items.length, 1);
+  assert.equal(box.snapshot().items[0].status, 'queued');
+  await box.enqueue({ room_id: 10, type: 'pdf', body: '', fileSha256: 'bb' });
+  assert.equal(sent.length, 2);
+  assert.equal(box.snapshot().items.length, 1);
+  assert.equal(box.snapshot().items[0].type, 'image');
+});
+
+test('poller ACKs outbox when the thread shows available or rejected', async () => {
+  const storage = memoryStorage();
+  const rejectedId = '11111111-1111-4111-8111-111111111111';
+  const availableId = '22222222-2222-4222-8222-222222222222';
+  let n = 0;
+  const ids = [rejectedId, availableId];
+  const box = createOutbox({
+    storage,
+    userId: 5,
+    uuid: () => ids[n++] || crypto.randomUUID(),
+    digest: async (value) => digest(value),
+    send: async (item) => ({ status: 202, data: { id: item.body === 'r' ? 8 : 9, client_id: item.client_id, status: 'queued' } }),
+  });
+  await box.load();
+  await box.enqueue({ room_id: 10, type: 'image', body: 'r', fileSha256: 'r1' });
+  await box.enqueue({ room_id: 10, type: 'pdf', body: 'a', fileSha256: 'a1' });
+  assert.equal(box.snapshot().items.length, 2);
+
+  const poller = createChatPoller({
+    featuresChat: true,
+    userId: 5,
+    setIntervalFn: () => 1,
+    clearIntervalFn: () => {},
+    syncInbox: async () => ({ rooms: [{ id: 10, unread: 0, can_manage_members: true }] }),
+    fetchThread: async () => ({
+      messages: [
+        { id: 8, client_id: rejectedId, status: 'rejected' },
+        { id: 9, client_id: availableId, status: 'available', type: 'pdf' },
+      ],
+    }),
+    ackOutbox: (messages) => box.ack(messages),
+  });
+  poller.setAppState('active');
+  await flushed();
+  poller.setFocusedRoomId(10);
+  await flushed();
+  assert.equal(box.snapshot().items.length, 0);
+  assert.equal(poller.getState().messagesByRoom[10].find((msg) => msg.client_id === rejectedId).status, 'rejected');
+  assert.equal(canManageMembers(poller.getState().rooms[0]), true);
+});
+
+test('manage UI follows can_manage_members from inbox JSON', async () => {
+  assert.equal(canManageMembers({ can_manage_members: true }), true);
+  assert.equal(canManageMembers({ can_manage_members: false }), false);
+  assert.equal(canManageMembers({}), false);
+  assert.equal(canManageMembers(null), false);
+  const poller = createChatPoller({
+    featuresChat: true,
+    setIntervalFn: () => 1,
+    clearIntervalFn: () => {},
+    syncInbox: async () => ({
+      rooms: [
+        { id: 1, unread: 0, can_manage_members: true },
+        { id: 2, unread: 0, can_manage_members: false },
+      ],
+    }),
+  });
+  poller.setAppState('active');
+  await flushed();
+  assert.equal(poller.getState().rooms[0].can_manage_members, true);
+  assert.equal(canManageMembers(poller.getState().rooms[1]), false);
+  const membersSrc = fs.readFileSync(path.join(__dirname, '../src/screens/ChatMembersScreen.js'), 'utf8');
+  assert.match(membersSrc, /can_manage_members/);
+  assert.match(membersSrc, /canManageMembers/);
 });
 
 test('load turns 401/403 rows pending so reauth can flush the same UUID', async () => {

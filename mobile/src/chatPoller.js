@@ -32,6 +32,10 @@ function maxAvailableId(messages) {
   return max;
 }
 
+function canManageMembers(room) {
+  return room != null && room.can_manage_members === true;
+}
+
 function createChatPoller(options) {
   const featuresChat = options.featuresChat === true;
   const pollMs = options.pollMs || POLL_MS;
@@ -42,6 +46,7 @@ function createChatPoller(options) {
   const syncInbox = options.syncInbox;
   const fetchThread = options.fetchThread;
   const flushOutbox = options.flushOutbox;
+  const ackOutbox = options.ackOutbox;
   const markRead = options.markRead;
   const onChange = options.onChange;
   const userId = options.userId;
@@ -129,6 +134,9 @@ function createChatPoller(options) {
             ...state.messagesByRoom,
             [roomId]: mergeMessages(state.messagesByRoom[roomId] || [], incoming),
           };
+          if (ackOutbox) {
+            try { await ackOutbox(state.messagesByRoom[roomId]); } catch { /* next tick retries ACK */ }
+          }
           const last = maxAvailableId(state.messagesByRoom[roomId]);
           if (last && markRead && focusedRoomId === roomId) {
             try {
@@ -239,6 +247,7 @@ module.exports = {
   shouldPoll,
   unreadTotal,
   mergeMessages,
+  canManageMembers,
   createChatPoller,
   attachChatSession,
   stopMobileChat,
