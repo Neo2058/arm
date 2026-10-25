@@ -180,11 +180,11 @@ export default function ChatThreadScreen({ route, navigation }) {
 
   const enqueueFile = async ({ type, uri, name, mime, caption }) => {
     const outbox = getChatOutbox();
-    if (!outbox) return;
+    if (!outbox) return false;
     const size = await fileSize(uri);
     if (!size || size > MAX_FILE_BYTES) {
       Alert.alert('Файл', 'Допустимы файлы размером от 1 байта до 10 МиБ.');
-      return;
+      return false;
     }
     const fileSha256 = await sha256File(uri);
     await outbox.enqueue({
@@ -196,6 +196,7 @@ export default function ChatThreadScreen({ route, navigation }) {
       mime,
       fileSha256,
     });
+    return true;
   };
 
   const pickPhoto = async () => {
@@ -218,17 +219,18 @@ export default function ChatThreadScreen({ route, navigation }) {
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
       );
       const caption = text.trim().slice(0, 500);
+      setText('');
       try {
-        await enqueueFile({
+        const ok = await enqueueFile({
           type: 'image',
           uri: prepared.uri,
           name: 'photo.jpg',
           mime: 'image/jpeg',
           caption,
         });
-        setText('');
+        if (!ok) setText(caption);
       } catch {
-        /* caption stays in composer */
+        setText(caption);
       }
     } catch {
       Alert.alert('Фото', 'Не удалось прочитать снимок. Повторите выбор.');
@@ -250,17 +252,18 @@ export default function ChatThreadScreen({ route, navigation }) {
         return;
       }
       const caption = text.trim().slice(0, 500);
+      setText('');
       try {
-        await enqueueFile({
+        const ok = await enqueueFile({
           type: 'pdf',
           uri: asset.uri,
           name,
           mime: asset.mimeType || 'application/pdf',
           caption,
         });
-        setText('');
+        if (!ok) setText(caption);
       } catch {
-        /* caption stays in composer */
+        setText(caption);
       }
     } catch {
       Alert.alert('PDF', 'Не удалось прочитать выбранный файл. Повторите выбор.');

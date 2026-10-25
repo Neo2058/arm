@@ -469,12 +469,18 @@ test('rejected stub without sender_id is treated as own message', () => {
   assert.equal(mine({ id: 11, sender_id: 5, type: 'system' }, 5), false);
 });
 
-test('composer caption stays until enqueueFile succeeds', () => {
+test('composer caption is cleared before enqueue and restored if it fails', () => {
   const src = fs.readFileSync(path.join(__dirname, '../src/screens/ChatThreadScreen.js'), 'utf8');
+  const enqueueFile = src.slice(src.indexOf('const enqueueFile'), src.indexOf('const pickPhoto'));
   const pickPhoto = src.slice(src.indexOf('const pickPhoto'), src.indexOf('const pickPdf'));
   const pickPdf = src.slice(src.indexOf('const pickPdf'), src.indexOf('const openPdf'));
-  assert.ok(pickPhoto.indexOf("setText('')") > pickPhoto.indexOf('await enqueueFile'));
-  assert.ok(pickPdf.indexOf("setText('')") > pickPdf.indexOf('await enqueueFile'));
+  assert.match(enqueueFile, /if \(!size \|\| size > MAX_FILE_BYTES\)/);
+  assert.match(enqueueFile, /return false;/);
+  assert.match(enqueueFile, /return true;/);
+  assert.ok(pickPhoto.indexOf("setText('')") < pickPhoto.indexOf('await enqueueFile'));
+  assert.match(pickPhoto, /if \(!ok\) setText\(caption\)/);
+  assert.ok(pickPdf.indexOf("setText('')") < pickPdf.indexOf('await enqueueFile'));
+  assert.match(pickPdf, /if \(!ok\) setText\(caption\)/);
 });
 
 test('manage UI follows can_manage_members from inbox JSON', async () => {
