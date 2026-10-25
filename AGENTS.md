@@ -24,7 +24,7 @@
 **Базы данных (критично!):**
 - **PostgreSQL** — основная операционная БД (пользователи, смены, квизы, документы)
 - **ClickHouse** — аналитика и логи действий пользователей (`user_actions`)
-- Redis — кеш + очереди
+- Redis — кеш и сессии (не очереди)
 - MinIO — S3-хранилище документов
 - Meilisearch — полнотекстовый поиск
 
@@ -239,7 +239,8 @@
 ### Filament
 - Основная панель: `/admin` (`AdminPanelProvider`).
 - Цвет — Amber.
-- Группы меню: «Люди и доступ», «Документы», «Обучение», «Справочники смен», «Администрирование».
+- Группы меню: «Люди и доступ», «Документы», «Обучение», «Справочники смен», «Администрирование», «Коммуникации».
+- «Коммуникации» всегда видна для `isAdmin()`, даже при `CHAT_ENABLED=false`.
 - Дашборд: очередь заявок/уведомлений/устройств + виджеты аналитики в `app/Filament/Widgets/`.
 - Выкладка нарядов (`NaryadResource`): TXT + разбивка смен + общий PDF. Сетку `/naryad` сюда не дублировать.
 - Новые ресурсы создавай в `app/Filament/Resources/` с полными Pages (List/Create/Edit).
@@ -248,6 +249,9 @@
 - При обновлении PHP-зависимостей сохраняй `composer.config.platform.php = 8.2.0`; проверяй реальный PHP контейнера через `composer check-platform-reqs --no-dev`.
 - Обновление зависимостей безопасности и открытые mobile advisories — `SECURITY_DEPENDENCIES.md`; production устанавливает зависимости по lock-файлам.
 - Основной способ запуска — `docker compose up`.
+- Production + дисциплина + чат: `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml`.
+- Redis — только кеш/сессии. `QUEUE_CONNECTION=deferred` на `arm-app`. `QUEUE_CONNECTION=database` **только** на `arm-chat-worker`. Не `docker exec arm-app queue:work --queue=chat`.
+- `docker/php-fpm/www.conf` → `/usr/local/etc/php-fpm.d/zz-www.conf`, `pm.max_children=15` (фото; текстовый пилот можно на стоковых 5).
 - При локальной разработке без Docker помни про зависимости (postgres host = `postgres`, clickhouse = `clickhouse` и т.д. в конфигах).
 - Миграции и сиды должны работать в контейнере.
 
@@ -283,6 +287,9 @@
 # Запуск всего стека
 docker compose up -d
 
+# Production + дисциплина + чат
+docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml up -d
+
 # Логи приложения
 docker compose logs -f app
 
@@ -307,7 +314,7 @@ php artisan optimize:clear
 
 ---
 
-**Последнее обновление:** 2026-10-25 (PHP2Shell: пин 8.2.35, `session.upload_progress.enabled=Off`)
+**Последнее обновление:** 2026-10-26 (чат: пилот депо, Redis только кеш/сессии, `pm.max_children=15`)
 
 Этот файл имеет высокий приоритет и будет автоматически подгружаться в контекст AI при работе в директории проекта.
 
@@ -398,3 +405,28 @@ php artisan optimize:clear
 
 
 ATZ mobile API and Android 1.0.14/code15 were published on production on 31 October 2026. Sanctum routes reuse InstructorTrainingRequests/InstructorTrainingAccounting. Exact requests persist in scoped mobile training storage; logout clears it. See ATZ_RELEASE_2026-10-31.md and PRODUCTION_DEPLOYMENT.md. Full-suite legacy accounting failures reproduce on base HEAD; targeted ATZ checks are separate. Physical-phone instructor acceptance is still pending.
+
+
+## Чат (пилот депо)
+
+Модель B (в монолите): полный inbox, FileProxy, опрос 15 с, PHP-worker без брокера (нет RabbitMQ/NATS/Kafka/Redis Streams/Reverb/FCM/WebSockets). Карусель учёта не трогать.
+
+- `CHAT_ENABLED` (по умолчанию false) включает мобильный API и вкладку. Группа Filament «Коммуникации» для `isAdmin()` не прячется.
+- `CHAT_PILOT_COLUMN` — необязательный фильтр колонны на мобильном inbox.
+- `CHAT_ENCRYPTION_KEY` — `base64:` 32 байта как APP_KEY; пустой ключ закрывает encrypt/decrypt. `CHAT_PREVIOUS_KEYS` — через запятую, для ротации. Encrypter AES-256-GCM envelope `v1.{kid}.{payload}`; не Crypt facade.
+- Текст синхронно (воркер не нужен). Фото/PDF: ClamAV + `ProcessChatAttachment` в таблице `jobs`. `QUEUE_CONNECTION=database` только на `arm-chat-worker`; на `arm-app` остаётся `deferred`. Не `docker exec arm-app queue:work --queue=chat`.
+- Redis — только кеш/сессии. Файлы через FileProxyService, не `Storage::temporaryUrl()`. Audit Filament: `admin.chat_room.*` и `admin.column_deputy.*`, без тел сообщений. Антивирус — `ClamAvScanner` + `config/antivirus.php`, не `config('discipline.*')`.
+- Compose: `docker-compose.prod.yml` + `docker-compose.discipline.yml` + `docker-compose.chat.yml`.
+- `docker/php-fpm/www.conf`: `pm.max_children=15`. Откат: `CHAT_ENABLED=false` (воркер idle).
+
+Пилот:
+
+1. Резервная копия Postgres и MinIO `chat/`.
+2. `php artisan migrate`.
+3. Выставить `CHAT_ENCRYPTION_KEY` (пустой — fail closed).
+4. Пересоздать `arm-app`.
+5. Filament уже открыт → создать **одну** комнату вручную при `CHAT_ENABLED=false`.
+6. APK `/install` (1.1.0 / versionCode 8).
+7. `CHAT_ENABLED=true`, при необходимости `CHAT_PILOT_COLUMN`.
+8. Текст работает без воркера. Фото: `pm.max_children ≥ 15` + `up -d chat-worker`; проверить `docker top arm-chat-worker`.
+9. Откат `CHAT_ENABLED=false` — воркер простаивает.
