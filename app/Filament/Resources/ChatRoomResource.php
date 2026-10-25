@@ -3,16 +3,14 @@
 namespace App\Filament\Resources;
 
 use App\Enums\ChatMemberRole;
-use App\Enums\ChatMessageStatus;
-use App\Enums\ChatMessageType;
+use App\Enums\ChatMemberSource;
 use App\Enums\ChatType;
 use App\Filament\Resources\ChatRoomResource\Pages;
-use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\User;
 use App\Models\UserProfile;
-use App\Services\Chat\ChatCrypto;
 use Filament\Forms;
+use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Infolists\Components\Section as InfoSection;
@@ -118,6 +116,8 @@ class ChatRoomResource extends Resource
                             ->live(onBlur: true)
                             ->dehydrateStateUsing(fn ($state) => is_string($state) ? trim($state) : $state)
                             ->required(fn (Get $get): bool => self::formType($get('type')) === ChatType::COLUMN)
+                            ->disabled(fn (Get $get, string $operation): bool => $operation === 'edit'
+                                && self::formType($get('type')) === ChatType::COLUMN)
                             ->visible(fn (Get $get): bool => self::formType($get('type')) !== ChatType::LEADERSHIP)
                             ->helperText(function (Get $get): ?string {
                                 $type = self::formType($get('type'));
@@ -154,10 +154,28 @@ class ChatRoomResource extends Resource
                                     ->label('Сотрудник')
                                     ->searchable()
                                     ->preload()
-                                    ->options(fn () => User::query()
-                                        ->where('is_active', true)
-                                        ->orderBy('name')
-                                        ->pluck('name', 'id'))
+                                    ->options(function (HasForms $livewire) {
+                                        $keepIds = [];
+                                        if (method_exists($livewire, 'getRecord')) {
+                                            $record = $livewire->getRecord();
+                                            if ($record instanceof ChatRoom) {
+                                                $keepIds = $record->members()
+                                                    ->where('source', ChatMemberSource::REGULAR)
+                                                    ->pluck('user_id')
+                                                    ->all();
+                                            }
+                                        }
+
+                                        return User::query()
+                                            ->where(function ($query) use ($keepIds) {
+                                                $query->where('is_active', true);
+                                                if ($keepIds !== []) {
+                                                    $query->orWhereIn('id', $keepIds);
+                                                }
+                                            })
+                                            ->orderBy('name')
+                                            ->pluck('name', 'id');
+                                    })
                                     ->required()
                                     ->distinct()
                                     ->disableOptionsWhenSelectedInSiblingRepeaterItems(),
@@ -261,32 +279,6 @@ class ChatRoomResource extends Resource
             'view' => Pages\ViewChatRoom::route('/{record}'),
             'edit' => Pages\EditChatRoom::route('/{record}/edit'),
         ];
-    }
-
-    public static function presentFeedBody(ChatMessage $message): string
-    {
-        if ($message->status === ChatMessageStatus::QUEUED) {
-            return '';
-        }
-        if ($message->status === ChatMessageStatus::REJECTED) {
-            return 'Отклонено антивирусом';
-        }
-
-        return match ($message->type) {
-            ChatMessageType::IMAGE => 'Фото',
-            ChatMessageType::PDF => 'PDF',
-            default => self::decryptBody($message),
-        };
-    }
-
-    public static function decryptBody(ChatMessage $message): string
-    {
-        $cipher = $message->body_ciphertext;
-        if (! is_string($cipher) || $cipher === '') {
-            return '';
-        }
-
-        return app(ChatCrypto::class)->decrypt($cipher);
     }
 
     public static function formType(mixed $type): ?ChatType

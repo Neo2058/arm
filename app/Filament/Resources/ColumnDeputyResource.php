@@ -133,8 +133,10 @@ class ColumnDeputyResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()
-                    ->using(function (ColumnDeputy $record): void {
+                    ->using(function (ColumnDeputy $record): bool {
                         app(ChatService::class)->revoke($record);
+
+                        return true;
                     }),
             ])
             ->bulkActions([]);

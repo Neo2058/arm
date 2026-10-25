@@ -144,10 +144,29 @@ class ColumnDeputyResourceTest extends TestCase
         $this->actingAs($admin);
 
         Livewire::test(EditColumnDeputy::class, ['record' => $period->id])
-            ->callAction('delete');
+            ->callAction('delete')
+            ->assertNotified(__('filament-actions::delete.single.notifications.deleted.title'));
 
         $member = ChatMember::query()->where('room_id', $room->id)->where('user_id', $user->id)->firstOrFail();
         $this->assertSame('2026-10-19', $member->window_ends_on->toDateString());
+        $this->assertFalse(app(ChatAuthorization::class)->isEffectiveMember($user, $room->fresh()));
+        $this->assertNotNull($period->fresh());
+    }
+
+    public function test_delete_future_period_removes_the_row(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $user = User::factory()->driver()->create();
+        $room = $this->columnRoom($admin, '15');
+        $period = app(ChatService::class)->grant($admin, $user, '15', '2026-11-01', '2026-11-30', 'будущее');
+        $this->actingAs($admin);
+
+        Livewire::test(EditColumnDeputy::class, ['record' => $period->id])
+            ->callAction('delete')
+            ->assertNotified(__('filament-actions::delete.single.notifications.deleted.title'))
+            ->assertRedirect(ColumnDeputyResource::getUrl('index'));
+
+        $this->assertDatabaseMissing('column_deputies', ['id' => $period->id]);
         $this->assertFalse(app(ChatAuthorization::class)->isEffectiveMember($user, $room->fresh()));
     }
 

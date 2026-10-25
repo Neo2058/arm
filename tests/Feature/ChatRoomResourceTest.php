@@ -240,6 +240,86 @@ class ChatRoomResourceTest extends TestCase
         $this->assertLessThanOrEqual(50, $calls);
     }
 
+    public function test_view_feed_shows_placeholder_when_decrypt_fails(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $room = $this->columnRoom($admin, '15');
+        $plain = app(ChatCrypto::class)->encrypt('секрет');
+        ChatMessage::create([
+            'room_id' => $room->id,
+            'sender_id' => $admin->id,
+            'client_id' => (string) Str::uuid(),
+            'type' => ChatMessageType::TEXT,
+            'status' => ChatMessageStatus::AVAILABLE,
+            'body_ciphertext' => $plain,
+        ]);
+        ChatMessage::create([
+            'room_id' => $room->id,
+            'sender_id' => $admin->id,
+            'client_id' => (string) Str::uuid(),
+            'type' => ChatMessageType::TEXT,
+            'status' => ChatMessageStatus::AVAILABLE,
+            'body_ciphertext' => 'not-an-envelope',
+        ]);
+
+        $this->actingAs($admin);
+        Livewire::test(ViewChatRoom::class, ['record' => $room->id])
+            ->assertSuccessful()
+            ->assertSee('секрет')
+            ->assertSee('не удалось расшифровать');
+    }
+
+    public function test_column_is_locked_on_edit_for_column_rooms(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $room = $this->columnRoom($admin, '15');
+        $this->actingAs($admin);
+
+        Livewire::test(EditChatRoom::class, ['record' => $room->id])
+            ->assertFormFieldIsDisabled('column')
+            ->fillForm([
+                'title' => 'Колонна 16',
+                'column' => '16',
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $room->refresh();
+        $this->assertSame('15', $room->column);
+        $this->assertSame('Колонна 16', $room->title);
+    }
+
+    public function test_title_only_save_keeps_inactive_regular_members(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $instructor = $this->instructor('15', 'Иванов');
+        $this->actingAs($admin);
+
+        Livewire::test(CreateChatRoom::class)
+            ->fillForm([
+                'title' => 'Колонна 15',
+                'type' => ChatType::COLUMN->value,
+                'column' => '15',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $room = ChatRoom::query()->firstOrFail();
+        $instructor->update(['is_active' => false]);
+
+        Livewire::test(EditChatRoom::class, ['record' => $room->id])
+            ->fillForm(['title' => 'Колонна 15б'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('chat_members', [
+            'room_id' => $room->id,
+            'user_id' => $instructor->id,
+            'source' => ChatMemberSource::REGULAR->value,
+        ]);
+        $this->assertSame('Колонна 15б', $room->fresh()->title);
+    }
+
     public function test_soft_delete_keeps_ciphertext(): void
     {
         $admin = User::factory()->admin()->create();

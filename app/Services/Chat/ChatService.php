@@ -165,7 +165,7 @@ class ChatService
         });
     }
 
-    public function seedColumnRoom(ChatRoom $room, User $actor): void
+    private function seedColumnRoom(ChatRoom $room, User $actor): void
     {
         if ($room->type !== ChatType::COLUMN) {
             return;
@@ -652,8 +652,12 @@ class ChatService
             if ($userId === 0) {
                 continue;
             }
-            $target = User::query()->whereKey($userId)->where('is_active', true)->first();
+            $target = User::query()->whereKey($userId)->first();
             if ($target === null) {
+                continue;
+            }
+            $keep[] = $userId;
+            if (! $target->is_active) {
                 continue;
             }
             $role = ChatMemberRole::tryFrom((string) ($row['role'] ?? '')) ?? ChatMemberRole::MEMBER;
@@ -673,7 +677,6 @@ class ChatService
                 $existing->role = $role;
                 $existing->save();
             }
-            $keep[] = $userId;
         }
 
         $query = ChatMember::query()
@@ -691,13 +694,17 @@ class ChatService
             return;
         }
 
-        ChatMember::create([
-            'room_id' => $room->id,
-            'user_id' => $userId,
-            'role' => $role,
-            'source' => ChatMemberSource::REGULAR,
-            'added_by' => $addedBy,
-        ]);
+        try {
+            ChatMember::create([
+                'room_id' => $room->id,
+                'user_id' => $userId,
+                'role' => $role,
+                'source' => ChatMemberSource::REGULAR,
+                'added_by' => $addedBy,
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            return;
+        }
     }
 
     /**
