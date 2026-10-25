@@ -67,7 +67,6 @@ export default function ChatsScreen({ navigation }) {
           onPress={() => navigation.navigate('ChatThread', {
             id: item.id,
             title: item.title,
-            can_manage_members: item.can_manage_members,
           })}
         >
           <View style={styles.row}>

@@ -45,6 +45,7 @@ function threadRows(roomId, pollerState, outboxItems, userId) {
       sender_id: userId,
       status: item.status,
       error: item.error,
+      httpStatus: item.httpStatus,
       created_at: item.created_at,
     }));
   return [...visible, ...local];
@@ -144,15 +145,21 @@ export default function ChatThreadScreen({ route }) {
           const mine = item.sender_id === userId && item.type !== 'system';
           const pending = item.local && item.status === 'pending';
           const failed = item.local && item.status === 'error';
+          const conflict = failed && item.httpStatus === 409;
           return (
             <View style={[styles.bubble, item.type === 'system' ? styles.system : mine ? styles.mine : styles.theirs, pending && styles.pending]}>
               {item.type !== 'system' && !mine ? <Text style={styles.author}>{item.sender_name || ''}</Text> : null}
               <Text style={styles.body}>{bodyOf(item)}</Text>
               <Text style={styles.time}>{pending ? (item.error || 'отправляется') : formatTime(item.created_at)}</Text>
               {failed ? <Text style={styles.err}>{item.error || 'нет сети'}</Text> : null}
-              {pending && item.error ? (
+              {(pending && item.error) || (failed && !conflict) ? (
                 <Pressable accessibilityRole="button" onPress={() => getChatOutbox()?.retry(item.client_id)}>
                   <Text style={styles.retry}>Повторить</Text>
+                </Pressable>
+              ) : null}
+              {conflict ? (
+                <Pressable accessibilityRole="button" onPress={() => getChatOutbox()?.drop(item.client_id)}>
+                  <Text style={styles.retry}>Скрыть</Text>
                 </Pressable>
               ) : null}
             </View>

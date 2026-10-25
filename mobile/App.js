@@ -176,7 +176,6 @@ function MainTabs({ user, onLogout, onReauthenticate, onProfileSaved }) {
       featuresChat: true,
       userId: user.id,
       syncInbox: () => syncChats(),
-      // Newest 50 without after_id so a queued id cannot hide a later available neighbor.
       fetchThread: (roomId) => listChatMessages(roomId, { limit: 50 }),
       flushOutbox: () => outbox.flush(),
       markRead: (roomId, lastId) => markChatRead(roomId, lastId),
@@ -188,6 +187,7 @@ function MainTabs({ user, onLogout, onReauthenticate, onProfileSaved }) {
       } catch { /* empty in-memory queue; FileSystem write retried on send */ }
       if (cancelled) {
         poller.stop();
+        outbox.stop();
         return;
       }
       attachChatSession({ poller, outbox });
@@ -198,6 +198,7 @@ function MainTabs({ user, onLogout, onReauthenticate, onProfileSaved }) {
       cancelled = true;
       sub?.remove();
       poller.stop();
+      outbox.stop();
       stopMobileChat();
     };
   }, [chatOn, user.id]);

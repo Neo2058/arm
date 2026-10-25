@@ -120,19 +120,20 @@ function createChatPoller(options) {
         return;
       }
 
-      if (focusedRoomId != null && fetchThread) {
+      const roomId = focusedRoomId;
+      if (roomId != null && fetchThread) {
         try {
-          const page = await fetchThread(focusedRoomId);
+          const page = await fetchThread(roomId);
           const incoming = (page && page.messages) || page || [];
           state.messagesByRoom = {
             ...state.messagesByRoom,
-            [focusedRoomId]: mergeMessages(state.messagesByRoom[focusedRoomId] || [], incoming),
+            [roomId]: mergeMessages(state.messagesByRoom[roomId] || [], incoming),
           };
-          const last = maxAvailableId(state.messagesByRoom[focusedRoomId]);
-          if (last && markRead) {
+          const last = maxAvailableId(state.messagesByRoom[roomId]);
+          if (last && markRead && focusedRoomId === roomId) {
             try {
-              await markRead(focusedRoomId, last);
-              state.rooms = state.rooms.map((room) => (room.id === focusedRoomId ? { ...room, unread: 0 } : room));
+              await markRead(roomId, last);
+              state.rooms = state.rooms.map((room) => (room.id === roomId ? { ...room, unread: 0 } : room));
               state.unread = unreadTotal(state.rooms);
             } catch { /* next tick retries read */ }
           }

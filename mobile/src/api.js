@@ -53,13 +53,13 @@ export async function me() {
   return data.user;
 }
 
-export async function syncChats(signal) {
-  const { data } = await client.get('/chats/sync', { signal });
+export async function syncChats() {
+  const { data } = await client.get('/chats/sync');
   return data;
 }
 
-export async function listChatMessages(roomId, params = {}, signal) {
-  const { data } = await client.get(`/chats/${encodeURIComponent(roomId)}/messages`, { params, signal });
+export async function listChatMessages(roomId, params = {}) {
+  const { data } = await client.get(`/chats/${encodeURIComponent(roomId)}/messages`, { params });
   return data;
 }
 

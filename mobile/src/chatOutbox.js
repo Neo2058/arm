@@ -2,8 +2,8 @@ const copy = (value) => JSON.parse(JSON.stringify(value));
 const BACKOFF_MS = [2000, 5000, 15000];
 const BACKOFF_429_MS = 30000;
 
-function fingerprintPayload(type, body, fileSha256) {
-  return `${type}\n${body}\n${fileSha256 || ''}`;
+function fingerprintPayload(type, body) {
+  return `${type}\n${body}\n`;
 }
 
 function createFileStorage(FS, filename) {
@@ -31,7 +31,8 @@ function createOutbox({ storage, send, uuid, digest, userId, onAck, now = Date.n
   let state = { schema: 1, user_id: userId, items: [] };
   let chain = Promise.resolve();
   let stopped = false;
-  let running = false;
+  let flushing = false;
+  let again = false;
   const listeners = new Set();
   const api = {};
   const emit = () => { for (const fn of listeners) fn(copy(state)); };
@@ -46,7 +47,7 @@ function createOutbox({ storage, send, uuid, digest, userId, onAck, now = Date.n
     emit();
   };
   const mutate = (fn) => serial(async () => {
-    if (stopped) throw new Error('Outbox stopped');
+    if (stopped) return;
     const next = copy(state);
     const result = await fn(next);
     await commit(next);
@@ -57,6 +58,14 @@ function createOutbox({ storage, send, uuid, digest, userId, onAck, now = Date.n
     const saved = await storage.read();
     if (saved && saved.schema === 1 && Array.isArray(saved.items) && saved.user_id === userId) {
       state = saved;
+      for (const item of state.items) {
+        if (item.status === 'error' && (item.httpStatus === 401 || item.httpStatus === 403)) {
+          item.status = 'pending';
+          item.error = '';
+          item.httpStatus = undefined;
+          item.nextAttemptAt = 0;
+        }
+      }
     } else {
       state = { schema: 1, user_id: userId, items: [] };
     }
@@ -68,12 +77,10 @@ function createOutbox({ storage, send, uuid, digest, userId, onAck, now = Date.n
     return () => listeners.delete(fn);
   };
   api.snapshot = function snapshot() { return copy(state); };
-  api.itemsForRoom = function itemsForRoom(roomId) {
-    return state.items.filter((item) => item.room_id === roomId);
-  };
   api.enqueue = async function enqueue({ room_id, type, body }) {
+    if (stopped) throw new Error('Outbox stopped');
     const client_id = uuid();
-    const fingerprint = await digest(fingerprintPayload(type, body, ''));
+    const fingerprint = await digest(fingerprintPayload(type, body));
     await mutate((next) => {
       next.items.push({
         client_id,
@@ -97,6 +104,7 @@ function createOutbox({ storage, send, uuid, digest, userId, onAck, now = Date.n
       if (!item) return;
       item.status = 'pending';
       item.error = '';
+      item.httpStatus = undefined;
       item.nextAttemptAt = 0;
     }).then(() => api.flush());
   };
@@ -106,47 +114,32 @@ function createOutbox({ storage, send, uuid, digest, userId, onAck, now = Date.n
     });
   };
   api.flush = async function flush() {
-      if (stopped || running) return;
-      running = true;
-      try {
+    if (stopped) return;
+    if (flushing) {
+      again = true;
+      return;
+    }
+    flushing = true;
+    try {
+      do {
+        again = false;
         for (const item of state.items.slice()) {
-          if (stopped) break;
+          if (stopped) return;
           if (item.status !== 'pending' || (item.nextAttemptAt || 0) > now()) continue;
           const snapshot = copy(item);
           try {
             const res = await send(snapshot);
-            const status = res && res.status;
-            if (status === 200 || status === 201) {
+            if (stopped) return;
+            if (res && (res.status === 200 || res.status === 201)) {
               await mutate((next) => {
                 next.items = next.items.filter((row) => row.client_id !== snapshot.client_id);
               });
               if (onAck) onAck(snapshot, res);
-            } else if (status === 409) {
-              await mutate((next) => {
-                const current = next.items.find((row) => row.client_id === snapshot.client_id);
-                if (!current) return;
-                current.status = 'error';
-                current.error = (res.data && res.data.message) || 'Этот client_id уже использован с другим содержимым.';
-              });
-            } else if (status === 429) {
-              await mutate((next) => {
-                const current = next.items.find((row) => row.client_id === snapshot.client_id);
-                if (!current) return;
-                current.attempts = (current.attempts || 0) + 1;
-                current.nextAttemptAt = now() + BACKOFF_429_MS;
-                current.error = 'нет сети';
-              });
-            } else if ([401, 403, 404, 410, 422].includes(status)) {
-              await mutate((next) => {
-                const current = next.items.find((row) => row.client_id === snapshot.client_id);
-                if (!current) return;
-                current.status = 'error';
-                current.error = (res.data && res.data.message) || 'Сообщение не отправлено.';
-              });
             } else {
               throw res && res.error ? res.error : new Error('send failed');
             }
           } catch (error) {
+            if (stopped) return;
             const status = error && error.response && error.response.status;
             const data = error && error.response && error.response.data;
             await mutate((next) => {
@@ -154,11 +147,13 @@ function createOutbox({ storage, send, uuid, digest, userId, onAck, now = Date.n
               if (!current) return;
               if (status === 409) {
                 current.status = 'error';
+                current.httpStatus = 409;
                 current.error = (data && data.message) || 'Этот client_id уже использован с другим содержимым.';
                 return;
               }
               if ([401, 403, 404, 410, 422].includes(status)) {
                 current.status = 'error';
+                current.httpStatus = status;
                 current.error = (data && data.message) || 'Сообщение не отправлено.';
                 return;
               }
@@ -175,10 +170,12 @@ function createOutbox({ storage, send, uuid, digest, userId, onAck, now = Date.n
             });
           }
         }
-      } finally {
-        running = false;
-      }
-    };
+      } while (again && !stopped);
+    } finally {
+      flushing = false;
+    }
+    if (again && !stopped) return api.flush();
+  };
   api.clear = async function clear() {
     stopped = true;
     await chain.catch(() => {});
