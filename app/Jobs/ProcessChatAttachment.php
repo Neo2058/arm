@@ -27,6 +27,10 @@ class ProcessChatAttachment implements ShouldQueue
         public int $messageId,
         public string $pendingRelativePath,
         public string $sha256,
+        public string $originalName,
+        public string $mime,
+        public int $size,
+        public string $caption = '',
     ) {
         $this->onConnection('database'); // иначе arm-app deferred выполнит скан в fpm
         $this->onQueue('chat');
@@ -40,13 +44,15 @@ class ProcessChatAttachment implements ShouldQueue
 
     public function handle(ClamAvScanner $scanner, ChatCrypto $crypto): void
     {
-        $message = ChatMessage::query()->with('room')->find($this->messageId);
+        $message = ChatMessage::query()->find($this->messageId);
         if ($message === null) {
             $this->unlinkPending();
 
             return;
         }
         if ($message->status !== ChatMessageStatus::QUEUED) {
+            $this->unlinkPending();
+
             return;
         }
 
@@ -70,11 +76,9 @@ class ProcessChatAttachment implements ShouldQueue
             return;
         }
 
-        $meta = $this->meta($disk, $relative);
-        $originalName = $this->safeName((string) ($meta['original_name'] ?? 'file'));
-        $mime = (string) ($meta['mime'] ?? 'application/octet-stream');
-        $size = (int) ($meta['size'] ?? $disk->size($relative));
-        $caption = (string) ($meta['caption'] ?? '');
+        $originalName = $this->safeName($this->originalName);
+        $mime = $this->mime !== '' ? $this->mime : 'application/octet-stream';
+        $size = $this->size > 0 ? $this->size : (int) $disk->size($relative);
 
         $uploaded = new UploadedFile($absolute, $originalName, $mime, UPLOAD_ERR_OK, true);
         try {
@@ -99,7 +103,7 @@ class ProcessChatAttachment implements ShouldQueue
             }
         }
 
-        DB::transaction(function () use ($message, $object, $originalName, $mime, $size, $caption, $crypto) {
+        DB::transaction(function () use ($message, $object, $originalName, $mime, $size, $crypto) {
             $locked = ChatMessage::query()->whereKey($message->id)->lockForUpdate()->first();
             if ($locked === null || $locked->status !== ChatMessageStatus::QUEUED) {
                 return;
@@ -116,8 +120,8 @@ class ProcessChatAttachment implements ShouldQueue
                 ],
             );
 
-            if ($caption !== '') {
-                $locked->body_ciphertext = $crypto->encrypt($caption);
+            if ($this->caption !== '') {
+                $locked->body_ciphertext = $crypto->encrypt($this->caption);
             }
             $locked->status = ChatMessageStatus::AVAILABLE;
             $locked->save();
@@ -136,21 +140,6 @@ class ProcessChatAttachment implements ShouldQueue
         }
 
         $this->unlinkPending();
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function meta($disk, string $relative): array
-    {
-        $metaPath = $relative.'.meta';
-        if (! $disk->exists($metaPath)) {
-            return [];
-        }
-
-        $decoded = json_decode((string) $disk->get($metaPath), true);
-
-        return is_array($decoded) ? $decoded : [];
     }
 
     private function objectPath(int $roomId, string $originalName, string $mime): string
@@ -194,6 +183,6 @@ class ProcessChatAttachment implements ShouldQueue
             return;
         }
 
-        Storage::disk('local')->delete([$relative, $relative.'.meta']);
+        Storage::disk('local')->delete($relative);
     }
 }

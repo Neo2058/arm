@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccessRequestController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ChatAttachmentController;
 use App\Http\Controllers\InstallController;
 use App\Http\Middleware\CheckDeviceBinding;
 use App\Http\Middleware\CheckDynamicBarrier;
@@ -49,7 +50,9 @@ Route::middleware(['auth', CheckUserExistence::class, CheckDeviceBinding::class,
     require __DIR__.'/work.php';
     require __DIR__.'/journal.php';
     require __DIR__.'/discipline.php';
-    require __DIR__.'/chat.php';
+    Route::get('/admin/serve-chat-attachment', [ChatAttachmentController::class, 'adminServe'])
+        ->name('admin.chat-attachments.serve')
+        ->middleware('signed');
     require __DIR__.'/naryad.php';
     require __DIR__.'/nsi.php';
     require __DIR__.'/uchet.php';

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ChatAttachment;
 use App\Services\FileProxyService;
 
 class ChatAttachmentController extends Controller
@@ -17,9 +16,6 @@ class ChatAttachmentController extends Controller
         }
 
         $path = request('path');
-        if (empty($path) && request()->filled('attachment')) {
-            $path = ChatAttachment::query()->find(request('attachment'))?->path;
-        }
         if (empty($path)) {
             abort(404);
         }
