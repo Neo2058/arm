@@ -116,12 +116,39 @@ test('HTTP 429 backs off 30s and marks the UI offline', async () => {
   assert.equal(syncs, 2);
 });
 
-test('open thread merges newest page by id without after_id', () => {
+test('mergeMessages keeps older ids and overwrites by id', () => {
   const merged = mergeMessages(
     [{ id: 1, body: 'old' }, { id: 4, body: 'queued-neighbor' }],
     [{ id: 4, body: 'available' }, { id: 7, body: 'new' }],
   );
   assert.deepEqual(merged.map((msg) => [msg.id, msg.body]), [[1, 'old'], [4, 'available'], [7, 'new']]);
+});
+
+test('in-flight thread page merges into the room it was fetched for', async () => {
+  let resolveA;
+  const reads = [];
+  const poller = createChatPoller({
+    featuresChat: true,
+    setIntervalFn: () => 1,
+    clearIntervalFn: () => {},
+    syncInbox: async () => ({ rooms: [{ id: 1, unread: 1 }, { id: 2, unread: 1 }] }),
+    fetchThread: (id) => {
+      if (id === 1) return new Promise((resolve) => { resolveA = resolve; });
+      return { messages: [{ id: 200, body: 'b' }] };
+    },
+    markRead: async (id, last) => { reads.push([id, last]); },
+  });
+  poller.setAppState('active');
+  await flushed();
+  poller.setFocusedRoomId(1);
+  await flushed();
+  assert.equal(typeof resolveA, 'function');
+  poller.setFocusedRoomId(2);
+  resolveA({ messages: [{ id: 100, body: 'a' }] });
+  await flushed();
+  assert.equal(poller.getState().messagesByRoom[1][0].id, 100);
+  assert.equal(poller.getState().messagesByRoom[2][0].id, 200);
+  assert.deepEqual(reads, [[2, 200]]);
 });
 
 test('outbox fingerprints the payload and retries the same client UUID', async () => {
@@ -182,4 +209,74 @@ test('outbox shows 409 as an error and does not retry with a new UUID', async ()
   await box.flush();
   assert.equal(sent.length, 1);
   assert.equal(sent[0], uuid);
+  assert.equal(box.snapshot().items[0].httpStatus, 409);
+});
+
+test('second text enqueued during an in-flight POST is flushed without waiting for the poller', async () => {
+  const storage = memoryStorage();
+  const sent = [];
+  let finishFirst;
+  let n = 0;
+  const box = createOutbox({
+    storage,
+    userId: 5,
+    uuid: () => `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}`,
+    digest: async (value) => digest(value),
+    send: async (item) => {
+      sent.push(item.body);
+      if (item.body === 'A') {
+        return new Promise((resolve) => {
+          finishFirst = () => resolve({ status: 201, data: { id: 1, client_id: item.client_id, status: 'available' } });
+        });
+      }
+      return { status: 201, data: { id: sent.length, client_id: item.client_id, status: 'available' } };
+    },
+  });
+  await box.load();
+  const first = box.enqueue({ room_id: 10, type: 'text', body: 'A' });
+  await flushed();
+  assert.equal(sent.length, 1);
+  const second = box.enqueue({ room_id: 10, type: 'text', body: 'B' });
+  await flushed();
+  assert.equal(storage.peek().items.length, 2);
+  finishFirst();
+  await first;
+  await second;
+  assert.deepEqual(sent, ['A', 'B']);
+  assert.equal(box.snapshot().items.length, 0);
+});
+
+test('load turns 401/403 rows pending so reauth can flush the same UUID', async () => {
+  const storage = memoryStorage({
+    schema: 1,
+    user_id: 5,
+    items: [{
+      client_id: uuid,
+      room_id: 10,
+      type: 'text',
+      body: 'На смену',
+      fingerprint: digest('text\nНа смену\n'),
+      attempts: 1,
+      status: 'error',
+      httpStatus: 401,
+      error: 'Сообщение не отправлено.',
+      nextAttemptAt: 0,
+    }],
+  });
+  const sent = [];
+  const box = createOutbox({
+    storage,
+    userId: 5,
+    uuid: () => uuid,
+    digest: async (value) => digest(value),
+    send: async (item) => {
+      sent.push(item.client_id);
+      return { status: 201, data: { id: 9, client_id: item.client_id, status: 'available' } };
+    },
+  });
+  await box.load();
+  assert.equal(box.snapshot().items[0].status, 'pending');
+  await box.flush();
+  assert.equal(sent[0], uuid);
+  assert.equal(box.snapshot().items.length, 0);
 });
