@@ -301,17 +301,17 @@ php artisan optimize:clear
 - `CHAT_ENCRYPTION_KEY` — `base64:` 32 байта как APP_KEY; пустой ключ закрывает encrypt/decrypt. `CHAT_PREVIOUS_KEYS` — через запятую, для ротации. Encrypter AES-256-GCM envelope `v1.{kid}.{payload}`; не Crypt facade.
 - Текст синхронно (воркер не нужен). Фото/PDF: ClamAV + `ProcessChatAttachment` в таблице `jobs`. `QUEUE_CONNECTION=database` только на `arm-chat-worker`; на `arm-app` остаётся `deferred`. Не `docker exec arm-app queue:work --queue=chat`.
 - Redis — только кеш/сессии. Файлы через FileProxyService, не `Storage::temporaryUrl()`. Audit Filament: `admin.chat_room.*` и `admin.column_deputy.*`, без тел сообщений. Антивирус — `ClamAvScanner` + `config/antivirus.php`, не `config('discipline.*')`.
-- Compose: `docker-compose.prod.yml` + `docker-compose.discipline.yml` + `docker-compose.chat.yml`.
-- `docker/php-fpm/www.conf`: `pm.max_children=15`. Откат: `CHAT_ENABLED=false` (воркер idle).
+- Compose: `docker-compose.prod.yml` + `docker-compose.discipline.yml` + `docker-compose.chat.yml`. Не `docker compose.yaml` (там нет `chat-worker`).
+- `docker/php-fpm/www.conf`: `pm.max_children=15`. После правки `.env` — `--force-recreate app` (`env_file` замораживается при create; `up -d chat-worker` API не трогает). Откат: `CHAT_ENABLED=false` + recreate `app` (воркер idle).
 
-Пилот:
+Пилот (всегда `-f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml`):
 
 1. Резервная копия Postgres и MinIO `chat/`.
-2. `php artisan migrate`.
+2. `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml exec app php artisan migrate --force`
 3. Выставить `CHAT_ENCRYPTION_KEY` (пустой — fail closed).
-4. Пересоздать `arm-app`.
+4. `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml up -d --force-recreate app`
 5. Filament уже открыт → создать **одну** комнату вручную при `CHAT_ENABLED=false`.
 6. APK `/install` (1.1.0 / versionCode 8).
-7. `CHAT_ENABLED=true`, при необходимости `CHAT_PILOT_COLUMN`.
-8. Текст работает без воркера. Фото: `pm.max_children ≥ 15` + `up -d chat-worker`; проверить `docker top arm-chat-worker`.
-9. Откат `CHAT_ENABLED=false` — воркер простаивает.
+7. `CHAT_ENABLED=true`, при необходимости `CHAT_PILOT_COLUMN`. Затем `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml up -d --force-recreate app`.
+8. Текст работает без воркера. Фото: `pm.max_children ≥ 15` + `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml up -d chat-worker`; проверить `docker top arm-chat-worker`. Это не подхватывает `.env` в API.
+9. `CHAT_ENABLED=false`, затем `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml up -d --force-recreate app` — воркер idle.
