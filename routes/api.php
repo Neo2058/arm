@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Mobile\AuthController;
 use App\Http\Controllers\Api\Mobile\ChatController;
+use App\Http\Controllers\Api\Mobile\ChatFileController;
 use App\Http\Controllers\Api\Mobile\DisciplineController;
 use App\Http\Controllers\Api\Mobile\DocumentController;
 use App\Http\Controllers\Api\Mobile\FileController;
@@ -25,6 +26,9 @@ Route::prefix('mobile')->group(function () {
         ->middleware('signed');
     Route::get('/files/naryads/{naryad}', [FileController::class, 'naryad'])
         ->name('mobile.files.naryads')
+        ->middleware('signed');
+    Route::get('/files/chats/{attachment}', [ChatFileController::class, 'show'])
+        ->name('mobile.files.chats')
         ->middleware('signed');
 
     Route::middleware(['auth:sanctum', EnsureActiveApiUser::class])->group(function () {

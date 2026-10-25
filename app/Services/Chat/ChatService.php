@@ -7,17 +7,21 @@ use App\Enums\ChatMemberSource;
 use App\Enums\ChatMessageStatus;
 use App\Enums\ChatMessageType;
 use App\Enums\ChatType;
+use App\Jobs\ProcessChatAttachment;
 use App\Models\ChatMember;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\ColumnDeputy;
 use App\Models\User;
+use App\Services\FileProxyService;
 use DateTimeInterface;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class ChatService
@@ -25,6 +29,7 @@ class ChatService
     public function __construct(
         private ChatAuthorization $authz,
         private ChatCrypto $crypto,
+        private FileProxyService $files,
     ) {}
 
     public function grant(
@@ -172,7 +177,7 @@ class ChatService
     public function thread(User $user, ChatRoom $room, ?int $afterId, ?int $beforeId, int $limit): array
     {
         $query = ChatMessage::query()
-            ->with('sender:id,name')
+            ->with(['sender:id,name', 'attachment'])
             ->where('room_id', $room->id)
             ->where(function ($inner) use ($user) {
                 $inner->where('status', ChatMessageStatus::AVAILABLE)
@@ -231,6 +236,104 @@ class ChatService
                     'status' => ChatMessageStatus::AVAILABLE,
                     'body_ciphertext' => $this->crypto->encrypt($body),
                 ]);
+
+                return ['message' => $message, 'created' => true];
+            });
+        });
+    }
+
+    /**
+     * @return array{message: ChatMessage, created: bool}
+     */
+    public function sendAttachment(
+        User $user,
+        ChatRoom $room,
+        string $clientId,
+        ChatMessageType $type,
+        UploadedFile $file,
+        string $body = '',
+    ): array {
+        if ($type !== ChatMessageType::IMAGE && $type !== ChatMessageType::PDF) {
+            throw ValidationException::withMessages([
+                'type' => 'Допустимы только фото и PDF.',
+            ]);
+        }
+
+        $validated = $this->assertUpload($type, $file);
+        $fingerprint = $this->fingerprint($type->value, $body, $validated['sha256']);
+
+        return Cache::lock('chat-send:'.$user->id.':'.$clientId, 30)->block(10, function () use ($user, $room, $clientId, $type, $file, $body, $fingerprint, $validated) {
+            return DB::transaction(function () use ($user, $room, $clientId, $type, $file, $body, $fingerprint, $validated) {
+                $this->authz->assertMobileRoom($user, $room->fresh());
+
+                $existing = ChatMessage::query()
+                    ->where('room_id', $room->id)
+                    ->where('sender_id', $user->id)
+                    ->where('client_id', $clientId)
+                    ->lockForUpdate()
+                    ->first();
+                if ($existing !== null) {
+                    if (! is_string($existing->payload_fingerprint)
+                        || ! hash_equals($existing->payload_fingerprint, $fingerprint)) {
+                        abort(409, 'Этот client_id уже использован с другим содержимым.');
+                    }
+
+                    return ['message' => $existing, 'created' => false];
+                }
+
+                $relative = null;
+                try {
+                    $message = ChatMessage::create([
+                        'room_id' => $room->id,
+                        'sender_id' => $user->id,
+                        'client_id' => $clientId,
+                        'payload_fingerprint' => $fingerprint,
+                        'type' => $type,
+                        'status' => ChatMessageStatus::QUEUED,
+                        'body_ciphertext' => null,
+                    ]);
+                    $relative = 'chat-pending/'.$room->id.'/'.$message->id;
+                    $stream = fopen($file->getRealPath(), 'rb');
+                    try {
+                        abort_unless(
+                            Storage::disk('local')->put($relative, $stream),
+                            503,
+                            'Хранилище недоступно.',
+                        );
+                    } finally {
+                        if (is_resource($stream)) {
+                            fclose($stream);
+                        }
+                    }
+                    Storage::disk('local')->put($relative.'.meta', json_encode([
+                        'original_name' => $validated['name'],
+                        'mime' => $validated['mime'],
+                        'size' => $validated['size'],
+                        'sha256' => $validated['sha256'],
+                        'caption' => $body,
+                    ], JSON_UNESCAPED_UNICODE));
+                    ProcessChatAttachment::dispatch($message->id, $relative, $validated['sha256']);
+                } catch (UniqueConstraintViolationException) {
+                    if ($relative !== null) {
+                        Storage::disk('local')->delete([$relative, $relative.'.meta']);
+                    }
+                    $existing = ChatMessage::query()
+                        ->where('room_id', $room->id)
+                        ->where('sender_id', $user->id)
+                        ->where('client_id', $clientId)
+                        ->first();
+                    if ($existing !== null
+                        && is_string($existing->payload_fingerprint)
+                        && hash_equals($existing->payload_fingerprint, $fingerprint)) {
+                        return ['message' => $existing, 'created' => false];
+                    }
+                    abort(409, 'Этот client_id уже использован с другим содержимым.');
+                } catch (\Throwable $e) {
+                    if ($relative !== null) {
+                        Storage::disk('local')->delete([$relative, $relative.'.meta']);
+                    }
+                    throw $e;
+                }
 
                 return ['message' => $message, 'created' => true];
             });
@@ -626,8 +729,73 @@ class ChatService
                 ? $this->crypto->decrypt($message->body_ciphertext)
                 : null;
         }
+        if ($message->type === ChatMessageType::IMAGE || $message->type === ChatMessageType::PDF) {
+            if ($message->body_ciphertext !== null && $message->body_ciphertext !== '') {
+                $row['body'] = $this->crypto->decrypt($message->body_ciphertext);
+            }
+            $attachment = $message->attachment;
+            if ($attachment !== null) {
+                $row['file'] = [
+                    'id' => $attachment->id,
+                    'name' => $attachment->original_name,
+                    'mime' => $attachment->mime,
+                    'size' => $attachment->size,
+                    'url' => $this->files->temporarySignedRoute('mobile.files.chats', 15, $attachment->id),
+                ];
+            }
+        }
 
         return $row;
+    }
+
+    /**
+     * @return array{name: string, mime: string, size: int, sha256: string}
+     */
+    private function assertUpload(ChatMessageType $type, UploadedFile $file): array
+    {
+        $max = (int) config('chat.attachment_max_bytes', 10 * 1024 * 1024);
+        if (! $file->isValid() || $file->getSize() <= 0 || $file->getSize() > $max) {
+            throw ValidationException::withMessages([
+                'file' => 'Допустимы файлы размером от 1 байта до 10 МиБ.',
+            ]);
+        }
+
+        $mime = (string) $file->getMimeType();
+        $extension = strtolower($file->getClientOriginalExtension());
+        $types = [
+            'image/jpeg' => ['jpg', 'jpeg'],
+            'image/png' => ['png'],
+            'application/pdf' => ['pdf'],
+        ];
+        if (! in_array($extension, $types[$mime] ?? [], true)) {
+            throw ValidationException::withMessages([
+                'file' => 'Допустимы только PDF, JPEG и PNG с соответствующим расширением.',
+            ]);
+        }
+        if ($type === ChatMessageType::PDF && $mime !== 'application/pdf') {
+            throw ValidationException::withMessages([
+                'file' => 'Допустимы только PDF, JPEG и PNG с соответствующим расширением.',
+            ]);
+        }
+        if ($type === ChatMessageType::IMAGE && ! in_array($mime, ['image/jpeg', 'image/png'], true)) {
+            throw ValidationException::withMessages([
+                'file' => 'Допустимы только PDF, JPEG и PNG с соответствующим расширением.',
+            ]);
+        }
+
+        $name = basename(str_replace('\\', '/', $file->getClientOriginalName()));
+        if ($name === '' || mb_strlen($name) > 255 || preg_match('/[\x00-\x1f\x7f]/', $name)) {
+            throw ValidationException::withMessages([
+                'file' => 'Недопустимое имя файла.',
+            ]);
+        }
+
+        return [
+            'name' => $name,
+            'mime' => $mime,
+            'size' => (int) $file->getSize(),
+            'sha256' => hash_file('sha256', $file->getRealPath()),
+        ];
     }
 
     private function preview(ChatMessage $message): string

@@ -9,6 +9,10 @@ class ChatAttachment extends Model
 {
     protected $guarded = [];
 
+    protected $casts = [
+        'size' => 'integer',
+    ];
+
     public function message(): BelongsTo
     {
         return $this->belongsTo(ChatMessage::class, 'message_id');

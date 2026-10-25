@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Http\Middleware\AccessBarrierExemptions;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Route;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -55,6 +56,7 @@ class AccessBarrierExemptionsTest extends TestCase
             ['/logout'],
             ['/admin/serve-document'],
             ['/admin/serve-training-material'],
+            ['/admin/serve-chat-attachment'],
         ];
     }
 
@@ -87,7 +89,7 @@ class AccessBarrierExemptionsTest extends TestCase
     {
         $request = Request::create('/unrelated', 'POST');
         $request->setRouteResolver(function () {
-            $route = new \Illuminate\Routing\Route('POST', 'unrelated', fn () => null);
+            $route = new Route('POST', 'unrelated', fn () => null);
             $route->name('livewire.update');
 
             return $route;
