@@ -132,3 +132,7 @@ NaryadHoursCalculator, WorkCalendar/useWorkShifts, TECHNICAL_DEBT.md.
 Обновление мобильных иконок и launcher icon опубликовано в APK 1.0.9 вместе с привязкой Telegram
 в профиле: `mobile/ICONS.md`, `deployments/mobile-profile-icons-1.0.9.md`.
 Финансовый блок остаётся отложенным до получения правил и контрольных примеров.
+
+2026-10-26: по отдельному согласованному плану опубликован общий справочник телефонов:
+добавление всеми активными пользователями в APK/вебе, уникальный номер на сервере.
+APK 1.0.10; `PHONE_DIRECTORY_PLAN.md`, `deployments/shared-phones-1.0.10.md`.
