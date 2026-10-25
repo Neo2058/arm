@@ -52,3 +52,23 @@ export async function me() {
   const { data } = await client.get('/me');
   return data.user;
 }
+
+export async function syncChats(signal) {
+  const { data } = await client.get('/chats/sync', { signal });
+  return data;
+}
+
+export async function listChatMessages(roomId, params = {}, signal) {
+  const { data } = await client.get(`/chats/${encodeURIComponent(roomId)}/messages`, { params, signal });
+  return data;
+}
+
+export function sendChatText(roomId, payload) {
+  return client.post(`/chats/${encodeURIComponent(roomId)}/messages`, payload);
+}
+
+export function markChatRead(roomId, lastReadMessageId) {
+  return client.post(`/chats/${encodeURIComponent(roomId)}/read`, {
+    last_read_message_id: lastReadMessageId,
+  });
+}

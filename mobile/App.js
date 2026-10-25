@@ -1,10 +1,12 @@
 import TrainingRequestsScreen from './src/screens/TrainingRequestsScreen';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
+import * as Crypto from 'expo-crypto';
+import * as FileSystem from 'expo-file-system/legacy';
 import JournalScreen, { JournalTasksScreen, JournalCrewScreen } from './src/screens/JournalScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
@@ -23,10 +25,14 @@ import PhonesScreen from './src/screens/PhonesScreen';
 import DisciplineListScreen from './src/screens/DisciplineListScreen';
 import DisciplineDetailScreen from './src/screens/DisciplineDetailScreen';
 import DisciplineAttachmentScreen from './src/screens/DisciplineAttachmentScreen';
+import ChatsScreen from './src/screens/ChatsScreen';
+import ChatThreadScreen from './src/screens/ChatThreadScreen';
 import * as SecureStore from 'expo-secure-store';
-import { API_URL, logout, me } from './src/api';
+import { API_URL, listChatMessages, logout, markChatRead, me, sendChatText, syncChats } from './src/api';
 import { DisciplineProvider, clearDisciplineData } from './src/discipline/context';
 import AppIcon, { IconLabel, TAB_ICONS } from './src/components/AppIcon';
+import { attachChatSession, clearChatData, createChatPoller, getChatPoller, stopMobileChat } from './src/chatPoller';
+import { createFileStorage, createOutbox } from './src/chatOutbox';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -114,7 +120,88 @@ function ProfileStack({ user, onLogout, onReauthenticate, onProfileSaved }) {
   </Stack.Navigator>;
 }
 
+function ChatStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}>
+      <Stack.Screen name="ChatsList" component={ChatsScreen} options={{ title: 'Чаты' }} />
+      <Stack.Screen name="ChatThread" component={ChatThreadScreen} options={({ route }) => ({ title: route.params?.title || 'Чат' })} />
+    </Stack.Navigator>
+  );
+}
+
 function MainTabs({ user, onLogout, onReauthenticate, onProfileSaved }) {
+  const chatOn = user.features?.chat === true;
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    if (!chatOn) {
+      stopMobileChat();
+      attachChatSession(null);
+      setUnread(0);
+      return undefined;
+    }
+    let cancelled = false;
+    let sub;
+    const outbox = createOutbox({
+      storage: createFileStorage(FileSystem),
+      userId: user.id,
+      uuid: () => Crypto.randomUUID(),
+      digest: (value) => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, value),
+      send: async (item) => {
+        const res = await sendChatText(item.room_id, {
+          client_id: item.client_id,
+          type: item.type,
+          body: item.body,
+        });
+        return { status: res.status, data: res.data };
+      },
+      onAck: (item, res) => {
+        const data = res?.data || {};
+        if (data.id != null) {
+          getChatPoller()?.mergeThread(item.room_id, [{
+            id: data.id,
+            client_id: item.client_id,
+            type: item.type,
+            body: item.body,
+            sender_id: user.id,
+            sender_name: user.name,
+            created_at: data.created_at,
+            status: data.status || 'available',
+          }]);
+        }
+        getChatPoller()?.syncNow();
+      },
+    });
+    const poller = createChatPoller({
+      featuresChat: true,
+      userId: user.id,
+      syncInbox: () => syncChats(),
+      // Newest 50 without after_id so a queued id cannot hide a later available neighbor.
+      fetchThread: (roomId) => listChatMessages(roomId, { limit: 50 }),
+      flushOutbox: () => outbox.flush(),
+      markRead: (roomId, lastId) => markChatRead(roomId, lastId),
+      onChange: (state) => setUnread(state.unread),
+    });
+    (async () => {
+      try {
+        await outbox.load();
+      } catch { /* empty in-memory queue; FileSystem write retried on send */ }
+      if (cancelled) {
+        poller.stop();
+        return;
+      }
+      attachChatSession({ poller, outbox });
+      sub = AppState.addEventListener('change', (next) => poller.setAppState(next));
+      poller.setAppState(AppState.currentState);
+    })();
+    return () => {
+      cancelled = true;
+      sub?.remove();
+      poller.stop();
+      stopMobileChat();
+    };
+  }, [chatOn, user.id]);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -123,9 +210,23 @@ function MainTabs({ user, onLogout, onReauthenticate, onProfileSaved }) {
         tabBarStyle: { backgroundColor: '#0b1018', borderTopColor: '#1f2937' },
         tabBarActiveTintColor: '#fb923c',
         tabBarInactiveTintColor: '#6b7280',
-        tabBarLabelStyle: user.role === 'instructor' ? { fontSize: 10 } : undefined,
+        tabBarLabelStyle: user.role === 'instructor' || chatOn ? { fontSize: 10 } : undefined,
       })}
     >
+      {chatOn && (
+        <Tab.Screen
+          name="ChatTab"
+          component={ChatStack}
+          options={{
+            title: 'Чаты',
+            tabBarBadge: unread > 0 ? unread : undefined,
+            tabBarBadgeStyle: { backgroundColor: '#ea580c', color: '#fff' },
+          }}
+          listeners={{
+            focus: () => getChatPoller()?.syncNow(),
+          }}
+        />
+      )}
       {user.role === 'instructor' && <Tab.Screen name="DisciplineTab" component={DisciplineStack} options={{ title: 'Поручения' }} />}
       <Tab.Screen name="DocsTab" component={DocumentsStack} options={{ title: 'Документы' }} />
       <Tab.Screen name="QuizTab" component={QuizzesStack} options={{ title: 'Тесты' }} />
@@ -195,6 +296,7 @@ export default function App() {
             try {
               await clearWorkTimeData(user.id);
               await clearDisciplineData();
+              await clearChatData(createFileStorage(FileSystem));
               await SecureStore.deleteItemAsync('disciplineIdentity');
               await logout();
               setUser(null);

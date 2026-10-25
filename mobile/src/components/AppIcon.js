@@ -26,9 +26,10 @@ const paths = {
   team: 'M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0 M6 21v-2a6 6 0 0 1 12 0v2 M3 10a3 3 0 0 1 2-5 M21 10a3 3 0 0 0-2-5 M2 20v-3l2-2 M22 20v-3l-2-2',
   journal: 'M5 3h15v18H5z M2 7h6 M2 12h6 M2 17h6 M11 8h5 M11 12h5',
   close: 'M6 6l12 12 M18 6 6 18',
+  chat: 'M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-4 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
 };
 
-export const TAB_ICONS = { DocsTab: 'documents', QuizTab: 'quiz', NaryadTab: 'train', TrainTab: 'training', ProfileTab: 'profile', DisciplineTab: 'tasks' };
+export const TAB_ICONS = { ChatTab: 'chat', DocsTab: 'documents', QuizTab: 'quiz', NaryadTab: 'train', TrainTab: 'training', ProfileTab: 'profile', DisciplineTab: 'tasks' };
 
 export default function AppIcon({ name, size = 22, color = '#fb923c', strokeWidth = 1.8 }) {
   return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" accessible={false} importantForAccessibility="no-hide-descendants">
