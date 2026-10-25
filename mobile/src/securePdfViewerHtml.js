@@ -32,9 +32,37 @@ function isAllowedViewerUrl(url, origin) {
   return value.startsWith(`${origin}/vendor/pdfjs/`);
 }
 
-function buildSecurePdfHtml(base64, origin) {
+function buildSecurePdfHtml(base64, origin, options) {
+  const reportViolations = !options || options.reportViolations !== false;
   const pdfJsSrc = JSON.stringify(`${origin}/vendor/pdfjs/pdf.min.js`);
   const payload = JSON.stringify(base64);
+  const hooks = reportViolations
+    ? `function post(type, extra) {
+      try {
+        window.ReactNativeWebView.postMessage(JSON.stringify(Object.assign({ type: type }, extra || {})));
+      } catch (e) {}
+    }
+    document.addEventListener('contextmenu', function (e) { e.preventDefault(); post('download'); });
+    document.addEventListener('dragstart', function (e) { e.preventDefault(); });
+    document.addEventListener('copy', function (e) { e.preventDefault(); });
+    document.addEventListener('keydown', function (e) {
+      var key = (e.key || '').toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && ['s', 'p', 'u'].indexOf(key) !== -1) {
+        e.preventDefault();
+        post(key === 'p' ? 'print' : 'download');
+      }
+      if (key === 'print' || key === 'f12') e.preventDefault();
+    });
+    window.addEventListener('beforeprint', function (e) { e.preventDefault(); post('print'); });
+    try { window.print = function () { post('print'); }; } catch (e) {}
+    try { window.open = function () { post('share'); return null; }; } catch (e) {}`
+    : `document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    document.addEventListener('dragstart', function (e) { e.preventDefault(); });
+    document.addEventListener('copy', function (e) { e.preventDefault(); });`;
+  const failPost = reportViolations ? "post('error', { message: message });" : '';
+  const readyPost = reportViolations
+    ? 'return chain.then(function () { post(\'ready\', { pages: pdf.numPages }); });'
+    : 'return chain;';
 
   return `<!DOCTYPE html>
 <html lang="ru">
@@ -53,25 +81,7 @@ function buildSecurePdfHtml(base64, origin) {
   <div id="status">Загрузка документа…</div>
   <div id="pages"></div>
   <script>
-    function post(type, extra) {
-      try {
-        window.ReactNativeWebView.postMessage(JSON.stringify(Object.assign({ type: type }, extra || {})));
-      } catch (e) {}
-    }
-    document.addEventListener('contextmenu', function (e) { e.preventDefault(); post('download'); });
-    document.addEventListener('dragstart', function (e) { e.preventDefault(); });
-    document.addEventListener('copy', function (e) { e.preventDefault(); });
-    document.addEventListener('keydown', function (e) {
-      var key = (e.key || '').toLowerCase();
-      if ((e.ctrlKey || e.metaKey) && ['s', 'p', 'u'].indexOf(key) !== -1) {
-        e.preventDefault();
-        post(key === 'p' ? 'print' : 'download');
-      }
-      if (key === 'print' || key === 'f12') e.preventDefault();
-    });
-    window.addEventListener('beforeprint', function (e) { e.preventDefault(); post('print'); });
-    try { window.print = function () { post('print'); }; } catch (e) {}
-    try { window.open = function () { post('share'); return null; }; } catch (e) {}
+    ${hooks}
   </script>
   <script src=${pdfJsSrc}></script>
   <script>
@@ -81,7 +91,7 @@ function buildSecurePdfHtml(base64, origin) {
       function fail(message) {
         status.className = 'err';
         status.textContent = message;
-        post('error', { message: message });
+        ${failPost}
       }
       if (!window.pdfjsLib) {
         fail('Не удалось загрузить средство просмотра.');
@@ -120,7 +130,7 @@ function buildSecurePdfHtml(base64, origin) {
             });
           })(n);
         }
-        return chain.then(function () { post('ready', { pages: pdf.numPages }); });
+        ${readyPost}
       }).catch(function () {
         fail('Не удалось открыть документ.');
       });
@@ -130,10 +140,15 @@ function buildSecurePdfHtml(base64, origin) {
 </html>`;
 }
 
+function buildChatPdfHtml(base64, origin) {
+  return buildSecurePdfHtml(base64, origin, { reportViolations: false });
+}
+
 module.exports = {
   __esModule: true,
   apiOrigin,
   arrayBufferToBase64,
   isAllowedViewerUrl,
   buildSecurePdfHtml,
+  buildChatPdfHtml,
 };

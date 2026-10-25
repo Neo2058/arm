@@ -2,8 +2,15 @@ const copy = (value) => JSON.parse(JSON.stringify(value));
 const BACKOFF_MS = [2000, 5000, 15000];
 const BACKOFF_429_MS = 30000;
 
-function fingerprintPayload(type, body) {
-  return `${type}\n${body}\n`;
+function fingerprintPayload(type, body, fileSha256) {
+  return `${type}\n${body || ''}\n${fileSha256 || ''}`;
+}
+
+function uploadHeld(res) {
+  if (!res) return false;
+  if (res.status === 202) return true;
+  const remote = res.data && res.data.status;
+  return res.status === 200 && remote === 'queued';
 }
 
 function createFileStorage(FS, filename) {
@@ -77,17 +84,23 @@ function createOutbox({ storage, send, uuid, digest, userId, onAck, now = Date.n
     return () => listeners.delete(fn);
   };
   api.snapshot = function snapshot() { return copy(state); };
-  api.enqueue = async function enqueue({ room_id, type, body }) {
+  api.enqueue = async function enqueue({ room_id, type, body, localUri, fileName, mime, fileSha256 }) {
     if (stopped) throw new Error('Outbox stopped');
     const client_id = uuid();
-    const fingerprint = await digest(fingerprintPayload(type, body));
+    const text = body || '';
+    const fileHash = fileSha256 || '';
+    const fingerprint = await digest(fingerprintPayload(type, text, fileHash));
     await mutate((next) => {
       next.items.push({
         client_id,
         room_id,
         type,
-        body,
+        body: text,
         fingerprint,
+        fileSha256: fileHash,
+        localUri: localUri || undefined,
+        fileName: fileName || undefined,
+        mime: mime || undefined,
         attempts: 0,
         status: 'pending',
         error: '',
@@ -113,6 +126,18 @@ function createOutbox({ storage, send, uuid, digest, userId, onAck, now = Date.n
       next.items = next.items.filter((row) => row.client_id !== clientId);
     });
   };
+  api.ack = function ack(messages) {
+    const done = new Set();
+    for (const msg of messages || []) {
+      if (msg && msg.client_id && (msg.status === 'available' || msg.status === 'rejected')) {
+        done.add(msg.client_id);
+      }
+    }
+    if (!done.size) return Promise.resolve();
+    return mutate((next) => {
+      next.items = next.items.filter((row) => !done.has(row.client_id));
+    });
+  };
   api.flush = async function flush() {
     if (stopped) return;
     if (flushing) {
@@ -130,7 +155,16 @@ function createOutbox({ storage, send, uuid, digest, userId, onAck, now = Date.n
           try {
             const res = await send(snapshot);
             if (stopped) return;
-            if (res && (res.status === 200 || res.status === 201)) {
+            if (uploadHeld(res)) {
+              await mutate((next) => {
+                const current = next.items.find((row) => row.client_id === snapshot.client_id);
+                if (!current) return;
+                current.status = 'queued';
+                current.httpStatus = res.status;
+                current.error = '';
+                current.localUri = undefined;
+              });
+            } else if (res && (res.status === 200 || res.status === 201)) {
               await mutate((next) => {
                 next.items = next.items.filter((row) => row.client_id !== snapshot.client_id);
               });
@@ -190,4 +224,4 @@ function createOutbox({ storage, send, uuid, digest, userId, onAck, now = Date.n
   return api;
 }
 
-module.exports = { fingerprintPayload, createFileStorage, createOutbox };
+module.exports = { fingerprintPayload, uploadHeld, createFileStorage, createOutbox };

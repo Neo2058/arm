@@ -24,8 +24,10 @@ import DisciplineDetailScreen from './src/screens/DisciplineDetailScreen';
 import DisciplineAttachmentScreen from './src/screens/DisciplineAttachmentScreen';
 import ChatsScreen from './src/screens/ChatsScreen';
 import ChatThreadScreen from './src/screens/ChatThreadScreen';
+import ChatMembersScreen from './src/screens/ChatMembersScreen';
+import ChatPdfScreen from './src/screens/ChatPdfScreen';
 import * as SecureStore from 'expo-secure-store';
-import { API_URL, listChatMessages, logout, markChatRead, me, sendChatText, syncChats } from './src/api';
+import { API_URL, listChatMessages, logout, markChatRead, me, sendChatAttachment, sendChatText, syncChats } from './src/api';
 import { DisciplineProvider, clearDisciplineData } from './src/discipline/context';
 import AppIcon, { IconLabel, TAB_ICONS } from './src/components/AppIcon';
 import { attachChatSession, clearChatData, createChatPoller, getChatPoller, stopMobileChat } from './src/chatPoller';
@@ -114,6 +116,8 @@ function ChatStack() {
     <Stack.Navigator screenOptions={{ headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}>
       <Stack.Screen name="ChatsList" component={ChatsScreen} options={{ title: 'Чаты' }} />
       <Stack.Screen name="ChatThread" component={ChatThreadScreen} options={({ route }) => ({ title: route.params?.title || 'Чат' })} />
+      <Stack.Screen name="ChatMembers" component={ChatMembersScreen} options={{ title: 'Участники' }} />
+      <Stack.Screen name="ChatPdf" component={ChatPdfScreen} options={({ route }) => ({ title: route.params?.title || 'PDF' })} />
     </Stack.Navigator>
   );
 }
@@ -137,6 +141,10 @@ function MainTabs({ user, onLogout, onReauthenticate }) {
       uuid: () => Crypto.randomUUID(),
       digest: (value) => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, value),
       send: async (item) => {
+        if (item.type === 'image' || item.type === 'pdf') {
+          const res = await sendChatAttachment(item.room_id, item);
+          return { status: res.status, data: res.data };
+        }
         const res = await sendChatText(item.room_id, {
           client_id: item.client_id,
           type: item.type,
@@ -167,6 +175,7 @@ function MainTabs({ user, onLogout, onReauthenticate }) {
       syncInbox: () => syncChats(),
       fetchThread: (roomId) => listChatMessages(roomId, { limit: 50 }),
       flushOutbox: () => outbox.flush(),
+      ackOutbox: (messages) => outbox.ack(messages),
       markRead: (roomId, lastId) => markChatRead(roomId, lastId),
       onChange: (state) => setUnread(state.unread),
     });

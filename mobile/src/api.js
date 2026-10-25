@@ -14,13 +14,24 @@ export const client = axios.create({
   headers: { Accept: 'application/json' },
 });
 
-client.interceptors.request.use(async (config) => {
+export const CHAT_UPLOAD_TIMEOUT_MS = 30000;
+
+export const chatUploadClient = axios.create({
+  baseURL: API_URL,
+  timeout: CHAT_UPLOAD_TIMEOUT_MS,
+  headers: { Accept: 'application/json' },
+});
+
+async function attachToken(config) {
   const token = await SecureStore.getItemAsync('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
-});
+}
+
+client.interceptors.request.use(attachToken);
+chatUploadClient.interceptors.request.use(attachToken);
 
 export async function login(email, password) {
   const { data } = await client.post('/login', { email, password });
@@ -67,8 +78,48 @@ export function sendChatText(roomId, payload) {
   return client.post(`/chats/${encodeURIComponent(roomId)}/messages`, payload);
 }
 
+export function sendChatAttachment(roomId, item) {
+  if (!item?.localUri) {
+    const error = new Error('Файл недоступен. Выберите его заново.');
+    error.response = { status: 422, data: { message: error.message } };
+    throw error;
+  }
+  const form = new FormData();
+  form.append('client_id', item.client_id);
+  form.append('type', item.type);
+  if (item.body) form.append('body', item.body);
+  form.append('file', {
+    uri: item.localUri,
+    name: item.fileName || (item.type === 'pdf' ? 'file.pdf' : 'photo.jpg'),
+    type: item.mime || (item.type === 'pdf' ? 'application/pdf' : 'image/jpeg'),
+  });
+  return chatUploadClient.post(`/chats/${encodeURIComponent(roomId)}/messages`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+}
+
 export function markChatRead(roomId, lastReadMessageId) {
   return client.post(`/chats/${encodeURIComponent(roomId)}/read`, {
     last_read_message_id: lastReadMessageId,
   });
+}
+
+export async function listChatMembers(roomId) {
+  const { data } = await client.get(`/chats/${encodeURIComponent(roomId)}/members`);
+  return data.members || [];
+}
+
+export async function listEligibleChatMembers(roomId, q = '') {
+  const { data } = await client.get(`/chats/${encodeURIComponent(roomId)}/eligible-members`, {
+    params: q ? { q } : {},
+  });
+  return data.users || [];
+}
+
+export function addChatMember(roomId, userId) {
+  return client.post(`/chats/${encodeURIComponent(roomId)}/members`, { user_id: userId });
+}
+
+export function removeChatMember(roomId, userId) {
+  return client.delete(`/chats/${encodeURIComponent(roomId)}/members/${encodeURIComponent(userId)}`);
 }

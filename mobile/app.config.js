@@ -7,7 +7,7 @@ export default {
   expo: {
     name: 'ТЧ-15',
     slug: 'arm-mobile',
-    version: '1.0.10',
+    version: '1.1.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
@@ -20,7 +20,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'ru.tch15.arm',
-      buildNumber: '11',
+      buildNumber: '12',
       infoPlist: {
         NSAppTransportSecurity: isHttp
           ? { NSAllowsLocalNetworking: true, NSAllowsArbitraryLoads: true }
@@ -31,7 +31,7 @@ export default {
     android: {
       package: 'ru.tch15.arm',
       allowBackup: false,
-      versionCode: 11,
+      versionCode: 12,
       usesCleartextTraffic: isHttp,
       adaptiveIcon: {
         backgroundColor: '#0b1018',
@@ -44,6 +44,15 @@ export default {
       'expo-secure-store',
       'expo-video',
       ['expo-audio', { microphonePermission: false, recordAudioAndroid: false }],
+      [
+        'expo-image-picker',
+        {
+          photosPermission: 'ТЧ-15 использует фото, чтобы отправить снимок в рабочий чат колонны.',
+          cameraPermission: false,
+        },
+      ],
+      'expo-document-picker',
+      'expo-file-system',
     ],
     extra: {
       apiUrl,
