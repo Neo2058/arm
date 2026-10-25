@@ -447,10 +447,11 @@ class MobileApiTest extends TestCase
         ]);
 
         $token = $driver->createToken('mobile')->plainTextToken;
+        $this->artisan('phones:import-personnel --apply')->assertExitCode(0);
         $this->withToken($token)
             ->getJson('/api/mobile/phones')
             ->assertOk()
-            ->assertJsonFragment(['name' => 'ИВАНОВ И.И.', 'phone' => '9991234567'])
+            ->assertJsonFragment(['name' => 'ИВАНОВ И.И.', 'phone' => '+79991234567'])
             ->assertJsonMissing(['name' => 'ПЕТРОВ П.П.']);
 
         $this->withToken($token)
@@ -461,7 +462,7 @@ class MobileApiTest extends TestCase
         $this->withToken($token)
             ->getJson('/api/mobile/phones?'.http_build_query(['q' => '999123']))
             ->assertOk()
-            ->assertJsonPath('phones.0.phone', '9991234567');
+            ->assertJsonPath('phones.0.phone', '+79991234567');
 
         $this->withToken($token)
             ->getJson('/api/mobile/phones?'.http_build_query(['q' => 'неттакого']))

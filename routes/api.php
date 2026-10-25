@@ -8,8 +8,8 @@ use App\Http\Controllers\Api\Mobile\JournalController;
 use App\Http\Controllers\Api\Mobile\NaryadController;
 use App\Http\Controllers\Api\Mobile\PhoneController;
 use App\Http\Controllers\Api\Mobile\QuizController;
-use App\Http\Controllers\Api\Mobile\TrainingController;
 use App\Http\Controllers\Api\Mobile\TelegramAccountController;
+use App\Http\Controllers\Api\Mobile\TrainingController;
 use App\Http\Middleware\EnsureActiveApiUser;
 use Illuminate\Support\Facades\Route;
 
@@ -56,6 +56,7 @@ Route::prefix('mobile')->group(function () {
         Route::get('/journal/crew', [JournalController::class, 'crew']);
 
         Route::get('/phones', [PhoneController::class, 'index']);
+        Route::post('/phones', [PhoneController::class, 'store'])->middleware('throttle:10,1');
 
         Route::get('/discipline', [DisciplineController::class, 'index']);
         Route::get('/discipline/files/{file}', [DisciplineController::class, 'file'])->whereNumber('file');

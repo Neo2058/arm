@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Mobile\PhoneController;
 use App\Http\Controllers\Naryad\BreakdownsController;
 use App\Http\Controllers\Naryad\CatalogsController;
 use App\Http\Controllers\Naryad\PersonnelController;
@@ -8,6 +9,10 @@ use App\Http\Controllers\Naryad\PrintController;
 use App\Http\Controllers\Naryad\SetkaController;
 use App\Http\Middleware\EnsureDispatcher;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/api/phones', [PhoneController::class, 'index'])->name('phones.index');
+Route::post('/api/phones', [PhoneController::class, 'store'])
+    ->middleware('throttle:10,1')->name('phones.store');
 
 /*
 |--------------------------------------------------------------------------

@@ -85,7 +85,13 @@
 - Sanctum personal access token (`Authorization: Bearer`).
 - JSON для логина, документов, квизов, нарядов, телефонов, тем обучения, материалов, комментариев.
 - Стрим файлов: signed URL (`mobile.files.documents` / `mobile.files.training` / `mobile.files.naryads`) + `FileProxyService`, без сессии и без MinIO URL. Клиент не открывает PDF URL в WebView (это включает DownloadManager); байты читаются в приложении и рисуются PDF.js. Попытки screenshot/recording/download/share/print — `POST .../documents/{id}/violation`.
-- Квизы: `QuizService::playerData` / `grade` (без `is_correct` на клиенте). Наряды: личный TXT + общий PDF. Телефоны: `arm_personnel` (не уволенные, с номером).
+- Квизы: `QuizService::playerData` / `grade` (без `is_correct` на клиенте). Наряды: личный TXT + общий PDF.
+- Телефоны: общая таблица `phone_contacts`, GET/POST `/api/mobile/phones` и session/CSRF `/api/phones`.
+  `PhoneDirectory` нормализует номера, уникальный индекс БД запрещает дубли. Создание доступно активным
+  пользователям, throttle 10/min. Согласованный аудит `phone.created`: только ID контакта и автора.
+  Перенос `arm_personnel` — `phones:import-personnel` (аудит), затем `--apply`, без изменения кадровых данных.
+  Импортёр FoxPro не перезаписывает общий справочник: перенос телефонов запускается явно после импорта.
+  Прежние `naryad_phones` браузера переносятся только вручную, без автоматической публикации примеров.
 - Клиент: каталог `mobile/` (Expo). Не путать с web-группой (CSRF / device / barrier).
 - Привязка устройства на мобильном прототипе **не** включена.
 - Установщики (не браузер): `eas.json` профиль `preview` → APK/IPA с вшитым `EXPO_PUBLIC_API_URL`. Артефакты класть в `public/downloads/tch15-android.apk` и `tch15-ios.ipa`, страница `/install`.

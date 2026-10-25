@@ -1,3 +1,4 @@
+import PhoneDirectory from './PhoneDirectory';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, Eye, Phone, BookOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Plus, Trash2, Copy } from 'lucide-react';
 
@@ -28,29 +29,6 @@ export default function NaryadViewer({ naryads = [], isAdmin = false, userFileNa
     const canvasRef = useRef(null);
     const pdfContainerRef = useRef(null);
     const touchStartX = useRef(0);
-
-    // Phone directory - full FIO search + add
-    const [phones, setPhones] = useState(() => {
-        const saved = localStorage.getItem('naryad_phones');
-        return saved ? JSON.parse(saved) : [
-            { id: 1, fio: 'Иванов Иван Иванович', phone: '+7 (999) 123-45-67' },
-            { id: 2, fio: 'Петров Петр Петрович', phone: '+7 (999) 234-56-78' },
-            { id: 3, fio: 'Сидоров Сидор Сидорович', phone: '+7 (999) 345-67-89' },
-            { id: 4, fio: 'Кузнецов Алексей Сергеевич', phone: '+7 (912) 555-12-34' },
-        ];
-    });
-    const [phoneSearch, setPhoneSearch] = useState('');
-    const [newPhoneFio, setNewPhoneFio] = useState('');
-    const [newPhoneNum, setNewPhoneNum] = useState('');
-
-    // Log phone searches (debounced)
-    useEffect(() => {
-        if (!phoneSearch || phoneSearch.length < 2) return;
-        const t = setTimeout(() => {
-            logAction('search_phones', { query: phoneSearch });
-        }, 800);
-        return () => clearTimeout(t);
-    }, [phoneSearch]);
 
     // Shift explanations / расшифровки смен - full add + read + search
     const [explanations, setExplanations] = useState(() => {
@@ -105,22 +83,10 @@ export default function NaryadViewer({ naryads = [], isAdmin = false, userFileNa
         if (act) logAction(act);
     }, [activeTab]);
 
-    // Persist phones
-    useEffect(() => {
-        localStorage.setItem('naryad_phones', JSON.stringify(phones));
-    }, [phones]);
-
     // Persist explanations
     useEffect(() => {
         localStorage.setItem('naryad_explanations', JSON.stringify(explanations));
     }, [explanations]);
-
-    // Phones filtered by FIO (full search)
-    const filteredPhones = useMemo(() => {
-        const q = phoneSearch.trim().toLowerCase();
-        if (!q) return phones;
-        return phones.filter(p => (p.fio || '').toLowerCase().includes(q));
-    }, [phones, phoneSearch]);
 
     // Explanations filtered by shift or text
     const filteredExps = useMemo(() => {
@@ -172,42 +138,6 @@ export default function NaryadViewer({ naryads = [], isAdmin = false, userFileNa
             const url = new URL(window.location);
             url.searchParams.set('tab', tab);
             window.history.replaceState({}, '', url);
-        }
-    };
-
-    // Phones handlers - full featured
-    const addPhone = () => {
-        if (!isAdmin) return;
-        const fio = newPhoneFio.trim();
-        const phone = newPhoneNum.trim();
-        if (!fio || !phone) return;
-        const newEntry = {
-            id: Date.now(),
-            fio,
-            phone,
-        };
-        setPhones(prev => [newEntry, ...prev]);
-        setNewPhoneFio('');
-        setNewPhoneNum('');
-
-        logAction('add_phone', { fio });
-    };
-
-    const deletePhone = (id) => {
-        if (!isAdmin) return;
-        const entry = phones.find(p => p.id === id);
-        setPhones(prev => prev.filter(p => p.id !== id));
-        if (entry) logAction('delete_phone', { fio: entry.fio });
-    };
-
-    const copyPhone = async (phone) => {
-        try {
-            await navigator.clipboard.writeText(phone);
-            // simple visual feedback via alert for mobile simplicity
-            alert('Телефон скопирован: ' + phone);
-        } catch (_) {
-            // fallback
-            prompt('Скопируйте телефон:', phone);
         }
     };
 
@@ -562,85 +492,7 @@ export default function NaryadViewer({ naryads = [], isAdmin = false, userFileNa
             )}
 
             {/* ========== BLOCK 2: СПРАВОЧНИК ТЕЛЕФОНОВ — полноценный поиск по ФИО ========== */}
-            {activeTab === 'phones' && (
-                <div className="space-y-4">
-                    <div className="bg-white/5 border border-white/10 rounded-3xl p-4">
-                        <div className="flex items-center gap-2 text-orange-400 text-sm font-semibold mb-1">
-                            <Phone size={18} /> Справочник телефонов
-                            {!isAdmin && <span className="text-[10px] text-orange-300/60">(только просмотр)</span>}
-                        </div>
-
-                        {/* Search by FIO — large */}
-                        <div className="relative mb-4">
-                            <Search className="absolute left-4 top-4 h-5 w-5 text-orange-400" />
-                            <input
-                                type="text"
-                                value={phoneSearch}
-                                onChange={e => setPhoneSearch(e.target.value)}
-                                placeholder="Поиск по ФИО (начните вводить фамилию или имя)"
-                                className="w-full rounded-3xl border border-white/10 bg-[#0b1018] pl-12 py-3.5 text-lg text-orange-400 focus:outline-none focus:border-orange-400 placeholder:text-orange-300/50"
-                            />
-                        </div>
-
-                        {/* Add form — only for admins */}
-                        {isAdmin && (
-                            <>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                                    <input
-                                        type="text"
-                                        value={newPhoneFio}
-                                        onChange={e => setNewPhoneFio(e.target.value)}
-                                        placeholder="ФИО полностью"
-                                        className="rounded-3xl bg-[#0b1018] border border-white/10 px-4 py-3 text-base text-orange-400 placeholder:text-orange-300/60 focus:border-orange-400"
-                                        onKeyDown={e => e.key === 'Enter' && addPhone()}
-                                    />
-                                    <input
-                                        type="tel"
-                                        value={newPhoneNum}
-                                        onChange={e => setNewPhoneNum(e.target.value)}
-                                        placeholder="+7 (___) ___-__-__"
-                                        className="rounded-3xl bg-[#0b1018] border border-white/10 px-4 py-3 text-base text-orange-400 placeholder:text-orange-300/60 focus:border-orange-400"
-                                        onKeyDown={e => e.key === 'Enter' && addPhone()}
-                                    />
-                                </div>
-                                <button
-                                    onClick={addPhone}
-                                    className="w-full flex items-center justify-center gap-2 h-14 rounded-3xl bg-orange-500 active:bg-orange-600 text-white font-bold text-base shadow active:scale-[0.985]"
-                                >
-                                    <Plus size={20} /> ДОБАВИТЬ ТЕЛЕФОН
-                                </button>
-                                {phones.length > 0 && (
-                                    <button onClick={() => { if (confirm('Очистить весь справочник телефонов?')) setPhones([]); }} className="mt-1 w-full text-xs text-red-400/70 underline py-1 active:text-red-400">Очистить справочник</button>
-                                )}
-                            </>
-                        )}
-
-                    </div>
-
-                    {/* Phones list — big tappable rows */}
-                    <div className="space-y-2">
-                        {filteredPhones.length === 0 && <div className="text-orange-300 px-4 py-6 text-center bg-white/5 rounded-3xl">Ничего не найдено</div>}
-                        {filteredPhones.map(p => (
-                            <div key={p.id} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-3xl p-4 active:bg-white/10">
-                                <div className="flex-1 min-w-0">
-                                    <div className="font-semibold text-[17px] leading-tight text-orange-100">{p.fio}</div>
-                                    <a href={`tel:${p.phone.replace(/[^0-9+]/g,'')}`} className="block mt-0.5 text-xl font-mono text-orange-400 active:text-orange-300 break-all">{p.phone}</a>
-                                </div>
-                                <button onClick={() => copyPhone(p.phone)} className="p-3 rounded-2xl bg-white/5 active:bg-white/10" title="Скопировать">
-                                    <Copy size={19} />
-                                </button>
-                                {isAdmin && (
-                                    <button onClick={() => deletePhone(p.id)} className="p-3 rounded-2xl bg-white/5 text-red-400 active:bg-white/10" title="Удалить">
-                                        <Trash2 size={19} />
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-
-                    <p className="text-[11px] px-2 text-orange-400/60">Данные хранятся в вашем устройстве. Нажмите на номер — позвонить.</p>
-                </div>
-            )}
+            {activeTab === 'phones' && <PhoneDirectory />}
 
             {/* ========== BLOCK 3: РАСШИФРОВКИ СМЕН — добавление + чтение + поиск ========== */}
             {activeTab === 'explanations' && (
