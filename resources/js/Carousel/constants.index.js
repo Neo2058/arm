@@ -147,7 +147,7 @@ export const imagesArray = [
     {
         name: "Оператор учёта",
         src: "/images/professionalDriver.jpg",
-        role: ['operator', 'dispatcher', 'admin', 'super_admin'],
+        role: ['dispatcher'],
         logo: "/assets/packaging.svg",
         link: '/uchet',
         details: [

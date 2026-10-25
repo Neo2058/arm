@@ -91,7 +91,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function isUchetStaff(): bool
     {
-        return $this->isOperator() || $this->isDispatcher() || $this->isAdmin();
+        return $this->isOperator() || $this->isDispatcher();
     }
 
     public function isDriver(): bool

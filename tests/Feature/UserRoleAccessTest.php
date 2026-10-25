@@ -52,6 +52,24 @@ class UserRoleAccessTest extends TestCase
         $this->assertTrue($operator->isUchetStaff());
         $this->assertFalse($operator->isDispatcher());
         $this->assertTrue($dispatcher->isUchetStaff());
+        $this->assertFalse($admin->isUchetStaff());
+        $this->assertFalse($super->isUchetStaff());
+    }
+
+    public function test_admin_and_super_admin_cannot_open_uchet(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $super = User::factory()->superAdmin()->create();
+
+        $this->actingAs($admin)->get('/uchet')->assertForbidden();
+        $this->actingAs($super)->get('/uchet')->assertForbidden();
+    }
+
+    public function test_dispatcher_can_open_uchet(): void
+    {
+        $dispatcher = User::factory()->dispatcher()->create();
+
+        $this->actingAs($dispatcher)->get('/uchet')->assertOk();
     }
 
     public function test_dispatcher_can_access_legacy_naryadchik_allowed_roles(): void
