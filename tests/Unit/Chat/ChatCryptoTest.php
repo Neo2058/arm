@@ -63,7 +63,7 @@ class ChatCryptoTest extends TestCase
         }
     }
 
-    public function test_short_key_fails_closed_on_encrypt_and_decrypt(): void
+    public function test_short_key_fails_closed_on_encrypt(): void
     {
         config(['chat.key' => 'base64:short']);
         $crypto = app(ChatCrypto::class);
@@ -105,5 +105,21 @@ class ChatCryptoTest extends TestCase
     {
         $this->expectException(DecryptException::class);
         app(ChatCrypto::class)->decrypt('not-an-envelope');
+    }
+
+    public function test_invalid_previous_keys_are_skipped(): void
+    {
+        config(['chat.key' => self::KEY_A, 'chat.previous_keys' => []]);
+        $legacy = app(ChatCrypto::class)->encrypt('keep');
+
+        config([
+            'chat.key' => self::KEY_B,
+            'chat.previous_keys' => ['', 'base64:short', self::KEY_A],
+        ]);
+
+        $this->assertSame('keep', app(ChatCrypto::class)->decrypt($legacy));
+        $this->assertSame('current', app(ChatCrypto::class)->decrypt(
+            app(ChatCrypto::class)->encrypt('current'),
+        ));
     }
 }

@@ -210,6 +210,88 @@ class ChatAuthorizationTest extends TestCase
         $service->grant($admin, $user, '15', '2026-10-20', '2026-10-31', 'пересечение');
     }
 
+    public function test_second_current_or_future_period_is_rejected(): void
+    {
+        [$authz, $deputy, $room, $period] = $this->grantedDeputy('2026-10-01', '2026-10-31');
+        $this->assertTrue($authz->isEffectiveMember($deputy, $room));
+
+        $admin = User::query()->findOrFail($period->granted_by);
+        try {
+            app(ChatService::class)->grant($admin, $deputy, '15', '2026-11-01', '2026-11-15', 'следующий');
+            $this->fail('expected ValidationException');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('starts_on', $e->errors());
+        }
+
+        $member = ChatMember::query()->where('room_id', $room->id)->where('user_id', $deputy->id)->firstOrFail();
+        $this->assertSame('2026-10-01', $member->window_starts_on->toDateString());
+        $this->assertSame('2026-10-31', $member->window_ends_on->toDateString());
+        $this->assertTrue($authz->isEffectiveMember($deputy, $room->fresh()));
+    }
+
+    public function test_historical_grant_does_not_overwrite_open_snapshot(): void
+    {
+        [$authz, $deputy, $room, $period] = $this->grantedDeputy('2026-10-01', '2026-10-31');
+        $admin = User::query()->findOrFail($period->granted_by);
+        app(ChatService::class)->grant($admin, $deputy, '15', '2026-09-01', '2026-09-15', 'архив');
+
+        $member = ChatMember::query()->where('room_id', $room->id)->where('user_id', $deputy->id)->firstOrFail();
+        $this->assertSame('2026-10-01', $member->window_starts_on->toDateString());
+        $this->assertSame('2026-10-31', $member->window_ends_on->toDateString());
+        $this->assertTrue($authz->isEffectiveMember($deputy, $room->fresh()));
+        $this->assertSame(2, ColumnDeputy::query()->where('user_id', $deputy->id)->count());
+    }
+
+    public function test_revoke_closes_window_on_archived_room_members(): void
+    {
+        [$authz, $deputy, $room, $period] = $this->grantedDeputy('2026-10-01', '2026-10-31');
+        $room->archived_at = now();
+        $room->save();
+
+        app(ChatService::class)->revoke($period);
+
+        $room->archived_at = null;
+        $room->save();
+        $member = ChatMember::query()->where('room_id', $room->id)->where('user_id', $deputy->id)->firstOrFail();
+        $this->assertSame('2026-10-19', $member->window_ends_on->toDateString());
+        $this->assertFalse($authz->isEffectiveMember($deputy, $room->fresh()));
+        $this->assertFalse($authz->roomsFor($deputy)->contains('id', $room->id));
+    }
+
+    public function test_assert_mobile_room_other_pilot_column_non_member_is_404(): void
+    {
+        config(['chat.pilot_column' => '15']);
+        $admin = User::factory()->admin()->create();
+        $room = $this->columnRoom('99', $admin);
+        $stranger = User::factory()->driver()->create();
+
+        $this->assertHttp(app(ChatAuthorization::class), $stranger, $room, 404);
+    }
+
+    public function test_assert_mobile_room_other_pilot_column_archived_is_404(): void
+    {
+        config(['chat.pilot_column' => '15']);
+        [$authz, $deputy, $room] = $this->grantedDeputy('2026-10-01', '2026-10-31', '99');
+        $room->archived_at = now();
+        $room->save();
+
+        $this->assertHttp($authz, $deputy, $room->fresh(), 404);
+    }
+
+    public function test_grant_rejects_empty_dates(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $user = User::factory()->driver()->create();
+        $this->columnRoom('15', $admin);
+
+        try {
+            app(ChatService::class)->grant($admin, $user, '15', null, '2026-10-31');
+            $this->fail('expected ValidationException');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('starts_on', $e->errors());
+        }
+    }
+
     /**
      * @return array{0: ChatAuthorization, 1: User, 2: ChatRoom, 3: ColumnDeputy}
      */

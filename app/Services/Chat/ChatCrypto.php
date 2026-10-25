@@ -60,7 +60,11 @@ class ChatCrypto
     {
         $keys = [$this->currentKey()];
         foreach (config('chat.previous_keys', []) as $raw) {
-            $keys[] = $this->parseKey($raw);
+            try {
+                $keys[] = $this->parseKey($raw);
+            } catch (RuntimeException) {
+                continue;
+            }
         }
 
         return $keys;
