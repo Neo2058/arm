@@ -30,3 +30,5 @@
 - Android: вход инструктора, сводка, личные задачи, фильтр выполненных, бригада своей колонны и просроченные нормативы проверены на локальном API с отдельной БД. Итоговый подписанный APK также устанавливается отдельно и проверяется на запуск без тестового токена. iOS не проверялась.
 
 Команды: `php -d memory_limit=512M vendor/bin/phpunit`; `node --test mobile/tests/*.cjs`; из mobile — `npx expo export --platform android`.
+
+Опубликовано на production вместе с APK 1.0.7. Журнал выкладки, резервные копии и откат: `deployments/2026-10-25-mobile-journal.md`. Установка: https://www.xn---15-7edz.xn--p1ai/install .
