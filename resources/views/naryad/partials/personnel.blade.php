@@ -1,8 +1,8 @@
 <div class="max-w-6xl">
     <h2 class="text-2xl font-bold mb-1">Картотека машинистов</h2>
     <p class="text-sm text-orange-700 dark:text-orange-200 mb-4">
-        Как <code>LKM</code>: табельный, должность, класс, бригада, приём/увольнение. Всего: <strong>{{ $total }}</strong>.
-        Импорт: <code>php artisan arm:import-dbf --only=personnel</code>.
+        Всего карточек: <strong>{{ $total }}</strong>.
+        <a href="{{ route('personnel.index') }}" class="underline font-semibold">Открыть полную картотеку и редактирование</a>
     </p>
 
     <form class="flex flex-wrap gap-3 items-end mb-4 text-sm" onsubmit="event.preventDefault(); const p = new URLSearchParams({q: document.getElementById('pe-q').value, active: document.getElementById('pe-active').checked ? '1' : ''}); window.Naryad.loadPartial('{{ route('naryad.partial.personnel') }}?' + p.toString());">
@@ -34,7 +34,7 @@
             @forelse($people as $p)
                 <tr class="{{ $p->isFired() ? 'opacity-50' : '' }}">
                     <td class="px-3 py-1.5 font-mono">{{ $p->tab_number }}</td>
-                    <td class="px-3 py-1.5 font-medium">{{ $p->full_name }} @if($p->is_brigadier)<span class="text-[10px] text-orange-500">бр.</span>@endif</td>
+                    <td class="px-3 py-1.5 font-medium"><a href="{{ route('personnel.show', $p) }}" class="underline">{{ $p->full_name }}</a> @if($p->is_brigadier)<span class="text-[10px] text-orange-500">бр.</span>@endif</td>
                     <td class="px-3 py-1.5 text-center">{{ $p->position_code }}</td>
                     <td class="px-3 py-1.5 text-center">{{ $p->class_code }}</td>
                     <td class="px-3 py-1.5 text-center">{{ $p->brigade_code }}</td>

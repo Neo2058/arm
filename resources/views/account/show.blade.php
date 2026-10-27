@@ -15,6 +15,10 @@
         h1 { margin: 8px 0; color: #60a5fa; font-size: clamp(32px, 6vw, 52px); line-height: 1.2; }
         h2 { font-size: 22px; margin: 0 0 12px; }
         p { margin: 0 0 16px; }
+        input { width: 100%; padding: 10px; border: 1px solid #475569; border-radius: 8px; background: #080b11; color: #e4e9f2; }
+        input[type="checkbox"] { width: auto; }
+        label { display: block; margin: 12px 0; }
+        button { border: 0; cursor: pointer; font: inherit; }
         .muted { color: #a1aec3; }
         .grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; align-items: start; }
         section { border: 1px solid #23324a; border-radius: 28px; background: #101722; padding: 28px; }
@@ -41,7 +45,30 @@
     <div class="grid">
         <section aria-labelledby="employee-heading">
             <h2 id="employee-heading">Данные сотрудника</h2>
-            <p class="muted">Если данные неверны, обратитесь к администратору.</p>
+            <p class="muted">Исправьте свои данные и сохраните изменения. Роль, колонну, инструктора и табельный номер назначает администратор.</p>
+            @if(session('success'))<p role="status">{{ session('success') }}</p>@endif
+            @if($errors->any())<ul role="alert">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>@endif
+            <form method="POST" action="{{ route('account.update') }}">
+                @csrf
+                @method('PATCH')
+                @foreach($selfProfile['fields'] as $field)
+                    @php($key = $field['key'])
+                    @if($field['type'] === 'windows')
+                        <fieldset><legend>{{ $field['label'] }}</legend>
+                            @for($i=0; $i<3; $i++)
+                                <label>Время {{ $i+1 }}<input name="{{ $key }}[{{ $i }}][time]" maxlength="5" placeholder="ЧЧ.ММ" value="{{ old($key.'.'.$i.'.time', $selfProfile['values'][$key][$i]['time'] ?? '') }}"></label>
+                                <label>Основание<input name="{{ $key }}[{{ $i }}][reason]" maxlength="8" value="{{ old($key.'.'.$i.'.reason', $selfProfile['values'][$key][$i]['reason'] ?? '') }}"></label>
+                            @endfor
+                        </fieldset>
+                    @elseif($field['type'] === 'boolean')
+                        <input type="hidden" name="{{ $key }}" value="0">
+                        <label><input type="checkbox" name="{{ $key }}" value="1" @checked(old($key, $selfProfile['values'][$key]))> {{ $field['label'] }}</label>
+                    @else
+                        <label>{{ $field['label'] }}<input type="{{ $field['type'] }}" name="{{ $key }}" value="{{ old($key, $selfProfile['values'][$key]) }}" @if($field['max_length']) maxlength="{{ $field['max_length'] }}" @endif @if($field['type'] === 'number') min="0" max="999" @endif @required($key === 'full_name')></label>
+                    @endif
+                @endforeach
+                <button class="button" type="submit">Сохранить профиль</button>
+            </form>
             <dl>
                 @foreach([
                     'ФИО' => $user->name,

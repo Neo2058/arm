@@ -20,3 +20,12 @@ Journal read views: JournalScreen exports overview/tasks/crew, reached from Disc
 ProfileScreen manages Telegram through token-authenticated /account/telegram GET/POST/DELETE.
 One-time bot links stay in memory only, never logs or persistent drafts; refresh status on return from Telegram.
 Version is visible in profile. Icons use local react-native-svg paths in components/AppIcon.js.
+
+
+## Личные профили и логины — 26 октября 2026
+
+- `/account` GET/PATCH и `/api/mobile/account/profile` GET/PATCH используют один `SelfProfile` и рабочую карточку `arm_personnel`. Телефоны, личные и кадровые поля можно редактировать самостоятельно; профиль и картотека синхронизируются транзакционно через `PersonnelDirectory::updateOwn`. Маршрут всегда определяет пользователя из сессии/Sanctum, ID от клиента не принимается.
+- Роль, активность, email-логин, табельный, колонна, instructor, увольнение и исходный снимок защищены от самоизменения (в том числе при административной роли). `account.profile_updated` пишет только имена изменённых полей. Полное ФИО расширено до 255 символов отдельной добавочной миграцией.
+- Мобильный редактор `ProfileEditor` использует метаданные того же API, сохраняет ввод при сетевой ошибке, не хранит кадровые черновики на диске. Android 1.0.11 / versionCode 12. Новые нативные зависимости не добавлены.
+- Логины `TABNOM@mail.ru` и случайные пароли подготовлены только для 262 активных импортированных технических аккаунтов. По прямому указанию владельца 364 архивных аккаунта исключены. Действующие реальные аккаунты не переоформляются; роли сохраняются для дальнейшего ручного назначения. Это идентификаторы входа, почтовые ящики не создаются и письма не отправляются. Пароли в открытом виде — только приватный CSV на компьютере владельца, на сервер передаются хеши bcrypt cost 12.
+- Проверки: `SelfProfileTest` (веб + реальные Sanctum-токены, запрет повышения прав, чужого ID, неактивных, откат), `PersonnelDirectoryTest`, тесты маршрутов/доступа/журнала/учёта и безопасности.

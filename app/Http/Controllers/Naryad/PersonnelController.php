@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ArmAbsence;
 use App\Models\ArmAppointment;
 use App\Models\ArmPersonnel;
+use App\Services\Arm\PersonnelDirectory;
 use App\Services\ClickHouseService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -18,12 +19,12 @@ class PersonnelController extends Controller implements HasMiddleware
     {
         $this->abortIfNotDispatcher();
 
-        $query = ArmPersonnel::query()->with('user')->orderBy('tab_number');
+        $query = app(PersonnelDirectory::class)->query($request->user())->orderBy('tab_number');
         if ($request->filled('q')) {
             $q = (string) $request->string('q')->trim();
             $query->where(function ($inner) use ($q) {
-                $inner->where('tab_number', 'like', '%'.$q.'%')
-                    ->orWhere('full_name', 'like', '%'.$q.'%')
+                $inner->where('tab_number', $inner->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like', '%'.$q.'%')
+                    ->orWhere('full_name', $inner->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like', '%'.$q.'%')
                     ->orWhere('brigade_code', $q);
             });
         }

@@ -10,23 +10,36 @@ use App\Models\ArmPersonnel;
 use App\Models\User;
 use App\Models\UserProfile;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PersonnelImporter
 {
     public function importPersonnel(string $dbfPath): int
     {
-        $count = 0;
-        foreach ((new DbfReader($dbfPath))->records() as $row) {
+        $rows = iterator_to_array((new DbfReader($dbfPath))->records());
+        $seen = [];
+        foreach ($rows as $row) {
             $tab = $this->tab($row['TABNOM'] ?? '');
-            if ($tab === '') {
-                continue;
+            if ($tab !== '' && isset($seen[$tab])) {
+                throw new \RuntimeException('Повторный табельный номер в LKM: '.$tab);
             }
-            $this->upsertPerson($tab, $row);
-            $count++;
+            $seen[$tab] = true;
         }
 
-        return $count;
+        return DB::transaction(function () use ($rows) {
+            $count = 0;
+            foreach ($rows as $row) {
+                $tab = $this->tab($row['TABNOM'] ?? '');
+                if ($tab === '') {
+                    continue;
+                }
+                $this->upsertPerson($tab, $row);
+                $count++;
+            }
+
+            return $count;
+        });
     }
 
     public function importAppointments(string $dbfPath): int
@@ -167,6 +180,7 @@ class PersonnelImporter
             ['tab_number' => $tab],
             [
                 'user_id' => $user->id,
+                'source_data' => $row,
                 'full_name' => $fio !== '' ? $fio : $displayName,
                 'hired_on' => $hired,
                 'fired_on' => $fired,
@@ -199,8 +213,18 @@ class PersonnelImporter
     {
         $email = 'tab'.$tab.'@arm.local';
 
-        $profile = UserProfile::query()->where('tab_number', $tab)->first();
-        $user = $profile?->user ?? User::query()->where('email', $email)->first();
+        $profiles = UserProfile::query()->where('tab_number', $tab)->get();
+        if ($profiles->count() > 1) {
+            throw new \RuntimeException('Несколько профилей с табельным '.$tab);
+        }
+        $profileUser = $profiles->first()?->user;
+        $emailUser = User::query()->where('email', $email)->first();
+        $cardUser = ArmPersonnel::query()->where('tab_number', $tab)->first()?->user;
+        $candidates = collect([$profileUser, $emailUser, $cardUser])->filter();
+        if ($candidates->pluck('id')->unique()->count() > 1) {
+            throw new \RuntimeException('Конфликт аккаунтов для табельного '.$tab);
+        }
+        $user = $candidates->first();
 
         if (! $user) {
             $user = User::create([
@@ -211,7 +235,10 @@ class PersonnelImporter
                 'is_active' => true,
             ]);
         } else {
-            $user->name = $name;
+            // Keep the full current portal name instead of replacing it with historical initials.
+            if (trim($user->name) === '') {
+                $user->name = $name;
+            }
             if ($user->role === UserRole::DRIVER || $user->role === null) {
                 $user->role = UserRole::DRIVER;
             }

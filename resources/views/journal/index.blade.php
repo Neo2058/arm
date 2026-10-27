@@ -23,6 +23,8 @@
 
     <a href="{{ route('discipline.index') }}" class="block mb-6 p-4 rounded-xl bg-orange-100 text-orange-900 font-semibold">Исполнительская дисциплина — поручения и отчёты</a>
 
+    <a href="{{ route('personnel.index') }}" class="block mb-6 p-4 rounded-xl bg-orange-100 text-orange-900 font-semibold">Картотека машинистов своей колонны</a>
+
     <!-- Statistics - наглядно -->
     <div class="mb-8">
         <h2 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">Статистика работы с колонной</h2>

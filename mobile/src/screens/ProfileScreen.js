@@ -3,9 +3,10 @@ import { ActivityIndicator, Alert, AppState, Linking, Pressable, ScrollView, Sty
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { client } from '../api';
+import ProfileEditor from './ProfileEditor';
 import AppIcon, { IconLabel } from '../components/AppIcon';
 
-export default function ProfileScreen({ user, onLogout, onReauthenticate }) {
+export default function ProfileScreen({ user, onLogout, onReauthenticate, onProfileSaved }) {
   const [telegram, setTelegram] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -71,6 +72,7 @@ export default function ProfileScreen({ user, onLogout, onReauthenticate }) {
   return <ScrollView style={s.page} contentContainerStyle={s.content}>
     <View style={s.avatar}><AppIcon name="profile" size={36} /></View>
     <Text style={s.name}>{user.name}</Text><Text style={s.meta}>{user.email}</Text><Text style={s.meta}>Роль: {user.role}</Text>
+    <ProfileEditor userId={user.id} onSaved={onProfileSaved} />
     <View style={s.card}>
       <IconLabel name="send" color="#fb923c">Telegram</IconLabel>
       <Text style={s.status}>{telegram ? telegram.linked ? 'Привязан' : 'Не привязан' : 'Статус не получен'}</Text>

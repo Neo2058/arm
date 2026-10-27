@@ -103,7 +103,7 @@ function DisciplineStack() {
   );
 }
 
-function MainTabs({ user, onLogout, onReauthenticate }) {
+function MainTabs({ user, onLogout, onReauthenticate, onProfileSaved }) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -125,7 +125,7 @@ function MainTabs({ user, onLogout, onReauthenticate }) {
         options={{ title: 'Профиль', headerShown: true, headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}
       >
         {() => (
-          <ProfileScreen key={user.id} user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} />
+          <ProfileScreen key={user.id} user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} onProfileSaved={onProfileSaved} />
         )}
       </Tab.Screen>
     </Tab.Navigator>
@@ -175,6 +175,10 @@ export default function App() {
         <DisciplineProvider key={String(user.id)} user={user}><MainTabs
           key={String(user.id)}
           user={user}
+          onProfileSaved={async fresh => {
+            await SecureStore.setItemAsync('disciplineIdentity', JSON.stringify({ server: API_URL, user: fresh }));
+            setUser(fresh);
+          }}
           onReauthenticate={() => setReauth(true)}
           onLogout={async () => {
             try {

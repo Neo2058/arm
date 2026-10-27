@@ -16,6 +16,7 @@
             <div class="text-[10px] text-orange-500">УЧЁТ / ЛИЦЕВЫЕ СЧЕТА</div>
         </div>
         <nav class="p-3 space-y-1 text-sm">
+            <a href="{{ route('personnel.index') }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Картотека машинистов</a>
             <a href="{{ route('uchet.index', ['month' => $month ?? date('Y-m')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Учётные карточки</a>
             <a href="{{ route('uchet.accounts', ['month' => $month ?? date('Y-m')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Лицевые счета</a>
             <a href="{{ route('uchet.sheets', ['date' => $date ?? date('Y-m-d')]) }}" class="block px-4 py-2 rounded-2xl hover:bg-orange-500/10">Маршрутные листы</a>

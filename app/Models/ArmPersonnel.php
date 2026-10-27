@@ -11,6 +11,7 @@ class ArmPersonnel extends Model
     protected $table = 'arm_personnel';
 
     protected $fillable = [
+        'source_data',
         'user_id',
         'tab_number',
         'full_name',
@@ -40,6 +41,7 @@ class ArmPersonnel extends Model
     ];
 
     protected $casts = [
+        'source_data' => 'array',
         'hired_on' => 'date',
         'fired_on' => 'date',
         'seniority_on' => 'date',

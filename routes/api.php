@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Mobile\FileController;
 use App\Http\Controllers\Api\Mobile\JournalController;
 use App\Http\Controllers\Api\Mobile\NaryadController;
 use App\Http\Controllers\Api\Mobile\PhoneController;
+use App\Http\Controllers\Api\Mobile\ProfileController;
 use App\Http\Controllers\Api\Mobile\QuizController;
 use App\Http\Controllers\Api\Mobile\TelegramAccountController;
 use App\Http\Controllers\Api\Mobile\TrainingController;
@@ -27,6 +28,8 @@ Route::prefix('mobile')->group(function () {
         ->middleware('signed');
 
     Route::middleware(['auth:sanctum', EnsureActiveApiUser::class])->group(function () {
+        Route::get('/account/profile', [ProfileController::class, 'show']);
+        Route::patch('/account/profile', [ProfileController::class, 'update'])->middleware('throttle:20,1');
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
 

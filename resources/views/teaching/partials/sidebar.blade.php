@@ -209,6 +209,7 @@
     ]);
 
     $journalMenu = [
+        ['title' => 'Картотека машинистов', 'route' => 'personnel.index', 'icon' => 'results'],
         ['title' => 'Исполнительская дисциплина', 'route' => 'discipline.index', 'icon' => 'results'],
 
         [
@@ -292,6 +293,11 @@
     $menu = match (true) {
 
         // Инструктор в разделе документов остаётся в контексте журнала ТЧМ
+        request()->routeIs('personnel.*') && $isInstructor => $journalMenu,
+        request()->routeIs('personnel.*') => [
+            ['title' => 'Картотека машинистов', 'route' => 'personnel.index', 'icon' => 'results'],
+            ['title' => 'Обратно в меню', 'route' => 'mainMenu', 'icon' => 'logout'],
+        ],
         request()->routeIs('discipline.*') && $isInstructor => $journalMenu,
         request()->routeIs('documents.*') && $isInstructor => $journalMenu,
         request()->routeIs('documents.*') => $documentsMenu,
