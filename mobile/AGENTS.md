@@ -38,4 +38,5 @@ inject platform React rather than importing mobile React from web. All payroll m
 Persist UUID/version/exact request before sending in private `personal-worktime` scope (API URL + user ID).
 Manual retry after uncertain responses; 409 requires comparison/rebase, 422 permits correction.
 Reauthenticate preserves drafts; explicit logout clears them and blocks late writes. All breaks paid.
-Subtotal is incomplete, not salary payable. Local worktime APK is not published; release must include API migrations.
+Subtotal is incomplete, not salary payable. Published with web/API migrations in Android 1.0.12 (13);
+see ../RELEASE_2026-10-27.md. Future APK releases must increase versionCode and retain the release certificate.

@@ -163,7 +163,7 @@
   блокировка User, expected_revision, UUID и неизменные операционные квитанции в Postgres.
   Обновление снимка ставки — только явный refresh_snapshot; ставки наследуются с месяца изменения.
   Согласован work_time.settings_saved: ID пользователя, месяц, имена полей, без значений; после COMMIT.
-  Перед будущей выкладкой нужны обе миграции версии/редакций. Интерфейсы готовы локально:
+  Обе миграции версии/редакций применены в общем выпуске 27 октября 2026. Интерфейсы опубликованы:
   `PERSONAL_WORKTIME_UI.md`, остров WorkTime со старым календарём отдельно и мобильный
   WorkTimeScreen из профиля. Общая клиентская модель model.mjs/controller.mjs; расчёты только на сервере.
   Не менять UUID/тело неподтверждённого запроса; конфликт требует сравнения текущей редакции.
@@ -335,8 +335,8 @@ php artisan optimize:clear
 ## Journal task mutations (27 October 2026)
 
 - JournalTasks is shared by web and mobile; keep personal tasks distinct from DisciplineService.
-- Migration 2026_10_27_150000_version_journal_tasks adds version and UUID receipts. Deploy only this migration path, without parallel worktime/profile migrations.
+- Migration 2026_10_27_150000_version_journal_tasks adds version and UUID receipts. Published in the explicitly approved coordinated release 2026-10-27 with both worktime migrations; do not rerun personnel imports or unrelated migrations.
 - Fresh role/activity, owner/column and version checked under locks. Persist receipt and mutation atomically; mismatched UUID body is 409, stale version is 412.
 - Mobile journal-tasks storage keeps the exact pending request across restarts. Manual retry only; logout clears it. Stable initial TextInput defaults prevent asynchronous save from replacing typed text.
 - Web forms carry UUID/version; legacy POSTs remain compatible. Existing analytics events only, after COMMIT, without duplicate replay logging.
-- Local development only; production has not been updated. See mobile/JOURNAL_TASKS.md, JournalTaskMutationsTest and journal-mutations.test.cjs.
+- Published on production with Android 1.0.12 (13). See RELEASE_2026-10-27.md, mobile/JOURNAL_TASKS.md, JournalTaskMutationsTest and journal-mutations.test.cjs.
