@@ -6,6 +6,8 @@ use App\Http\Controllers\PodstroikiController;
 use App\Models\QuizResult;
 use Illuminate\Support\Facades\Route;
 
+Route::prefix('api/worktime/v2')->group(function () { require __DIR__.'/personal-worktime.php'; });
+
 Route::get('/naryady', [NaryadViewerController::class, 'index'])->name('naryady.index');
 Route::post('/naryady/search-people', [NaryadViewerController::class, 'searchPeople'])->name('naryady.search-people');
 Route::get('/naryady/{naryad}/pdf', [NaryadViewerController::class, 'pdf'])->name('naryady.pdf');

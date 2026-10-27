@@ -31,6 +31,7 @@ Route::prefix('mobile')->group(function () {
         Route::get('/account/profile', [ProfileController::class, 'show']);
         Route::patch('/account/profile', [ProfileController::class, 'update'])->middleware('throttle:20,1');
         Route::get('/me', [AuthController::class, 'me']);
+        Route::prefix('worktime')->group(function () { require __DIR__.'/personal-worktime.php'; });
         Route::post('/logout', [AuthController::class, 'logout']);
 
         Route::get('/account/telegram', [TelegramAccountController::class, 'show']);

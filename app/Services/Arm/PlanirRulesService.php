@@ -418,7 +418,7 @@ class PlanirRulesService
     /**
      * @param  array<string, mixed>  $planir
      */
-    private function requiredIntervalHours(float $chas, int $restStreak, array $planir): float
+    public function requiredIntervalHours(float $chas, int $restStreak, array $planir): float
     {
         if (($planir['interval_mode'] ?? 'formula') === 'fixed') {
             $need = (float) $planir['interval_hours'];

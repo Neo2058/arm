@@ -2,11 +2,24 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Services\Payroll\PersonalWorkTimeCalculator;
+use App\Services\Payroll\PersonalWorkTimeSettings;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
 
 class WorkShift extends Model
 {
+    protected $attributes = ['revision' => 1];
+
+    private ?array $requestedCalculationSnapshot = null;
+
+    /** Server-only explicit refresh; not mass assignable from an HTTP payload. */
+    public function useCalculationSnapshot(array $snapshot): void
+    {
+        $this->requestedCalculationSnapshot = $snapshot;
+    }
+
     protected $fillable = [
         'user_id',
         'shift_date',
@@ -20,17 +33,36 @@ class WorkShift extends Model
         'break_duration',
         'total_minutes',
         'estimated_earnings',
+        'calculation_version',
+        'shift_code',
+        'segments',
     ];
 
     protected $casts = [
         'shift_date' => 'date',
         'started_at' => 'datetime',
         'ended_at' => 'datetime',
+        'calculation_version' => 'integer',
+        'revision' => 'integer',
+        'segments' => 'array',
+        'calculation_snapshot' => 'array',
+        'calculation_result' => 'array',
     ];
 
-    public function route() { return $this->belongsTo(RoutesCatalog::class, 'route_id'); }
-    public function deviation() { return $this->belongsTo(DeviationsCatalog::class, 'deviation_id'); }
-    public function user() { return $this->belongsTo(User::class); }
+    public function route()
+    {
+        return $this->belongsTo(RoutesCatalog::class, 'route_id');
+    }
+
+    public function deviation()
+    {
+        return $this->belongsTo(DeviationsCatalog::class, 'deviation_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     /**
      * Автоматический пересчет длительности смены перед сохранением в базу
@@ -38,6 +70,29 @@ class WorkShift extends Model
     protected static function booted()
     {
         static::saving(function ($shift) {
+            if (! in_array((int) ($shift->calculation_version ?? 1), [1, 2], true)) {
+                throw ValidationException::withMessages(['calculation_version' => 'Неизвестная версия расчёта.']);
+            }
+            if ((int) $shift->calculation_version === 2) {
+                if ($shift->exists && (int) $shift->getOriginal('calculation_version') !== 2) {
+                    throw ValidationException::withMessages(['calculation_version' => 'Историческую смену нельзя переводить в новую версию без отдельного переноса.']);
+                }
+                $snapshot = $shift->requestedCalculationSnapshot ?? ($shift->exists ? $shift->getOriginal('calculation_snapshot') : $shift->calculation_snapshot);
+                if ($shift->exists && $shift->isDirty('user_id')) {
+                    throw ValidationException::withMessages(['user_id' => 'Владельца сохранённой смены менять нельзя.']);
+                }
+                $snapshot ??= app(PersonalWorkTimeSettings::class)->snapshot($shift->user_id, $shift->shift_date->toDateString());
+                $result = app(PersonalWorkTimeCalculator::class)->calculate($shift, $snapshot);
+                $shift->calculation_snapshot = $snapshot;
+                $shift->calculation_result = $result;
+                $shift->total_minutes = $result['paid_minutes'];
+                $shift->estimated_earnings = $result['subtotal_kopecks'] / 100;
+
+                return;
+            }
+            if ($shift->exists && (int) $shift->getOriginal('calculation_version') === 2) {
+                throw ValidationException::withMessages(['calculation_version' => 'Нельзя сбросить версию расчёта смены.']);
+            }
             // В будущем эти ставки будут динамически браться из профиля пользователя
             $rates = [
                 'work' => 450.00,        // 100% линия
@@ -57,17 +112,20 @@ class WorkShift extends Model
                 }
             }
             // 2. Если это РЕАЛЬНАЯ СМЕНА по маршруту локомотива
-            else if ($shift->type === 'work' && $shift->started_at && $shift->ended_at) {
+            elseif ($shift->type === 'work' && $shift->started_at && $shift->ended_at) {
                 $start = Carbon::parse($shift->started_at);
                 $end = Carbon::parse($shift->ended_at);
 
                 $diffInMinutes = $start->diffInMinutes($end);
-                $pureWorkMinutes = $diffInMinutes - (int)$shift->break_duration;
+                $pureWorkMinutes = $diffInMinutes - (int) $shift->break_duration;
 
                 $shift->total_minutes = $pureWorkMinutes > 0 ? $pureWorkMinutes : 0;
                 $hourlyRate = 450.00; // Твой дефолтный тариф за линию
                 $shift->estimated_earnings = ($shift->total_minutes / 60) * $hourlyRate;
             }
+        });
+        static::saved(function ($shift) {
+            $shift->requestedCalculationSnapshot = null;
         });
     }
 }

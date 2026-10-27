@@ -7,7 +7,7 @@ import SecureDocumentViewer from "./DocumentViewer/SecureDocumentViewer.jsx";
 import NaryadViewer from "./NaryadViewer/NaryadViewer.jsx";
 import QuizPlayer from './QuizPlayer/QuizPlayer';
 import GeneralQuizPlayer from './GeneralQuizPlayer/GeneralQuizPlayer';
-import WorkCalendar from './WorkCalendar/WorkCalendar';
+import WorkTime from './WorkTime/WorkTime';
 
 
 const mountComponent = (id, Component, props = {}) => {
@@ -49,7 +49,8 @@ mountComponent(
 // Монтируем личный кабинет календаря смен машиниста
 mountComponent(
     'work-calendar-root',
-    WorkCalendar
+    WorkTime,
+    { userId: document.getElementById('work-calendar-root')?.dataset.userId }
 );
 
 
@@ -121,7 +122,6 @@ async function generateDeviceFingerprint() {
     document.cookie = `device_key=${hashHex}; path=/; max-age=157680000; SameSite=Lax; Secure`;
 }
 generateDeviceFingerprint();
-
 
 
 

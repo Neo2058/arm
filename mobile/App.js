@@ -7,6 +7,8 @@ import { StatusBar } from 'expo-status-bar';
 import JournalScreen, { JournalTasksScreen, JournalCrewScreen } from './src/screens/JournalScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import WorkTimeScreen from './src/screens/WorkTimeScreen';
+import { clearWorkTimeData } from './src/worktime/storage';
 import DocumentsScreen from './src/screens/DocumentsScreen';
 import DocumentViewScreen from './src/screens/DocumentViewScreen';
 import TopicsScreen from './src/screens/TopicsScreen';
@@ -103,6 +105,13 @@ function DisciplineStack() {
   );
 }
 
+function ProfileStack({ user, onLogout, onReauthenticate, onProfileSaved }) {
+  return <Stack.Navigator screenOptions={{ headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}>
+    <Stack.Screen name="ProfileHome" options={{ title: 'Профиль' }}>{({ navigation }) => <ProfileScreen user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} onProfileSaved={onProfileSaved} onOpenWorkTime={() => navigation.navigate('PersonalWorkTime')} />}</Stack.Screen>
+    <Stack.Screen name="PersonalWorkTime" options={{ title: 'Личный табель' }}>{() => <WorkTimeScreen userId={user.id} />}</Stack.Screen>
+  </Stack.Navigator>;
+}
+
 function MainTabs({ user, onLogout, onReauthenticate, onProfileSaved }) {
   return (
     <Tab.Navigator
@@ -122,10 +131,10 @@ function MainTabs({ user, onLogout, onReauthenticate, onProfileSaved }) {
       <Tab.Screen name="TrainTab" component={TrainingStack} options={{ title: 'Обучение' }} />
       <Tab.Screen
         name="ProfileTab"
-        options={{ title: 'Профиль', headerShown: true, headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}
+        options={{ title: 'Профиль' }}
       >
         {() => (
-          <ProfileScreen key={user.id} user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} onProfileSaved={onProfileSaved} />
+          <ProfileStack key={user.id} user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} onProfileSaved={onProfileSaved} />
         )}
       </Tab.Screen>
     </Tab.Navigator>
@@ -182,6 +191,7 @@ export default function App() {
           onReauthenticate={() => setReauth(true)}
           onLogout={async () => {
             try {
+              await clearWorkTimeData(user.id);
               await clearDisciplineData();
               await SecureStore.deleteItemAsync('disciplineIdentity');
               await logout();

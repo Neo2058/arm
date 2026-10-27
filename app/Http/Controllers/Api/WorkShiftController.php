@@ -4,13 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\DeviationsCatalog;
-use Carbon\Carbon;
-use Illuminate\Http\Request;
-use App\Models\WorkShift;
 use App\Models\RoutesCatalog;
-use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use App\Models\WorkShift;
 use App\Services\ClickHouseService;
 use App\Services\Payroll\PayrollService;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class WorkShiftController extends Controller
 {
@@ -26,12 +28,12 @@ class WorkShiftController extends Controller
         $start = Carbon::create($year, $month, 1)->startOfMonth();
         $end = Carbon::create($year, $month, 1)->endOfMonth();
 
-
         // Каждая учетка видит СТРОГО свои смены (Высший приоритет конфиденциальности)
         $shifts = WorkShift::where('user_id', $user->id)
+            ->where('calculation_version', 1)
             ->whereBetween('shift_date', [$start, $end])
             ->with([
-                'route:id,route_number,start_location,end_location,default_start_time,default_end_time,default_break_duration,technological_tasks', 'deviation'
+                'route:id,route_number,start_location,end_location,default_start_time,default_end_time,default_break_duration,technological_tasks', 'deviation',
             ])
             ->get();
 
@@ -43,7 +45,7 @@ class WorkShiftController extends Controller
         return response()->json([
             'shifts' => $shifts,
             'catalog' => $catalog,
-            'deviations_catalog' => $deviationsCatalog // <-- Улетело в React
+            'deviations_catalog' => $deviationsCatalog, // <-- Улетело в React
         ]);
     }
 
@@ -71,13 +73,28 @@ class WorkShiftController extends Controller
 
         $calculated = $payroll->calculate($data, Auth::user());
 
-        $shift = WorkShift::updateOrCreate(
-            [
-                'user_id' => Auth::id(),
-                'shift_date' => $data['shift_date']
-            ],
-            array_merge($data, $calculated)
-        );
+        $shift = DB::transaction(function () use ($data, $calculated) {
+            $user = User::whereKey(Auth::id())->lockForUpdate()->first();
+            abort_unless($user?->is_active, 403);
+            $newer = WorkShift::where('user_id', $user->id)->where('calculation_version', 2)
+                ->where(function ($query) use ($data) {
+                    $query->whereDate('shift_date', $data['shift_date']);
+                    if (! empty($data['started_at']) && ! empty($data['ended_at'])) {
+                        $query->orWhere(fn ($q) => $q->where('started_at', '<', Carbon::parse($data['ended_at'])->format('Y-m-d H:i:s'))
+                            ->where('ended_at', '>', Carbon::parse($data['started_at'])->format('Y-m-d H:i:s')));
+                    }
+                })->exists();
+            abort_if($newer, 409, 'На эту дату уже есть смена нового табеля. Используйте новую карточку смены.');
+
+            return WorkShift::updateOrCreate(
+                [
+                    'user_id' => Auth::id(),
+                    'calculation_version' => 1,
+                    'shift_date' => $data['shift_date'],
+                ],
+                array_merge($data, $calculated)
+            );
+        });
 
         ClickHouseService::log('work_shift.saved', $shift->id, [
             'shift_date' => $data['shift_date'],
@@ -88,7 +105,7 @@ class WorkShiftController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'shift' => $shift->load(['route', 'deviation'])
+            'shift' => $shift->load(['route', 'deviation']),
 
         ]);
     }
@@ -113,20 +130,20 @@ class WorkShiftController extends Controller
 
         // Обогащаем ответ в том же формате, который ожидает фронтендский preview
         $response = [
-            'label'       => $calculated['type'] === 'work' ? 'Рабочая смена' : 'Отвлечение',
-            'hours'       => $calculated['hours'] ?? 0,
-            'money'       => $calculated['earnings'] ?? 0,
+            'label' => $calculated['type'] === 'work' ? 'Рабочая смена' : 'Отвлечение',
+            'hours' => $calculated['hours'] ?? 0,
+            'money' => $calculated['earnings'] ?? 0,
             'routeNumber' => '—',
-            'tasks'       => 'Отвлечение от работы по графику депо',
+            'tasks' => 'Отвлечение от работы по графику депо',
         ];
 
-        if ($calculated['type'] === 'work' && !empty($data['route_id'])) {
+        if ($calculated['type'] === 'work' && ! empty($data['route_id'])) {
             $route = RoutesCatalog::find($data['route_id']);
             if ($route) {
                 $response['routeNumber'] = $route->route_number;
                 $response['tasks'] = $route->technological_tasks ?? 'План работ не задан';
             }
-        } elseif ($calculated['type'] === 'deviation' && !empty($data['deviation_id'])) {
+        } elseif ($calculated['type'] === 'deviation' && ! empty($data['deviation_id'])) {
             $dev = DeviationsCatalog::find($data['deviation_id']);
             if ($dev) {
                 $response['label'] = $dev->name;

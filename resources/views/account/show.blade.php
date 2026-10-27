@@ -41,6 +41,7 @@
         <span class="eyebrow">АРМ ТЧ-15 · Личный кабинет</span>
         <h1>Мой профиль</h1>
         <p class="muted">Ваши данные и связь с Telegram.</p>
+        <a class="button" href="{{ route('work.time.index') }}">Личный табель · смены и параметры расчёта</a>
     </header>
     <div class="grid">
         <section aria-labelledby="employee-heading">

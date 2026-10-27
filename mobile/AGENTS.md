@@ -29,3 +29,13 @@ Version is visible in profile. Icons use local react-native-svg paths in compone
 - Мобильный редактор `ProfileEditor` использует метаданные того же API, сохраняет ввод при сетевой ошибке, не хранит кадровые черновики на диске. Android 1.0.11 / versionCode 12. Новые нативные зависимости не добавлены.
 - Логины `TABNOM@mail.ru` и случайные пароли подготовлены только для 262 активных импортированных технических аккаунтов. По прямому указанию владельца 364 архивных аккаунта исключены. Действующие реальные аккаунты не переоформляются; роли сохраняются для дальнейшего ручного назначения. Это идентификаторы входа, почтовые ящики не создаются и письма не отправляются. Пароли в открытом виде — только приватный CSV на компьютере владельца, на сервер передаются хеши bcrypt cost 12.
 - Проверки: `SelfProfileTest` (веб + реальные Sanctum-токены, запрет повышения прав, чужого ID, неактивных, откат), `PersonnelDirectoryTest`, тесты маршрутов/доступа/журнала/учёта и безопасности.
+
+Journal task mutations: TaskEditor + journal/mutations.cjs, shared JournalTasks service. Persist exact UUID/version/body before sending; manual retries survive restarts. Keep TextInput defaultValue stable while saving asynchronously. Reauthenticate preserves editor, explicit logout clears journal-tasks storage. No package/App/version changes from parallel profile development are included here. See JOURNAL_TASKS.md.
+
+Personal work time: ProfileStack → WorkTimeScreen, GET/POST/PUT/PATCH `/worktime` on mobile API.
+See ../PERSONAL_WORKTIME_UI.md. Shared pure model.mjs/controller.mjs are also imported by web;
+inject platform React rather than importing mobile React from web. All payroll math is server-side.
+Persist UUID/version/exact request before sending in private `personal-worktime` scope (API URL + user ID).
+Manual retry after uncertain responses; 409 requires comparison/rebase, 422 permits correction.
+Reauthenticate preserves drafts; explicit logout clears them and blocks late writes. All breaks paid.
+Subtotal is incomplete, not salary payable. Local worktime APK is not published; release must include API migrations.

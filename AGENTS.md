@@ -157,6 +157,26 @@
 - При добавлении нового типа квиза используй существующий `GeneralQuizPlayer` / `QuizPlayer` как референс.
 
 ### Работа со сменами и оплатой
+- Личный табель API: `PERSONAL_WORKTIME_API.md`, `/api/worktime/v2` (web CSRF/device/barrier)
+  и `/api/mobile/worktime` (Sanctum), общий PersonalWorkTimeController. Все данные только свои.
+  Изменения через WorkTimeMutationService + PersonalWorkShiftService/PersonalWorkTimeSettingsEditor:
+  блокировка User, expected_revision, UUID и неизменные операционные квитанции в Postgres.
+  Обновление снимка ставки — только явный refresh_snapshot; ставки наследуются с месяца изменения.
+  Согласован work_time.settings_saved: ID пользователя, месяц, имена полей, без значений; после COMMIT.
+  Перед будущей выкладкой нужны обе миграции версии/редакций. Интерфейсы готовы локально:
+  `PERSONAL_WORKTIME_UI.md`, остров WorkTime со старым календарём отдельно и мобильный
+  WorkTimeScreen из профиля. Общая клиентская модель model.mjs/controller.mjs; расчёты только на сервере.
+  Не менять UUID/тело неподтверждённого запроса; конфликт требует сравнения текущей редакции.
+- Месячный личный отчёт v2: `PersonalWorkTimeMonth`, `PERSONAL_WORKTIME_MONTH.md`.
+  Производный пересчёт ночь–с ночи не пишет поверх сохранённых результатов; контекст соседних
+  месяцев не включается в итоги дважды. Пустые дни не считаются выходными без подтверждения
+  rest_dates. v1 явно исключаются из новых денежных сумм; полный прогноз всё ещё incomplete.
+- Личный табель v2: `PERSONAL_WORKTIME_BACKEND.md`. `PersonalWorkShiftService` — preview/create,
+  UUID, блокировка пользователя и проверка пересечений; `WorkShift::saving` вызывает общий
+  `PersonalWorkTimeCalculator`, снимок ставок сохраняется. Все перерывы v2 оплачиваются.
+  Старые записи — v1, текущий календарный API изолирован на v1 до подключения новых форм.
+  `estimated_earnings` v2 — неполный subtotal, `calculation_complete=false`; не выдавать его
+  за полную зарплату. Официальные ЛС/PLANIR не меняются. Перед будущей выкладкой миграция обязательна.
 - Логика расчёта `total_minutes` и `estimated_earnings` живёт в `WorkShift::booted()`.
 - Для отклонений (`type === 'deviation'`) ставка и минуты берутся из `DeviationsCatalog`.
 - Для обычных смен — фиксированная ставка 450 руб/час (на момент написания).
@@ -310,3 +330,13 @@ php artisan optimize:clear
 - Мобильный редактор `ProfileEditor` использует метаданные того же API, сохраняет ввод при сетевой ошибке, не хранит кадровые черновики на диске. Android 1.0.11 / versionCode 12. Новые нативные зависимости не добавлены.
 - Логины `TABNOM@mail.ru` и случайные пароли подготовлены только для 262 активных импортированных технических аккаунтов. По прямому указанию владельца 364 архивных аккаунта исключены. Действующие реальные аккаунты не переоформляются; роли сохраняются для дальнейшего ручного назначения. Это идентификаторы входа, почтовые ящики не создаются и письма не отправляются. Пароли в открытом виде — только приватный CSV на компьютере владельца, на сервер передаются хеши bcrypt cost 12.
 - Проверки: `SelfProfileTest` (веб + реальные Sanctum-токены, запрет повышения прав, чужого ID, неактивных, откат), `PersonnelDirectoryTest`, тесты маршрутов/доступа/журнала/учёта и безопасности.
+
+
+## Journal task mutations (27 October 2026)
+
+- JournalTasks is shared by web and mobile; keep personal tasks distinct from DisciplineService.
+- Migration 2026_10_27_150000_version_journal_tasks adds version and UUID receipts. Deploy only this migration path, without parallel worktime/profile migrations.
+- Fresh role/activity, owner/column and version checked under locks. Persist receipt and mutation atomically; mismatched UUID body is 409, stale version is 412.
+- Mobile journal-tasks storage keeps the exact pending request across restarts. Manual retry only; logout clears it. Stable initial TextInput defaults prevent asynchronous save from replacing typed text.
+- Web forms carry UUID/version; legacy POSTs remain compatible. Existing analytics events only, after COMMIT, without duplicate replay logging.
+- Local development only; production has not been updated. See mobile/JOURNAL_TASKS.md, JournalTaskMutationsTest and journal-mutations.test.cjs.

@@ -8,7 +8,7 @@
             <div class="w-full pt-16 lg:pt-4">
 
                 <!-- Контейнер для монтирования React-приложения календаря -->
-                <div id="work-calendar-root"></div>
+                <div id="work-calendar-root" data-user-id="{{ auth()->id() }}"></div>
 
             </div>
         </main>
