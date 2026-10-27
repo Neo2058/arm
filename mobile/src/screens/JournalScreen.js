@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, Tex
 import { IconLabel } from '../components/AppIcon';
 import { useJournal } from '../journal/useJournal';
 import s from '../discipline/styles';
+import TaskEditor, { useTaskEditor } from '../journal/TaskEditor';
 
 const date = value => value ? value.split('-').reverse().join('.') : 'не указана';
 function Feedback({ query }) {
@@ -24,11 +25,12 @@ export default function JournalScreen({ navigation }) {
 export function JournalTasksScreen() {
   const [status, setStatus] = useState('');
   const query = useJournal('/journal/tasks', 'tasks', status);
+  const editor = useTaskEditor(query.refresh);
   return <FlatList style={s.page} contentContainerStyle={s.content} data={query.data?.tasks || []} keyExtractor={item => item.id}
     refreshControl={<RefreshControl refreshing={query.busy} tintColor="#fb923c" onRefresh={query.refresh} />}
-    ListHeaderComponent={<><Text style={s.title}>Личные задачи журнала</Text><Text style={s.muted}>Просмотр задач из веб-журнала. Создание и изменение пока доступны в веб-версии.</Text><View style={s.row}>{[['', 'Все'], ['pending', 'К выполнению'], ['done', 'Выполнены']].map(([key, label]) => <Pressable key={key} style={[s.chip, key === status && s.selected]} onPress={() => setStatus(key)} accessibilityRole="button" accessibilityState={{ selected: key === status }}><Text style={s.body}>{label}</Text></Pressable>)}</View><Feedback query={query} /></>}
+    ListHeaderComponent={<><Text style={s.title}>Личные задачи журнала</Text><Text style={s.muted}>Личные задачи общие с веб-журналом. Поручения руководителя находятся в отдельном разделе.</Text><View style={s.row}>{[['', 'Все'], ['pending', 'К выполнению'], ['done', 'Выполнены']].map(([key, label]) => <Pressable key={key} style={[s.chip, key === status && s.selected]} onPress={() => setStatus(key)} accessibilityRole="button" accessibilityState={{ selected: key === status }}><Text style={s.body}>{label}</Text></Pressable>)}</View><Feedback query={query} /><TaskEditor editor={editor} /></>}
     ListEmptyComponent={!query.busy && !query.error ? <Text style={s.muted}>Задач по выбранному фильтру нет.</Text> : null}
-    renderItem={({ item }) => <View style={s.card}><Text selectable style={s.heading}>{item.title}</Text><Text style={item.status === 'done' ? s.success : s.accent}>{item.status === 'done' ? 'Выполнена' : 'К выполнению'}</Text><Text style={s.muted}>Дата: {date(item.due_date)}</Text>{item.is_overdue && <Text style={s.error}>Просрочено</Text>}{!!item.description && <Text selectable style={s.body}>{item.description}</Text>}</View>}
+    renderItem={({ item }) => <View style={s.card}><Text selectable style={s.heading}>{item.title}</Text><Text style={item.status === 'done' ? s.success : s.accent}>{item.status === 'done' ? 'Выполнена' : 'К выполнению'}</Text><Text style={s.muted}>Дата: {date(item.due_date)}</Text>{item.is_overdue && <Text style={s.error}>Просрочено</Text>}{!!item.description && <Text selectable style={s.body}>{item.description}</Text>}<View style={s.row}>{[['update', 'Изменить'], ...(item.status === 'pending' ? [['complete', 'Выполнено']] : []), ['delete', 'Удалить']].map(([action, label]) => <Pressable key={action} accessibilityLabel={`${label}: ${item.title}`} style={s.secondary} disabled={!!editor.entry.pending || editor.busy} onPress={() => editor.act(action, item)}><Text style={s.buttonText}>{label}</Text></Pressable>)}</View></View>}
     ListFooterComponent={query.data?.pagination.next_page ? <Pressable style={s.secondary} disabled={query.busy} onPress={query.more}><Text style={s.buttonText}>Загрузить ещё</Text></Pressable> : null} />;
 }
 export function JournalCrewScreen() {

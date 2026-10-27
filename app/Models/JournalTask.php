@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class JournalTask extends Model
 {
     protected $fillable = [
-        'user_id', 'column', 'title', 'description', 'source', 'status', 'due_date'
+        'user_id', 'column', 'title', 'description', 'source', 'status', 'due_date', 'version',
     ];
 
     protected $casts = [

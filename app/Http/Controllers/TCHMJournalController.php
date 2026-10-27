@@ -7,13 +7,14 @@ use App\Http\Middleware\EnsureInstructor;
 use App\Models\JournalCrewNormative;
 use App\Models\JournalDocument;
 use App\Models\JournalNormativeSetting;
-use App\Models\JournalTask;
 use App\Models\JournalVacation;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Services\ClickHouseService;
 use App\Services\Journal\JournalOverview;
+use App\Services\Journal\JournalTasks;
 use Carbon\Carbon;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Support\Facades\Auth;
@@ -41,84 +42,39 @@ class TCHMJournalController extends Controller implements HasMiddleware
         ]);
     }
 
-    public function addTodo(Request $request)
+    private function mutateTask(Request $request, string $action, ?int $id, JournalTasks $service, string $message)
     {
-        $user = Auth::user();
-        $profile = $user->profile;
-
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'due_date' => 'nullable|date',
-            'source' => 'nullable|string',
-        ]);
-
-        $task = JournalTask::create([
-            'user_id' => $user->id,
-            'column' => $profile?->column,
-            'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
-            'due_date' => $validated['due_date'] ?? null,
-            'source' => $validated['source'] ?? 'manual',
-            'status' => 'pending',
-        ]);
-        ClickHouseService::log('journal.todo.created', $task->id, [
-            'title' => $task->title,
-            'source' => $task->source,
-        ]);
-
-        return redirect()->route('journal.index')->with('success', 'Задача добавлена в журнал.');
-    }
-
-    public function completeTodo($id)
-    {
-        $task = JournalTask::where('user_id', Auth::id())->findOrFail($id);
-        $task->update(['status' => 'done']);
-
-        // Log to ClickHouse for history and analysis
         try {
-            ClickHouseService::log('normative_completed', $task->user_id, [
-                'type' => $task->source,
-                'title' => $task->title,
-                'column' => $task->column,
-            ]);
-        } catch (\Exception $e) {
-            // ignore if CH not available
+            $service->mutate(Auth::user(), $action, $id, $request->all(), false);
+        } catch (HttpResponseException $e) {
+            if ($e->getResponse()->getStatusCode() !== 412) {
+                throw $e;
+            }
+
+            return redirect()->route('journal.index')->with('error', 'Задача изменена на другом устройстве. Проверьте актуальную запись.');
         }
 
-        return redirect()->route('journal.index')->with('success', 'Задача отмечена выполненной.');
+        return redirect()->route('journal.index')->with('success', $message);
     }
 
-    public function updateTodo(Request $request, $id)
+    public function addTodo(Request $request, JournalTasks $service)
     {
-        $user = Auth::user();
-        $task = JournalTask::where('user_id', $user->id)->findOrFail($id);
-
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'due_date' => 'nullable|date',
-        ]);
-
-        $task->update([
-            'title' => $validated['title'],
-            'description' => $validated['description'] ?? $task->description,
-            'due_date' => $validated['due_date'] ?? $task->due_date,
-        ]);
-        ClickHouseService::log('journal.todo.updated', $task->id, ['title' => $task->title]);
-
-        return redirect()->route('journal.index')->with('success', 'Задача обновлена.');
+        return $this->mutateTask($request, 'create', null, $service, 'Задача добавлена в журнал.');
     }
 
-    public function deleteTodo($id)
+    public function completeTodo(Request $request, $id, JournalTasks $service)
     {
-        $task = JournalTask::where('user_id', Auth::id())->findOrFail($id);
-        $taskName = $task->title;
-        $id = $task->id;
-        $task->delete();
-        ClickHouseService::log('journal.todo.deleted', $id, ['title' => $taskName]);
+        return $this->mutateTask($request, 'complete', (int) $id, $service, 'Задача отмечена выполненной.');
+    }
 
-        return redirect()->route('journal.index')->with('success', "Задача «{$taskName}» удалена.");
+    public function updateTodo(Request $request, $id, JournalTasks $service)
+    {
+        return $this->mutateTask($request, 'update', (int) $id, $service, 'Задача обновлена.');
+    }
+
+    public function deleteTodo(Request $request, $id, JournalTasks $service)
+    {
+        return $this->mutateTask($request, 'delete', (int) $id, $service, 'Задача удалена.');
     }
 
     public function uploadDocument(Request $request)

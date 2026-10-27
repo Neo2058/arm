@@ -1,9 +1,9 @@
 import * as FS from 'expo-file-system/legacy';
 import * as Crypto from 'expo-crypto';
 
-export async function createStorage(server, userId) {
+export async function createStorage(server, userId, namespace = 'discipline') {
   const scope = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, `${server}\n${userId}`);
-  const root = `${FS.documentDirectory}discipline/${scope}/`;
+  const root = `${FS.documentDirectory}${namespace}/${scope}/`;
   await FS.makeDirectoryAsync(`${root}files`, { intermediates: true });
   let revision = 0;
   const revisions = async () => (await FS.readDirectoryAsync(root)).filter(n => /^state-\d+\.json$/.test(n)).sort((a, b) => Number(b.slice(6, -5)) - Number(a.slice(6, -5)));

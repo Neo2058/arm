@@ -65,6 +65,7 @@
 
         <form action="{{ route('journal.todo.add') }}" method="POST" class="mb-4 flex flex-col sm:flex-row gap-2">
             @csrf
+<input type="hidden" name="operation_id" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
             <input type="text" name="title" placeholder="Название задачи / норматива / рапорта" class="flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500" required>
             <input type="date" name="due_date" class="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500">
             <select name="source" class="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500">
@@ -85,6 +86,8 @@
                             <!-- Complete -->
                             <form action="{{ route('journal.todo.complete', $taskId) }}" method="POST" class="mt-1 flex-shrink-0">
                                 @csrf
+<input type="hidden" name="operation_id" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+<input type="hidden" name="version" value="{{ $task->version }}">
                                 <button type="submit" title="Отметить выполненной" class="w-5 h-5 border border-gray-300 dark:border-gray-600 rounded flex items-center justify-center {{ $task->status === 'done' ? 'bg-green-500 text-white' : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700' }} text-gray-900 dark:text-gray-200">
                                     @if($task->status === 'done') ✓ @endif
                                 </button>
@@ -115,6 +118,8 @@
 
                                 <form action="{{ route('journal.todo.destroy', $taskId) }}" method="POST" class="inline" onsubmit="return confirm('Удалить эту задачу?');">
                                     @csrf
+<input type="hidden" name="operation_id" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+<input type="hidden" name="version" value="{{ $task->version }}">
                                     @method('DELETE')
                                     <button type="submit"
                                             class="text-xs px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400"
@@ -129,6 +134,8 @@
                         <div id="edit-form-{{ $taskId }}" class="hidden mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                             <form action="{{ route('journal.todo.update', $taskId) }}" method="POST" class="flex flex-wrap gap-1 text-xs items-center">
                                 @csrf
+<input type="hidden" name="operation_id" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+<input type="hidden" name="version" value="{{ $task->version }}">
                                 <input type="text" name="title" value="{{ $task->title }}" class="flex-1 min-w-[120px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-orange-500" placeholder="Название" required>
                                 <input type="text" name="description" value="{{ $task->description ?? '' }}" class="flex-1 min-w-[80px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-orange-500" placeholder="Описание">
                                 <input type="date" name="due_date" value="{{ $task->due_date ? $task->due_date->format('Y-m-d') : '' }}" class="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded px-1 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-orange-500">
@@ -202,6 +209,7 @@
                                 <div class="mt-1">Ответ: {{ session('qa_result')['answer'] }}</div>
                                 <form action="{{ route('journal.todo.add') }}" method="POST" class="mt-2">
                                     @csrf
+<input type="hidden" name="operation_id" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
                                     <input type="hidden" name="title" value="{{ session('qa_result')['answer'] }}">
                                     <input type="hidden" name="description" value="Из документа: {{ $doc->title }}">
                                     <input type="hidden" name="source" value="document_qa">

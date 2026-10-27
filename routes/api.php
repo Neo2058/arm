@@ -56,6 +56,10 @@ Route::prefix('mobile')->group(function () {
 
         Route::get('/journal', [JournalController::class, 'summary']);
         Route::get('/journal/tasks', [JournalController::class, 'tasks']);
+        Route::post('/journal/tasks', [JournalController::class, 'createTask'])->middleware('throttle:20,1');
+        Route::patch('/journal/tasks/{task}', [JournalController::class, 'updateTask'])->whereNumber('task')->middleware('throttle:20,1');
+        Route::post('/journal/tasks/{task}/complete', [JournalController::class, 'completeTask'])->whereNumber('task')->middleware('throttle:20,1');
+        Route::delete('/journal/tasks/{task}', [JournalController::class, 'deleteTask'])->whereNumber('task')->middleware('throttle:20,1');
         Route::get('/journal/crew', [JournalController::class, 'crew']);
 
         Route::get('/phones', [PhoneController::class, 'index']);

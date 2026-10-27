@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\JournalCrewNormative;
 use App\Models\User;
 use App\Services\Journal\JournalOverview;
+use App\Services\Journal\JournalTasks;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -61,12 +62,28 @@ class JournalController extends Controller
 
         return $this->json([
             'column' => $this->overview->column($user),
-            'tasks' => $page->getCollection()->map(fn ($task) => [
-                'id' => (string) $task->id, 'title' => $task->title, 'description' => $task->description,
-                'status' => $task->status, 'source' => $task->source, 'due_date' => $task->due_date?->format('Y-m-d'),
-                'is_overdue' => $task->status === 'pending' && $task->due_date && $task->due_date->lt(today()),
-            ])->values(), 'pagination' => $this->pagination($page),
+            'tasks' => $page->getCollection()->map(fn ($task) => JournalTasks::payload($task))->values(), 'pagination' => $this->pagination($page),
         ]);
+    }
+
+    public function createTask(Request $request, JournalTasks $service)
+    {
+        return $this->json($service->mutate($this->instructor($request), 'create', null, $request->all()));
+    }
+
+    public function updateTask(Request $request, int $task, JournalTasks $service)
+    {
+        return $this->json($service->mutate($this->instructor($request), 'update', $task, $request->all()));
+    }
+
+    public function completeTask(Request $request, int $task, JournalTasks $service)
+    {
+        return $this->json($service->mutate($this->instructor($request), 'complete', $task, $request->all()));
+    }
+
+    public function deleteTask(Request $request, int $task, JournalTasks $service)
+    {
+        return $this->json($service->mutate($this->instructor($request), 'delete', $task, $request->all()));
     }
 
     public function crew(Request $request)
