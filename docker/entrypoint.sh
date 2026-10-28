@@ -64,6 +64,9 @@ php artisan storage:link --quiet || echo "storage:link note"
 
 # Ensure S3/MinIO bucket exists (idempotent, safe for volume resets)
 # Run synchronously because uploads and form loads depend on S3 being ready
+if [ "${ARM_BUCKET_PROVISIONED:-false}" = "true" ]; then
+    echo "S3 bucket provisioned administratively; runtime does not create buckets."
+else
 echo "Ensuring S3 bucket..."
 php -r '
 require "/var/www/vendor/autoload.php";
@@ -96,6 +99,7 @@ if ($bucket) {
     }
 }
 ' 2>&1 || echo "Bucket ensure script note (non-fatal)"
+fi
 
 # Final permission sweep for logs (in case volume/bind mount semantics reset some bits)
 touch /var/www/storage/logs/laravel.log

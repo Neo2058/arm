@@ -39,6 +39,18 @@
 
 ## Архитектура
 
+### Production runtime isolation (28 October 2026)
+- Production uses `docker-compose.security.yml` LAST after prod/discipline/runtime;
+  Compose >=2.30, root-only `/etc/arm/services/*.env`. Do not deploy base prod alone.
+- Application DB role `arm_runtime` has DML, not DDL/admin privileges. Run reviewed
+  migrations via `sudo python3 scripts/arm-admin-artisan.py migrate --force`;
+  status via `migrate:status`. Never cache config with administrative credentials.
+- MinIO app key is bucket-scoped; bucket provisioning is administrative.
+  `ARM_BUCKET_PROVISIONED=true` skips bucket creation in entrypoint.
+- Nginx sees public and only public storage subpath read-only, not full checkout.
+- Keep host-only service env snapshots synchronized on config changes.
+  See `SERVER_HARDENING_RUNBOOK.md`; secrets must never enter Git or tool output.
+
 ### Основные принципы
 1. **Filament-first** для административных CRUD и сложных форм (особенно конструктор квизов).
 2. **React islands** только для сложной интерактивности на стороне пользователя (проигрыватель квизов, календарь смен, просмотр документов, таймеры).

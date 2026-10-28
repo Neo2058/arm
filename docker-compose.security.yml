@@ -1,0 +1,52 @@
+# Apply LAST, after provisioning /etc/arm/services/*.env (root:root 0600).
+# Requires Compose >= 2.30 (raw env_file). See SERVER_HARDENING_RUNBOOK.md.
+services:
+  app:
+    env_file: !override
+      - path: ${ARM_SERVICE_ENV_DIR:-/etc/arm/services}/app.env
+        format: raw
+    environment: !reset {}
+    volumes:
+      - ./docker/entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
+    security_opt:
+      - no-new-privileges:true
+
+  postgres:
+    env_file: !override
+      - path: ${ARM_SERVICE_ENV_DIR:-/etc/arm/services}/postgres.env
+        format: raw
+    environment: !reset {}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+
+  minio:
+    env_file: !override
+      - path: ${ARM_SERVICE_ENV_DIR:-/etc/arm/services}/minio.env
+        format: raw
+    environment: !reset {}
+
+  clickhouse:
+    env_file: !override
+      - path: ${ARM_SERVICE_ENV_DIR:-/etc/arm/services}/clickhouse.env
+        format: raw
+    environment: !reset {}
+
+  meilisearch:
+    env_file: !override
+      - path: ${ARM_SERVICE_ENV_DIR:-/etc/arm/services}/meilisearch.env
+        format: raw
+    environment: !reset {}
+
+  nginx:
+    volumes: !override
+      - ./public:/var/www/public:ro
+      - type: volume
+        source: app_storage
+        target: /var/www/storage/app/public
+        read_only: true
+        volume:
+          subpath: app/public
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    security_opt:
+      - no-new-privileges:true
