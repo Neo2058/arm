@@ -5,6 +5,8 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before 
 Playback uses expo-video/expo-audio matching SDK 57, not expo-av 16 (native JSI crash on RN 0.86).
 Keep expo-asset in the SDK 57 range: unconstrained peer installation can pull SDK 58.
 Document reading uses PDF.js inside WebView from fetched bytes — never `WebView source={{ uri: pdfUrl }}` (Android DownloadManager). `expo-screen-capture` FLAG_SECURE + screenshot listener; capture attempts POST `/documents/{id}/violation`. Do not list `expo-screen-capture` in `app.config.js` plugins: the package has no `app.plugin.js` and prebuild then loads ESM `build/ScreenCapture.js`. Native code is autolinked from the dependency.
+Long PDFs: one bounded canvas with page navigation; transfer bytes through acknowledged 64 KiB chunks
+into a small HTML shell. Never embed a large document in source.html or render all pages eagerly.
 Tabs: documents, quizzes (`QuizService` on the server), naryads (personal TXT + in-app PDF), training, profile.
 Shared phone book is `GET /phones` (paginated) and `POST /phones`, backed by PostgreSQL phone_contacts.
 All active users may add contacts; name and normalized unique number are shared with web users.
