@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createEditor, requestFor, settingsDraft, shiftDraft, monthDays, moveMonth } from '../src/worktime/model.mjs';
+import { absenceDraft, createEditor, requestFor, settingsDraft, shiftDraft, monthDays, moveMonth } from '../src/worktime/model.mjs';
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const config = (revision = 0) => ({ month: '2026-10', revision, settings: { line_rate_kopecks: 57348, reserve_rate_kopecks: 55300, surface_rate_kopecks: 51204, evening_percent: 20, night_percent: 40, rest_dates: [] } });
@@ -105,4 +105,16 @@ test('stopping the editor before a queued retry prevents a new send', async () =
   const f = fixture(async () => { throw new Error('timeout'); }), editor = f.editor();
   await editor.open(shiftDraft(null, '2026-10-27')); await editor.submit();
   await editor.stop(); await editor.retry(); assert.equal(f.requests.length, 1);
+});
+test('absence draft sends inclusive dates without inventing hours or charges and survives uncertain replay', async () => {
+  let offline = true;
+  const f = fixture(async () => { if (offline) throw new Error('lost response'); return { shift: { id: 12 } }; });
+  const editor = f.editor(); await editor.open(absenceDraft(null, '2026-10-30'));
+  await editor.edit({ absence_kind: 'leave', absence_end: '2026-11-02' }); await editor.submit();
+  const frozen = editor.snapshot().pending;
+  assert.deepEqual(frozen.data, { type: 'deviation', absence_kind: 'leave', shift_date: '2026-10-30', absence_end: '2026-11-02', operation_id: 'uuid-1' });
+  const restarted = f.editor(); await restarted.load(); offline = false; await restarted.retry();
+  assert.deepEqual(f.requests, [frozen, frozen]);
+  const edit = shiftDraft({ id: 12, revision: 2, type: 'deviation', absence_kind: 'leave', shift_date: '2026-10-30', absence_end: '2026-11-02' });
+  assert.equal(edit.kind, 'absence'); assert.equal(requestFor(edit).data.expected_revision, 2);
 });

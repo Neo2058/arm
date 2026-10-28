@@ -1,10 +1,12 @@
 // Shared web/APK presentation and request state. No payroll formulas live here.
 export const KINDS = { line: 'Линия', reserve: 'Резерв', surface: 'Резерв на поверхности' };
+export const ABSENCES = { sick: 'Больничный', leave: 'Отпуск', study: 'Учёба' };
 export const RATE_FIELDS = [
   ['line_rate_kopecks', 'Линия, ₽/ч'], ['reserve_rate_kopecks', 'Резерв, ₽/ч'],
   ['surface_rate_kopecks', 'На поверхности, ₽/ч'], ['evening_percent', 'Вечерняя доплата, %'], ['night_percent', 'Ночная доплата, %'],
 ];
 export const WARNINGS = {
+  absence_rest_context: 'Между дежурствами есть больничный, отпуск или учёба. Этот период не считается обычным междусменным отдыхом.',
   rest_calendar_incomplete: 'Не все дни отдыха подтверждены. Для части интервалов указан только минимальный ориентир.',
   legacy_rest_context: 'В расчёте соседних интервалов есть старые записи: норматив отдыха может быть неизвестен.',
   legacy_shifts_excluded: 'Старые записи не входят в новую денежную сводку. Они доступны в старом календаре веб-версии.',
@@ -42,12 +44,16 @@ function dateTime(value) {
   return text;
 }
 export function shiftDraft(shift = null, date = `${currentMonth()}-01`) {
+  if (shift?.type === 'deviation' && shift.absence_kind) return absenceDraft(shift);
   return { kind: 'shift', target: shift, values: {
     started_at: localTime(shift?.started_at) || `${date} 08:00`, ended_at: localTime(shift?.ended_at) || `${date} 16:00`,
     break_duration: String(shift?.break_duration || 0), shift_code: shift?.shift_code || '',
     start_location: shift?.start_location || '', end_location: shift?.end_location || '', refresh_snapshot: false,
     segments: (shift?.segments || []).map(s => ({ ...s, started_at: localTime(s.started_at), ended_at: localTime(s.ended_at) })),
   } };
+}
+export function absenceDraft(shift = null, date = `${currentMonth()}-01`) {
+  return { kind: 'absence', target: shift, values: { absence_kind: shift?.absence_kind || 'sick', shift_date: shift?.shift_date || date, absence_end: shift?.absence_end || date } };
 }
 export function settingsDraft(data) {
   return { kind: 'settings', target: data, values: Object.fromEntries([
@@ -57,6 +63,12 @@ export function settingsDraft(data) {
 }
 export function requestFor(draft) {
   const v = draft.values;
+  if (draft.kind === 'absence') {
+    if (!ABSENCES[v.absence_kind] || !/^\d{4}-\d{2}-\d{2}$/.test(v.shift_date) || !/^\d{4}-\d{2}-\d{2}$/.test(v.absence_end)) throw new Error('Выберите вид периода и даты в формате ГГГГ-ММ-ДД.');
+    const data = { type: 'deviation', absence_kind: v.absence_kind, shift_date: v.shift_date, absence_end: v.absence_end };
+    if (draft.target?.id) data.expected_revision = draft.target.revision;
+    return { method: draft.target?.id ? 'put' : 'post', url: `/shifts${draft.target?.id ? `/${draft.target.id}` : ''}`, month: v.shift_date.slice(0, 7), data };
+  }
   if (draft.kind === 'settings') {
     const settings = {};
     for (const [key, label] of RATE_FIELDS) {

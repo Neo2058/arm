@@ -36,6 +36,8 @@ class WorkShift extends Model
         'calculation_version',
         'shift_code',
         'segments',
+        'absence_kind',
+        'absence_end',
     ];
 
     protected $casts = [
@@ -47,6 +49,7 @@ class WorkShift extends Model
         'segments' => 'array',
         'calculation_snapshot' => 'array',
         'calculation_result' => 'array',
+        'absence_end' => 'date',
     ];
 
     public function route()

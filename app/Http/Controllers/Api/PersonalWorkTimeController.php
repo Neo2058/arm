@@ -77,6 +77,7 @@ class PersonalWorkTimeController extends Controller
     private function view(WorkShift $shift): array
     {
         return ['id' => $shift->id, 'revision' => $shift->revision, 'shift_date' => $shift->shift_date->toDateString(),
+            'type' => $shift->type, 'absence_kind' => $shift->absence_kind, 'absence_end' => $shift->absence_end?->toDateString(),
             'started_at' => $shift->getAttributes()['started_at'], 'ended_at' => $shift->getAttributes()['ended_at'],
             'break_duration' => (int) $shift->break_duration, 'shift_code' => $shift->shift_code, 'route_id' => $shift->route_id,
             'start_location' => $shift->start_location, 'end_location' => $shift->end_location, 'segments' => $shift->segments,

@@ -13,6 +13,9 @@ class PersonalWorkTimeCalculator
 {
     public function calculate(WorkShift $shift, array $settings): array
     {
+        if ($shift->type === 'deviation') {
+            return app(PersonalWorkAbsenceCalculator::class)->calculate($shift);
+        }
         app(PersonalWorkTimeSettings::class)->validate($settings);
         Validator::make($shift->getAttributes(), [
             'type' => 'required|in:work',

@@ -24,6 +24,9 @@ class PersonalWorkTimeMonth
             abort_unless($user?->is_active, 403);
             $from = CarbonImmutable::parse($month.'-01', 'Europe/Moscow');
             $to = $from->addMonth();
+            $absenceQuery = WorkShift::where('user_id', $user->id)->where('calculation_version', 2)->where('type', 'deviation')->whereNotNull('absence_kind');
+            $absences = (clone $absenceQuery)->where('started_at', '<', $to->format('Y-m-d H:i:s'))
+                ->where('ended_at', '>', $from->format('Y-m-d H:i:s'))->orderBy('shift_date')->get();
             $base = WorkShift::where('user_id', $user->id)->where('type', 'work');
             $selected = (clone $base)->where('shift_date', '>=', $from->toDateString())->where('shift_date', '<', $to->toDateString())->get();
             $before = (clone $base)->where('shift_date', '<', $from->toDateString())->orderByDesc('shift_date')->orderByDesc('started_at')->orderByDesc('id')->limit(3)->get();
@@ -59,6 +62,9 @@ class PersonalWorkTimeMonth
                 $groups[] = $group;
             }
             $restDates = $this->restDates($user->id, $rows);
+            $contextAbsences = $rows->isEmpty() ? collect() : (clone $absenceQuery)
+                ->where('started_at', '<', $rows->last()->getRawOriginal('ended_at'))
+                ->where('ended_at', '>', $rows->first()->getRawOriginal('started_at'))->get();
             $rests = [];
             foreach ($groups as $i => $current) {
                 if ($i === 0) {
@@ -69,6 +75,18 @@ class PersonalWorkTimeMonth
                     continue;
                 }
                 $rest = $this->rest($previous, $current, $restDates);
+                foreach ($contextAbsences as $absence) {
+                    if ($absence->getRawOriginal('started_at') < ($rest['next_started_at'] ?? '')
+                        && $absence->getRawOriginal('ended_at') > ($rest['previous_ended_at'] ?? '')) {
+                        $rest['required_minutes'] = null;
+                        $rest['minimum_required_minutes'] = null;
+                        $rest['violation'] = null;
+                        $rest['calendar_confirmed'] = false;
+                        $rest['rest_days'] = null;
+                        $rest['absence_context'] = true;
+                        $warnings[] = 'absence_rest_context';
+                    }
+                }
                 $rests[] = $rest;
                 if (! $rest['calendar_confirmed']) {
                     $warnings[] = 'rest_calendar_incomplete';
@@ -117,7 +135,15 @@ class PersonalWorkTimeMonth
                 'month' => $month, 'attribution' => 'shift_start_date', 'shifts' => $output,
                 'totals' => $totals, 'by_kind_totals' => $byKind, 'night_pairs' => $pairs, 'rest_intervals' => $rests,
                 'legacy_shifts_count' => $legacy,
-                'excluded_deviations_count' => WorkShift::where('user_id', $user->id)->where('type', '!=', 'work')->whereBetween('shift_date', [$from->toDateString(), $to->subDay()->toDateString()])->count(),
+                'absences' => $absences->map(fn ($absence) => [
+                    'id' => $absence->id, 'revision' => $absence->revision, 'absence_kind' => $absence->absence_kind,
+                    'label' => PersonalWorkAbsenceCalculator::LABELS[$absence->absence_kind] ?? 'Отвлечение',
+                    'shift_date' => $absence->shift_date->toDateString(), 'absence_end' => $absence->absence_end->toDateString(),
+                    'days_in_month' => (int) max($from, CarbonImmutable::parse($absence->shift_date->toDateString(), 'Europe/Moscow'))
+                        ->diffInDays(min($to->subDay(), CarbonImmutable::parse($absence->absence_end->toDateString(), 'Europe/Moscow'))) + 1,
+                    'payment_status' => 'not_calculated',
+                ])->values()->all(),
+                'excluded_deviations_count' => WorkShift::where('user_id', $user->id)->where('calculation_version', 1)->where('type', '!=', 'work')->whereBetween('shift_date', [$from->toDateString(), $to->subDay()->toDateString()])->count(),
                 'warnings' => array_values(array_unique($warnings)), 'calculation_complete' => false,
                 'pending' => ['qualification_seniority_premium_overtime_deductions', 'full_cntsmen_procedural_parity'],
             ];

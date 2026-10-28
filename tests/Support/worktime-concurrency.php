@@ -145,3 +145,16 @@ sort($statuses);
 check($statuses === [200, 409], 'Settings revision race failed: '.json_encode($results));
 check(WorkTimeMonthSettings::where('user_id', $settingsUser->id)->count() === 1, 'Duplicate month settings');
 echo "OK: create UUID/overlap/conflicting payload, edit retry/revision, and settings revision races\n";
+
+$absenceUser = User::factory()->create();
+$period = ['type' => 'deviation', 'absence_kind' => 'sick', 'shift_date' => '2026-10-27', 'absence_end' => '2026-10-30'];
+$ids = [(string) Str::uuid(), (string) Str::uuid()];
+$results = race([
+    fn () => app(PersonalWorkShiftService::class)->create($absenceUser, $period, $ids[0]),
+    fn () => app(PersonalWorkShiftService::class)->create($absenceUser, $input, $ids[1]),
+]);
+$statuses = array_column($results, 'status');
+sort($statuses);
+check($statuses === [200, 422], 'Work/absence overlap race failed: '.json_encode($results));
+check(WorkShift::where('user_id', $absenceUser->id)->count() === 1, 'Work and absence were both inserted');
+echo "OK: work/absence mutual overlap race\n";

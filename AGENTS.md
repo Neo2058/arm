@@ -157,6 +157,10 @@
 - При добавлении нового типа квиза используй существующий `GeneralQuizPlayer` / `QuizPlayer` как референс.
 
 ### Работа со сменами и оплатой
+- Больничный/отпуск/учёба в личном табеле: WorkShift v2 type=deviation, absence_kind/absence_end,
+  PersonalWorkAbsenceCalculator; учёт включительных дат, без формул оплаты. payment_status=not_calculated,
+  не выдавать нулевой subtotal за отсутствие права на оплату. Пересечения со сменами/периодами запрещены
+  под блокировкой пользователя; absences в GET month отдельно от отработанных часов. См. MOBILE_FIXES_2026-10-27.md.
 - Личный табель API: `PERSONAL_WORKTIME_API.md`, `/api/worktime/v2` (web CSRF/device/barrier)
   и `/api/mobile/worktime` (Sanctum), общий PersonalWorkTimeController. Все данные только свои.
   Изменения через WorkTimeMutationService + PersonalWorkShiftService/PersonalWorkTimeSettingsEditor:

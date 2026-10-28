@@ -1,4 +1,4 @@
-import { createEditor, currentMonth, errorText, requestFor, settingsDraft, shiftDraft } from './model.mjs';
+import { absenceDraft, createEditor, currentMonth, errorText, requestFor, settingsDraft, shiftDraft } from './model.mjs';
 
 // React is supplied by each platform so Vite never bundles mobile's React copy.
 export function createUseWorkTime({ useEffect, useRef, useState }) {
@@ -49,6 +49,7 @@ export function createUseWorkTime({ useEffect, useRef, useState }) {
       reload: () => run(reload),
       openShift: id => run(async () => { const shift = id ? (await adapters.current.request({ method: 'get', url: `/shifts/${id}` })).shift : null; await editor.open(shiftDraft(shift, `${month}-01`)); setPreview(null); }),
       openDate: date => run(async () => { await editor.open(shiftDraft(null, date)); setPreview(null); }),
+      openAbsence: () => run(async () => { await editor.open(absenceDraft(null, `${month}-01`)); setPreview(null); }),
       openSettings: () => run(async () => { const fresh = await adapters.current.request({ method: 'get', url: '/settings', params: { month } }); await editor.open(settingsDraft(fresh)); setPreview(null); }),
       edit: patch => { setPreview(null); return editor.edit(patch).catch(() => setError('Не удалось сохранить ввод на устройстве. Повторите изменение перед отправкой.')); },
       close: () => run(async () => { await editor.close(); setPreview(null); }),

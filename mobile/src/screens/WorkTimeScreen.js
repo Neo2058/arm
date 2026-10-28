@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import * as Crypto from 'expo-crypto';
 import { API_URL, client } from '../api';
 import { createUseWorkTime } from '../worktime/controller.mjs';
-import { KINDS, RATE_FIELDS, WARNINGS, PARTIAL, localTime, minutes, money, monthDays, moveMonth } from '../worktime/model.mjs';
+import { ABSENCES, KINDS, RATE_FIELDS, WARNINGS, PARTIAL, localTime, minutes, money, monthDays, moveMonth } from '../worktime/model.mjs';
 import { workTimeStorage } from '../worktime/storage';
 
 const useWorkTime = createUseWorkTime(React);
@@ -22,8 +22,12 @@ function Editor({ ctl }) {
   const field = (key, label, numeric = false, maxLength) => <Field key={key} {...{ label, numeric, maxLength, disabled }} value={values[key]} onChange={value => edit({ [key]: value })} />;
   const partEdit = (index, patch) => edit({ segments: values.segments.map((part, i) => i === index ? { ...part, ...patch } : part) });
   return <View style={s.card}>
-    <Text style={s.heading}>{draft.kind === 'settings' ? `Параметры · ${draft.target.month}` : draft.target?.id ? 'Изменение смены' : 'Новая смена'}</Text>
-    {draft.kind === 'settings' ? <>
+    <Text style={s.heading}>{draft.kind === 'settings' ? `Параметры · ${draft.target.month}` : draft.kind === 'absence' ? 'Больничный, отпуск или учёба' : draft.target?.id ? 'Изменение смены' : 'Новая смена'}</Text>
+    {draft.kind === 'absence' ? <>
+      <Text style={s.meta}>Обе даты включаются целиком (московское время), до 366 дней в записи. Период не входит в отработанные часы. Оплата пока не рассчитана.</Text>
+      {Object.entries(ABSENCES).map(([key,label]) => <Button key={key} disabled={disabled} selected={values.absence_kind === key} onPress={() => edit({ absence_kind: key })}>{label}</Button>)}
+      {field('shift_date', 'Начало периода · ГГГГ-ММ-ДД', false, 10)}{field('absence_end', 'Окончание включительно · ГГГГ-ММ-ДД', false, 10)}
+    </> : draft.kind === 'settings' ? <>
       <Text style={s.meta}>Ставки действуют с выбранного месяца до следующего изменения. Сохранённые смены сохраняют прежние ставки.</Text>
       {RATE_FIELDS.map(([key, label]) => field(key, label, true))}
       <Text style={s.heading}>Подтверждённые выходные</Text><Text style={s.meta}>Отметьте фактические выходные. Пустой день не считается выходным автоматически.</Text>
@@ -46,7 +50,7 @@ function Editor({ ctl }) {
       {!!draft.target?.id && <Text style={s.meta}>При переносе в другой месяц обновление ставок обязательно.</Text>}
       {!!ctl.preview && <View style={s.part}><Text style={s.text}>{minutes(ctl.preview.paid_minutes)} · {money(ctl.preview.subtotal_kopecks)}</Text><Text style={s.meta}>Вечер {minutes(ctl.preview.evening_minutes)} · ночь {minutes(ctl.preview.night_minutes)}. Ночная связка уточняется в месячной сводке после сохранения.</Text></View>}
     </>}
-    {!!entry.current && <View style={s.part}><Text style={s.heading}>Текущая версия на сервере</Text>{draft.kind === 'settings' ? <>{RATE_FIELDS.map(([key, label]) => <Text key={key} style={s.text}>{label}: {key.endsWith('_kopecks') ? money(entry.current.settings[key]) : entry.current.settings[key]}</Text>)}<Text style={s.meta}>Выходные: {entry.current.settings.rest_dates.join(', ') || 'не указаны'}</Text></> : <>
+    {!!entry.current && <View style={s.part}><Text style={s.heading}>Текущая версия на сервере</Text>{draft.kind === 'settings' ? <>{RATE_FIELDS.map(([key, label]) => <Text key={key} style={s.text}>{label}: {key.endsWith('_kopecks') ? money(entry.current.settings[key]) : entry.current.settings[key]}</Text>)}<Text style={s.meta}>Выходные: {entry.current.settings.rest_dates.join(', ') || 'не указаны'}</Text></> : draft.kind === 'absence' ? <Text style={s.text}>{ABSENCES[entry.current.shift.absence_kind]}: {entry.current.shift.shift_date} — {entry.current.shift.absence_end}, оплата не рассчитана</Text> : <>
       <Text style={s.text}>{localTime(entry.current.shift.started_at)} — {localTime(entry.current.shift.ended_at)}</Text>
       <Text style={s.text}>{minutes(entry.current.shift.calculation_result.paid_minutes)} · {money(entry.current.shift.calculation_result.subtotal_kopecks)}</Text>
       <Text style={s.meta}>Код {entry.current.shift.shift_code || '—'} · перерывы {entry.current.shift.break_duration} мин · {entry.current.shift.start_location || '—'} → {entry.current.shift.end_location || '—'}</Text>
@@ -77,7 +81,7 @@ export default function WorkTimeScreen({ userId }) {
     {ctl.busy && <ActivityIndicator color="#fb923c" />}{!!ctl.entry?.result && <Text style={s.success}>Изменение подтверждено сервером. Сводка — за выбранный месяц.</Text>}
     {!!ctl.entry?.draft && <Editor key={`${ctl.entry.draft.kind}-${ctl.entry.draft.target?.id || ctl.entry.draft.target?.month || 'new'}-${ctl.entry.draft.target?.revision || 0}-${!!ctl.entry.pending}`} ctl={ctl} />}
     <View style={s.month}><Button disabled={ctl.busy} onPress={() => ctl.setMonth(moveMonth(ctl.month, -1))}>←</Button><Text style={s.heading}>{ctl.month}</Text><Button disabled={ctl.busy} onPress={() => ctl.setMonth(moveMonth(ctl.month, 1))}>→</Button></View>
-    <Button disabled={ctl.busy} onPress={ctl.reload}>Обновить сводку</Button><Button disabled={disabled} onPress={() => ctl.openShift()}>+ Добавить смену</Button><Button disabled={disabled} onPress={ctl.openSettings}>Параметры месяца и выходные</Button>
+    <Button disabled={ctl.busy} onPress={ctl.reload}>Обновить сводку</Button><Button disabled={disabled} onPress={() => ctl.openShift()}>+ Добавить смену</Button><Button disabled={disabled} onPress={ctl.openAbsence}>Больничный / отпуск / учёба</Button><Button disabled={disabled} onPress={ctl.openSettings}>Параметры месяца и выходные</Button>
     {!data ? <Text style={s.meta}>Сводка ещё не загружена.</Text> : <>
       <View style={s.card}><Text style={s.heading}>{minutes(data.totals.paid_minutes)}</Text><Text style={s.meta}>Оплаченное время · все перерывы включены</Text><Text style={s.text}>Вечер: {minutes(data.totals.evening_minutes)}</Text><Text style={s.text}>Ночь: {minutes(data.totals.night_minutes)}</Text><Text style={s.meta}>Фактические ночные: {minutes(data.totals.actual_night_minutes)}</Text><Text style={s.heading}>Часть начислений: {money(data.totals.subtotal_kopecks)}</Text>
         {Object.entries(data.by_kind_totals).map(([key, v]) => <View key={key} style={s.part}><Text style={s.text}>{KINDS[key]} · {minutes(v.paid_minutes)}</Text><Text style={s.meta}>Тариф {money(v.base_kopecks)} · вечер {money(v.evening_kopecks)} · ночь {money(v.night_kopecks)}</Text></View>)}
@@ -85,11 +89,12 @@ export default function WorkTimeScreen({ userId }) {
       {data.warnings.map(code => <Text style={s.note} key={code}>{WARNINGS[code] || 'Требуется проверка данных месяца.'}</Text>)}
       {!!data.excluded_deviations_count && <Text style={s.note}>Отклонения старого календаря ({data.excluded_deviations_count}) в новый итог не включены.</Text>}
       <Text style={s.heading}>Календарь</Text><Text style={s.meta}>Нажмите день, чтобы добавить смену. В — подтверждённый выходной.</Text>
-      <View style={s.days}>{monthDays(ctl.month).map(date => { const count = data.shifts.filter(shift => shift.shift_date === date).length, rest = ctl.settings?.settings.rest_dates.includes(date); return <Pressable key={date} accessibilityRole="button" accessibilityLabel={`Добавить смену ${date}`} disabled={disabled} style={[s.day, count > 0 && s.selected, disabled && s.disabled]} onPress={() => ctl.openDate(date)}><Text style={s.buttonText}>{Number(date.slice(-2))}</Text><Text style={s.calendarMark}>{count ? `${count} см.` : rest ? 'В' : '·'}</Text></Pressable>; })}</View>
+      <View style={s.days}>{monthDays(ctl.month).map(date => { const count = data.shifts.filter(shift => shift.shift_date === date).length, absence = (data.absences || []).find(a => a.shift_date <= date && a.absence_end >= date), rest = !absence && ctl.settings?.settings.rest_dates.includes(date); return <Pressable key={date} accessibilityRole="button" accessibilityLabel={`Добавить смену ${date}`} disabled={disabled} style={[s.day, count > 0 && s.selected, disabled && s.disabled]} onPress={() => absence ? ctl.openShift(absence.id) : ctl.openDate(date)}><Text style={s.buttonText}>{Number(date.slice(-2))}</Text><Text style={s.calendarMark}>{absence ? ABSENCES[absence.absence_kind]?.slice(0, 1) : count ? `${count} см.` : rest ? 'В' : '·'}</Text></Pressable>; })}</View>
+      <Text style={s.heading}>Больничные, отпуск и учёба</Text>{!(data.absences || []).length && <Text style={s.meta}>Периодов в этом месяце нет.</Text>}{(data.absences || []).map(a => <Button key={a.id} disabled={disabled} onPress={() => ctl.openShift(a.id)}>{a.label}: {a.shift_date} — {a.absence_end} включительно. {a.days_in_month} дн. в месяце · оплата не рассчитана</Button>)}
       <Text style={s.heading}>Смены месяца</Text>{!data.shifts.length && <Text style={s.meta}>Новых записей пока нет.</Text>}
       {data.shifts.map(shift => <Pressable accessibilityRole="button" disabled={disabled} style={[s.card, disabled && s.disabled]} key={shift.id} onPress={() => ctl.openShift(shift.id)}><Text style={s.text}>{localTime(shift.started_at)} — {localTime(shift.ended_at)}</Text><Text style={s.heading}>{minutes(shift.result.paid_minutes)} · {money(shift.result.subtotal_kopecks)}</Text><Text style={s.meta}>Код {shift.shift_code || '—'} · вечер {minutes(shift.result.evening_minutes)} · ночь {minutes(shift.result.night_minutes)}</Text><Text style={s.meta}>Нажмите для изменения</Text></Pressable>)}
       <Text style={s.heading}>Отдых между дежурствами</Text>{!data.rest_intervals.length && <Text style={s.meta}>Для сравнения нужны соседние смены.</Text>}
-      {data.rest_intervals.map((r, i) => <View style={s.card} key={i}><Text style={s.text}>{localTime(r.previous_ended_at) || 'Предыдущее дежурство'} → {localTime(r.next_started_at) || 'Следующее дежурство'}</Text><Text style={s.heading}>Отдых: {minutes(r.actual_minutes)}</Text><Text style={s.meta}>{r.required_minutes == null ? `Минимальный ориентир: ${minutes(r.minimum_required_minutes)}; календарь или предыдущая смена требуют уточнения.` : `Требуется: ${minutes(r.required_minutes)}.`}</Text><Text style={r.violation === true ? s.error : s.meta}>{r.violation === true ? 'Отдых короче нормы.' : r.violation === false ? 'Норма соблюдена.' : 'Окончательная оценка неизвестна.'}</Text></View>)}
+      {data.rest_intervals.map((r, i) => <View style={s.card} key={i}><Text style={s.text}>{localTime(r.previous_ended_at) || 'Предыдущее дежурство'} → {localTime(r.next_started_at) || 'Следующее дежурство'}</Text><Text style={s.heading}>{r.absence_context ? 'Промежуток' : 'Отдых'}: {minutes(r.actual_minutes)}</Text><Text style={s.meta}>{r.absence_context ? 'Внутри периода есть больничный, отпуск или учёба. Норма междусменного отдыха здесь не оценивается.' : r.required_minutes == null ? `Минимальный ориентир: ${minutes(r.minimum_required_minutes)}; календарь или предыдущая смена требуют уточнения.` : `Требуется: ${minutes(r.required_minutes)}.`}</Text><Text style={r.violation === true ? s.error : s.meta}>{r.violation === true ? 'Отдых короче нормы.' : r.violation === false ? 'Норма соблюдена.' : 'Окончательная оценка неизвестна.'}</Text></View>)}
     </>}
   </ScrollView>;
 }

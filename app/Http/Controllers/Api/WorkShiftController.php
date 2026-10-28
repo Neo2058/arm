@@ -79,6 +79,9 @@ class WorkShiftController extends Controller
             $newer = WorkShift::where('user_id', $user->id)->where('calculation_version', 2)
                 ->where(function ($query) use ($data) {
                     $query->whereDate('shift_date', $data['shift_date']);
+                    $query->orWhere(fn ($absence) => $absence->where('type', 'deviation')
+                        ->where('started_at', '<', Carbon::parse($data['shift_date'])->addDay()->format('Y-m-d H:i:s'))
+                        ->where('ended_at', '>', Carbon::parse($data['shift_date'])->startOfDay()->format('Y-m-d H:i:s')));
                     if (! empty($data['started_at']) && ! empty($data['ended_at'])) {
                         $query->orWhere(fn ($q) => $q->where('started_at', '<', Carbon::parse($data['ended_at'])->format('Y-m-d H:i:s'))
                             ->where('ended_at', '>', Carbon::parse($data['started_at'])->format('Y-m-d H:i:s')));

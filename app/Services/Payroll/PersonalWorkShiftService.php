@@ -5,6 +5,7 @@ namespace App\Services\Payroll;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Services\ClickHouseService;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -46,17 +47,12 @@ class PersonalWorkShiftService
             }
             $shift = $this->preview($user, $data);
             // Includes legacy records: the same worked time cannot be counted twice.
-            $overlap = WorkShift::where('user_id', $user->id)->where('type', 'work')
-                ->where('started_at', '<', $shift->getAttributes()['ended_at'])
-                ->where('ended_at', '>', $shift->getAttributes()['started_at'])->exists();
-            if ($overlap) {
-                throw ValidationException::withMessages(['started_at' => 'Смена пересекается с уже сохранённой сменой.']);
-            }
+            $this->assertNoOverlap($shift);
             $shift->operation_id = $operationId;
             $shift->operation_hash = $hash;
             $shift->save();
             DB::afterCommit(fn () => ClickHouseService::log('work_shift.saved', $shift->id, [
-                'shift_date' => $shift->shift_date->toDateString(), 'type' => 'work', 'calculation_version' => 2,
+                'shift_date' => $shift->shift_date->toDateString(), 'type' => $shift->type, 'calculation_version' => 2,
             ], $user));
 
             return $shift;
@@ -80,15 +76,11 @@ class PersonalWorkShiftService
             $shift = WorkShift::where('user_id', $user->id)->where('calculation_version', 2)->lockForUpdate()->findOrFail($id);
             abort_unless($shift->revision === $expectedRevision, 409, 'Смена уже изменена. Загрузите актуальную запись.');
             $shift = $this->prepareUpdate($shift, $input, $refreshSnapshot);
-            $overlap = WorkShift::where('user_id', $user->id)->where('type', 'work')->where('id', '!=', $shift->id)
-                ->where('started_at', '<', $shift->getAttributes()['ended_at'])->where('ended_at', '>', $shift->getAttributes()['started_at'])->exists();
-            if ($overlap) {
-                throw ValidationException::withMessages(['started_at' => 'Смена пересекается с уже сохранённой сменой.']);
-            }
+            $this->assertNoOverlap($shift);
             $shift->revision++;
             $shift->useCalculationSnapshot($shift->calculation_snapshot);
             $shift->save();
-            DB::afterCommit(fn () => ClickHouseService::log('work_shift.saved', $shift->id, ['shift_date' => $shift->shift_date->toDateString(), 'type' => 'work', 'calculation_version' => 2], $user));
+            DB::afterCommit(fn () => ClickHouseService::log('work_shift.saved', $shift->id, ['shift_date' => $shift->shift_date->toDateString(), 'type' => $shift->type, 'calculation_version' => 2], $user));
 
             return $shift;
         });
@@ -97,6 +89,9 @@ class PersonalWorkShiftService
     private function prepareUpdate(WorkShift $shift, array $input, bool $refreshSnapshot): WorkShift
     {
         $data = $this->validated($input);
+        if (($data['type'] ?? 'work') !== $shift->type) {
+            throw ValidationException::withMessages(['type' => 'Тип сохранённой записи менять нельзя.']);
+        }
         $data['break_duration'] = $data['break_duration'] ?? 0;
         $shift->fill($data + ['break_duration' => 0, 'segments' => null, 'shift_code' => null, 'route_id' => null, 'start_location' => null, 'end_location' => null]);
         $snapshot = $refreshSnapshot ? app(PersonalWorkTimeSettings::class)->snapshot($shift->user_id, $data['shift_date']) : $shift->getOriginal('calculation_snapshot');
@@ -111,6 +106,11 @@ class PersonalWorkShiftService
 
     public function validated(array $input): array
     {
+        Validator::make($input, ['type' => 'sometimes|in:work,deviation'])->validate();
+        if (($input['type'] ?? 'work') === 'deviation') {
+            return app(PersonalWorkAbsenceCalculator::class)->input($input);
+        }
+
         return Validator::make($input, [
             'shift_date' => 'required|date_format:Y-m-d',
             'started_at' => ['required', 'date', 'regex:/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::00)?$/'],
@@ -126,6 +126,21 @@ class PersonalWorkShiftService
             'segments.*.started_at' => ['required', 'date', 'regex:/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::00)?$/'],
             'segments.*.ended_at' => ['required', 'date', 'regex:/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::00)?$/'],
         ])->validate();
+    }
+
+    private function assertNoOverlap(WorkShift $shift): void
+    {
+        $start = $shift->getAttributes()['started_at'];
+        $end = $shift->getAttributes()['ended_at'];
+        $lastDate = CarbonImmutable::parse($end, 'Europe/Moscow')->subSecond()->toDateString();
+        $overlap = WorkShift::where('user_id', $shift->user_id)
+            ->when($shift->exists, fn ($q) => $q->whereKeyNot($shift->id))
+            ->where(fn ($q) => $q->where(fn ($times) => $times->where('started_at', '<', $end)->where('ended_at', '>', $start))
+                ->orWhere(fn ($unknown) => $unknown->where(fn ($nulls) => $nulls->whereNull('started_at')->orWhereNull('ended_at'))
+                    ->whereBetween('shift_date', [substr($start, 0, 10), $lastDate])))->exists();
+        if ($overlap) {
+            throw ValidationException::withMessages(['started_at' => 'Период пересекается с сохранённой сменой или отвлечением.']);
+        }
     }
 
     private function canonical(array $value): array
