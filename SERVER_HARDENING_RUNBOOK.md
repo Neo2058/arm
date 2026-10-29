@@ -149,6 +149,21 @@ root может запустить этот rollback.py: он unmask/enable/star
 Файлы /opt/php74, пакеты и Roundcube сохранены. Mask защищает от обычного systemd
 старта, но не от ручного запуска бинарника root или изменения настроек панелью.
 
+## BIND private listeners — 29 октября, 21:42 МСК
+
+Применён `scripts/restrict-bind-listeners.py --apply`: только loopback и текущие
+IPv4 адреса Docker bridges, IPv6 ::1. Основной домен делегирован REG.RU, named
+содержал лишь стандартные зоны; хост/контейнеры используют другой resolver.
+Служба named остаётся active. Публичный :53 больше не прослушивается.
+При изменении Docker bridge IP список listen-on требует отдельного пересмотра;
+если в будущем нужны публичные зоны — сначала пересмотреть DNS-архитектуру.
+
+Установщик не применять повторно: он откажется при managed marker или новых зонах.
+Backup и rollback.py: `/root/arm-bind-listeners-20261029T214239`.
+Откат копирует исходный named.conf.options и выполняет named-checkconf/rndc reconfig;
+возвращает прежнее публичное прослушивание. Финальный timer отменён после проверок.
+Подробности фактических портов/FTP/почты: SERVER_NETWORK_AUDIT_2026-10-29.md.
+
 Служебные логи ClickHouse хранятся один календарный месяц: read-only конфигурация
 `docker/clickhouse/system-log-retention.xml` в security overlay. Аналитика
 `default.user_actions` не затронута. При изменении схем/версии проверять TTL,
