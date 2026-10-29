@@ -1,0 +1,22 @@
+[sshd]
+enabled = true
+filter = sshd[mode=normal]
+backend = systemd
+journalmatch = _SYSTEMD_UNIT=ssh.service + _COMM=sshd + _COMM=sshd-session
+port = 22
+usedns = no
+ignoreip = 127.0.0.1/8 ::1 @ADMIN_IP@
+maxretry = 6
+findtime = 10m
+bantime = 10m
+bantime.increment = false
+action = arm-sshd-new[name=arm-sshd]
+
+# Existing host Nginx is inactive; Docker logs are not these files.
+# Mail/web jails need separate log-source and false-positive validation.
+[exim-isp]
+enabled = false
+[nginx-http-auth]
+enabled = false
+[nginx-botsearch]
+enabled = false
