@@ -30,6 +30,8 @@ services:
       - path: ${ARM_SERVICE_ENV_DIR:-/etc/arm/services}/clickhouse.env
         format: raw
     environment: !reset {}
+    volumes:
+      - ./docker/clickhouse/system-log-retention.xml:/etc/clickhouse-server/config.d/system-log-retention.xml:ro
 
   meilisearch:
     env_file: !override

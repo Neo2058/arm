@@ -1,0 +1,29 @@
+<clickhouse>
+    <!-- Diagnostic logs only. Application analytics tables are not affected. -->
+    <!-- One calendar month, rather than a fixed 30-day interval. -->
+    <trace_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></trace_log>
+    <text_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></text_log>
+    <metric_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></metric_log>
+    <part_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></part_log>
+    <asynchronous_metric_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></asynchronous_metric_log>
+    <query_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></query_log>
+    <error_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></error_log>
+    <background_schedule_pool_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></background_schedule_pool_log>
+    <processors_profile_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></processors_profile_log>
+    <asynchronous_insert_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></asynchronous_insert_log>
+    <aggregated_zookeeper_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></aggregated_zookeeper_log>
+    <backup_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></backup_log>
+    <blob_storage_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></blob_storage_log>
+    <crash_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></crash_log>
+    <delta_lake_metadata_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></delta_lake_metadata_log>
+    <iceberg_metadata_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></iceberg_metadata_log>
+    <!-- The base config defines an explicit engine here: a separate ttl is invalid. -->
+    <opentelemetry_span_log>
+        <engine replace="replace">ENGINE = MergeTree PARTITION BY toYYYYMM(finish_date) ORDER BY (finish_date, finish_time_us) TTL finish_date + INTERVAL 1 MONTH DELETE</engine>
+    </opentelemetry_span_log>
+    <query_metric_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></query_metric_log>
+    <query_thread_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></query_thread_log>
+    <query_views_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></query_views_log>
+    <s3queue_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></s3queue_log>
+    <zookeeper_connection_log><ttl>event_date + INTERVAL 1 MONTH DELETE</ttl></zookeeper_connection_log>
+</clickhouse>

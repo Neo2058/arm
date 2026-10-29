@@ -50,6 +50,9 @@
 - Nginx sees public and only public storage subpath read-only, not full checkout.
 - Keep host-only service env snapshots synchronized on config changes.
   See `SERVER_HARDENING_RUNBOOK.md`; secrets must never enter Git or tool output.
+- System logs in ClickHouse retain one calendar month via read-only
+  `docker/clickhouse/system-log-retention.xml`; `user_actions` is excluded.
+  OpenTelemetry has an explicit engine: put its TTL inside engine, never alongside it.
 
 ### Основные принципы
 1. **Filament-first** для административных CRUD и сложных форм (особенно конструктор квизов).

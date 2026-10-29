@@ -63,6 +63,11 @@ Nginx получает public read-only, только подкаталог app/p
 на read-only: это следующий самостоятельный этап с изменением startup/deploy.
 Backend network пока общая; SSH/firewall/Fail2Ban этим пакетом не изменены.
 
+Служебные логи ClickHouse хранятся один календарный месяц: read-only конфигурация
+`docker/clickhouse/system-log-retention.xml` в security overlay. Аналитика
+`default.user_actions` не затронута. При изменении схем/версии проверять TTL,
+колонки времени и возможные переименованные system-log tables после запуска.
+
 ## Откат и копии
 
 Приватный backup: `/root/arm-hardening-data-20261028`: исходные env/compose,
