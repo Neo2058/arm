@@ -164,3 +164,27 @@ non-loopback host; это ещё не доказывает внешний SMTP. 
 проверить зависимости Roundcube/ISPmanager перед отключением PHP 7.4. Затем отдельные
 итерации firewall/Docker exposure, независимых backups и мониторинга. Схема ClickHouse,
 события и пользовательские данные в этом этапе не менялись.
+
+## Неиспользуемый PHP 7.4 — завершено 29 октября, 21:28 МСК
+
+- [x] Проверены конфигурация SMTP приложения, DNS и адреса интерфейсов: SMTP:465
+  указывает вне этого хоста. Учтён MAIL_URL при проверке перед применением.
+- [x] Проверены php-fpm74 unit, обратные systemd dependencies, pool config,
+  ссылки в host Nginx/cron/ISPmanager и сокеты. Пул roundcube, активных подключений
+  к его сокету не было; host Nginx/Apache/httpd inactive. Ссылки ISPmanager остаются.
+- [x] scripts/disable-legacy-php.py сохранил конфигурацию в
+  /root/arm-legacy-php-20261029T212758 и создал rollback.py + timer 5 минут.
+- [x] php-fpm74.service stopped/disabled/masked. Пакеты и данные Roundcube не удалены;
+  конфигурация его host-Nginx осталась и требует отдельной миграции, если веб-почта
+  когда-либо понадобится. Другие версии PHP не остановлены.
+- [x] До и после остановки из arm-app проверены TLS с проверкой сертификата и
+  SMTP banner 220. Никаких AUTH/отправки писем не выполнялось; доставка не проверена.
+- [x] Независимый SSH-вход успешен, /login и /install HTTP 200, arm-app healthy,
+  остальные контейнеры работают. Exim/Dovecot/Fail2Ban/SSH сохранили состояние.
+  Unit arm-legacy-php-cutover-20261029 Result=success, ExecMainStatus=0;
+  rollback timer отменён после этих проверок.
+
+Точка продолжения: аудит доступных снаружи host/Docker портов и подготовка отдельного
+ограниченного firewall-изменения с откатом. На хосте обнаружены также FTP, DNS и
+почтовые listeners; их назначение/внешнюю доступность проверить до отключения.
+Пока не менять их вслепую. Далее независимые backups и мониторинг, затем PII encryption.

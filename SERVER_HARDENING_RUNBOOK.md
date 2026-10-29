@@ -129,6 +129,26 @@ netns, блокирует только 192.0.2.123 и 2001:db8:ffff:1::123 и о
 Почтовые/host-Nginx jails выключены намеренно до проверки логов.
 Exim/Dovecot и старые PHP не менялись; исходящие SMTP-уведомления нужно сохранить.
 
+## Отключение Roundcube PHP 7.4 — 29 октября, 21:28 МСК
+
+В отдельном следующем этапе php-fpm74.service остановлен, disabled и masked.
+Исходящие уведомления Laravel используют внешний SMTP:465; Exim/Dovecot оставлены.
+TLS/certificate verification и SMTP greeting проверены из arm-app до и после
+остановки. Это не проверка аутентификации или доставки писем.
+
+Первоначальный установщик `sudo python3 scripts/disable-legacy-php.py --apply`
+требует исходную active/enabled службу и остановленные host web-серверы;
+не запускать повторно для диагностики. Backup и rollback.py:
+`/root/arm-legacy-php-20261029T212758`. Финальный таймер отменён после внешнего SSH,
+HTTP и проверки состояния контейнеров. Для аварийного восстановления Roundcube FPM
+root может запустить этот rollback.py: он unmask/enable/start только php-fpm74.
+Возврат старого runtime увеличивает поверхность атаки; затем нужен отдельный
+переход Roundcube на поддерживаемый PHP. Webmail сейчас не включать через host Nginx:
+он не обслуживает ARM, а его порты заняты Docker.
+
+Файлы /opt/php74, пакеты и Roundcube сохранены. Mask защищает от обычного systemd
+старта, но не от ручного запуска бинарника root или изменения настроек панелью.
+
 Служебные логи ClickHouse хранятся один календарный месяц: read-only конфигурация
 `docker/clickhouse/system-log-retention.xml` в security overlay. Аналитика
 `default.user_actions` не затронута. При изменении схем/версии проверять TTL,
