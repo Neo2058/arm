@@ -1,12 +1,13 @@
 # Эксплуатация изолированного runtime ARM
 
-Применено 28 октября 2026. Overlay `docker-compose.security.yml` применяется
-последним после prod/discipline/runtime. Требуется Docker Compose >= 2.30
+Применено 28–29 октября 2026. После prod/discipline/runtime применяются
+`docker-compose.security.yml` и последним `docker-compose.readonly.yml`.
+Требуется Docker Compose >= 2.30
 (используется raw env_file) и Docker Engine с volume subpath.
 
 ## Секреты и запуск
 
-В production `COMPOSE_FILE` в `.env` включает security overlay. Файлы
+В production `COMPOSE_FILE` в `.env` включает security и readonly overlays. Файлы
 `/etc/arm/services/{app,postgres,minio,clickhouse,meilisearch}.env` принадлежат
 root, имеют права 0600, каталог 0700. Значения не коммитить и не печатать через
 `docker compose config`/`docker inspect`; для проверки использовать `config --quiet`.
@@ -21,7 +22,7 @@ Compose с overlay запускать через sudo из `/home/deploy/arm`: d
 `app.env` — снимок рабочего окружения, а не автоматически обновляемая ссылка на `.env`.
 При изменении настроек приложения администратор должен синхронно обновить app.env,
 сохранив runtime DB/S3 credentials и `ARM_BUCKET_PROVISIONED=true`, затем пересоздать
-только app и пересобрать config cache. Не копировать в него административные
+только app: readonly entrypoint сам создаёт новый config cache. Не копировать в него административные
 секреты PostgreSQL/MinIO. Не менять APP_KEY мимоходом.
 
 ## Миграции
@@ -59,9 +60,46 @@ list/multipart. Это защищает административные фун�
 
 Nginx получает public read-only, только подкаталог app/public storage-volume,
 конфигурацию и TLS. Полный checkout, Laravel config cache, .git и private storage
-не примонтированы. App/Nginx имеют no-new-privileges. Весь код app пока не переведён
-на read-only: это следующий самостоятельный этап с изменением startup/deploy.
-Backend network пока общая; SSH/firewall/Fail2Ban этим пакетом не изменены.
+не примонтированы. App/Nginx имеют no-new-privileges. Файловая система app и
+bind mount checkout теперь read-only; writable остаются storage и ограниченные
+tmpfs /tmp (256 MiB, noexec) и bootstrap/cache (16 MiB). Bootstrap cache генерируется
+root до старта FPM, затем для PHP workers доступен только на чтение.
+Backend network пока общая; UFW/Fail2Ban не менялись. Изолированное изменение
+SSH keys-only описано ниже.
+
+## Read-only развёртывание
+
+Отдельный `docker/readonly-entrypoint.sh` не публикует assets, не меняет public/storage,
+не создаёт bucket и не очищает общий Blade cache. Перед переключением должны быть
+готовы зависимости, public/build/manifest.json, assets Filament/Livewire и абсолютная
+ссылка public/storage -> /var/www/storage/app/public. Подготовка выполняется на
+хосте/в отдельном build-процессе с проверенными правами, не на обслуживающем runtime.
+
+После обновления кода/настроек пересоздать app с полным набором overlays и проверить
+Nginx upstream DNS (nginx -t, затем nginx -s reload при необходимости).
+**Не запускать optimize:clear/config:clear/package:discover в serving-контейнере**:
+это удалит подготовленные PHP-кеши, которые workers не могут пересоздать.
+Не запускать vendor:publish в read-only runtime. Миграции — только через отдельный wrapper.
+
+Проверки: `python3 scripts/verify-readonly-runtime.py --container arm-app
+--url https://www.xn---15-7edz.xn--p1ai` на хосте. Они проверяют HTTP, БД/PDF,
+нулевую вставку аналитики, очередь без обработки jobs, запрет записи кода и scanner.
+Для нового экземпляра сначала запускать изолированного кандидата без внешних портов;
+`scripts/deploy-readonly-runtime.py --apply` требует root, проверяет кандидата ещё раз,
+сохраняет исходную конфигурацию и возвращает её при неуспехе production-проверок.
+Не запускать повторно вслепую, если overlay уже выбран.
+
+## SSH — 29 октября
+
+После двух независимых проверок ключа применён keys-only drop-in:
+PasswordAuthentication no, KbdInteractiveAuthentication no,
+PermitRootLogin prohibit-password, PubkeyAuthentication yes.
+После reload отдельный клиент подтвердил publickey как единственный предлагаемый
+метод. Пятиминутный таймер отката отменён после успешного нового входа.
+Существующие сеансы не прерывались, SSH-ключи не заменялись, локальный sudo сохранён.
+Для дальнейших изменений есть `scripts/enable-ssh-keys-only.py`, но он намеренно
+отказывается перезаписывать существующий drop-in. Не применять повторно без анализа.
+UFW и Fail2Ban в этом этапе не менялись; Fail2Ban остаётся остановленным.
 
 Служебные логи ClickHouse хранятся один календарный месяц: read-only конфигурация
 `docker/clickhouse/system-log-retention.xml` в security overlay. Аналитика

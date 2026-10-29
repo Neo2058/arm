@@ -1,0 +1,12 @@
+# Apply after security overlay, only after the candidate checks in the runbook.
+services:
+  app:
+    read_only: true
+    entrypoint: ["/bin/sh", "/var/www/docker/readonly-entrypoint.sh"]
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - .:/var/www:ro
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=256m,mode=1777
+      - /var/www/bootstrap/cache:rw,nosuid,nodev,noexec,size=16m,mode=0755

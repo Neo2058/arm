@@ -40,7 +40,8 @@
 ## Архитектура
 
 ### Production runtime isolation (28 October 2026)
-- Production uses `docker-compose.security.yml` LAST after prod/discipline/runtime;
+- Production uses `docker-compose.security.yml`, then `docker-compose.readonly.yml`
+  after prod/discipline/runtime;
   Compose >=2.30, root-only `/etc/arm/services/*.env`. Do not deploy base prod alone.
 - Application DB role `arm_runtime` has DML, not DDL/admin privileges. Run reviewed
   migrations via `sudo python3 scripts/arm-admin-artisan.py migrate --force`;
@@ -48,6 +49,10 @@
 - MinIO app key is bucket-scoped; bucket provisioning is administrative.
   `ARM_BUCKET_PROVISIONED=true` skips bucket creation in entrypoint.
 - Nginx sees public and only public storage subpath read-only, not full checkout.
+- App root filesystem and checkout are read-only. Runtime writes go to storage,
+  bounded /tmp and tmpfs bootstrap cache. PHP workers cannot change bootstrap cache.
+  Assets/symlink preparation occurs before cutover, not in the runtime entrypoint.
+  Deploy updates by recreating app; do not run optimize:clear in the serving container.
 - Keep host-only service env snapshots synchronized on config changes.
   See `SERVER_HARDENING_RUNBOOK.md`; secrets must never enter Git or tool output.
 - System logs in ClickHouse retain one calendar month via read-only

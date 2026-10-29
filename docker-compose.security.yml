@@ -1,4 +1,5 @@
-# Apply LAST, after provisioning /etc/arm/services/*.env (root:root 0600).
+# Apply after prod/discipline/runtime; readonly overlay follows in production.
+# Provision /etc/arm/services/*.env first (root:root 0600).
 # Requires Compose >= 2.30 (raw env_file). See SERVER_HARDENING_RUNBOOK.md.
 services:
   app:

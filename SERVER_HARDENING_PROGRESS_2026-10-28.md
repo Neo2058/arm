@@ -13,10 +13,12 @@
 - [x] Восстановить SSH-доступ после запуска Fail2Ban и проверить причину потери связи.
 - [ ] Настроить исключения/безопасный тест блокировки, автоматический откат;
       убедиться, что второй независимый вход по ключу работает.
-- [ ] Настроить SSH keys-only и firewall по одному изменению с проверкой доступа.
+- [x] Настроить SSH keys-only отдельно, с автооткатом и независимой проверкой входа.
+- [ ] Проверить и настроить firewall отдельно, без сброса ограничений панели.
 - [x] Разделить runtime/administrative PostgreSQL роли и MinIO credentials.
 - [x] Убрать избыточные env вспомогательных сервисов и полный checkout из Nginx.
-- [ ] Завершить ручную приёмку web/APK/Filament и отдельный этап read-only кода app.
+- [x] Включить read-only кода и rootfs app после изолированного кандидата и production smoke.
+- [ ] Завершить ручную приёмку web/APK/Filament на физических устройствах.
 - [ ] Решить судьбу старых PHP/Roundcube/служб панели без потери нужной почты.
 - [ ] Проверить backup ISPmanager и независимое восстановление.
 - [ ] Настроить внешнее наблюдение; автоматическую изоляцию вводить после
@@ -100,3 +102,33 @@ user_actions не очищался. Исправлен конфликт engine/t
 из-за которого ClickHouse перезапускался до восстановления после обрыва связи.
 Проверены стабильный запуск, чтение/нулевая вставка от приложения, HTTP 200.
 Подробности и ограничения полноты аналитики: CLICKHOUSE_STORAGE_AUDIT_2026-10-28.md.
+
+## Read-only runtime и SSH keys-only — 29 октября
+
+- Сохранён следующий этап PERSONAL_DATA_ENCRYPTION_PLAN.md: ФИО, телефоны, права,
+  даты рождения и связанные копии; аудит email/табельных/Telegram identifiers.
+  Шифрование и внешнее хранилище ключей пока не включаются.
+- Прочитаны startup/Compose, модели User/UserProfile/ArmPersonnel/PhoneContact,
+  PDF extraction, FileProxy и текущие runtime-настройки.
+- Изолированный кандидат использовал отдельный storage, без published ports.
+  На нём обнаружены и исправлены права родительских каталогов пустого storage;
+  production не переключался до повторного успешного полного smoke.
+- Новый readonly overlay: RO checkout/rootfs, временный bootstrap cache в памяти,
+  запрет записи кеша workers, bounded noexec /tmp, writable storage.
+- Полный operational smoke прошёл на кандидате и production: /login /install
+  /admin/login 200, /worktime 302, API 401; runtime DB/S3/ClickHouse/queue,
+  scanner, Python и запреты записи. Дополнительно настоящий синтетический PDF
+  извлечён через NaryadDocumentLoader и Python на обоих экземплярах.
+- 72 feature tests / 348 assertions. Startup/Python syntax checks прошли.
+- Автономная systemd cutover задача завершилась Result=success/ExecMainStatus=0;
+  откат не потребовался. Backup: /root/arm-readonly-20261029T135831.
+  Миграции дополнительно проверены migrate:status.
+- SSH изменён отдельно от firewall: два key-only входа до применения,
+  backup + проверка sshd -t/-T + timer 5m, reload, новый key-only вход после.
+  Сервер предлагает только publickey. Таймер отменён после проверки.
+- Backup SSH: /root/arm-ssh-keys-20261029T140209. Права sudo и console не менялись.
+  UFW/Fail2Ban/почта/старые PHP не изменены; общая backend сеть пока остаётся.
+
+Далее в текущем hardening: безопасный план Fail2Ban/firewall с учётом динамического
+административного IP и восстановления через провайдера, старые PHP/Roundcube,
+независимые backups и мониторинг. После него — согласованный этап шифрования PII.
