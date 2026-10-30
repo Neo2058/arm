@@ -59,6 +59,20 @@
   `docker/clickhouse/system-log-retention.xml`; `user_actions` is excluded.
   OpenTelemetry has an explicit engine: put its TTL inside engine, never alongside it.
 
+### PC recovery backups (30 October 2026)
+- Owner selected the Mac as backup storage. Closed age/Fernet keys and backup data
+  live outside Git in `~/.tch15-arm/`; never send closed keys to production.
+- Manual recovery-set builder: `scripts/build-full-backup.py`, root only, public
+  age recipient in `/etc/arm/backup-recipient`. Read-only exports; no production restore.
+- Includes PostgreSQL, MinIO objects/metadata, storage/app, application ClickHouse
+  tables, source/public and private configuration. Excludes technical system logs.
+  Refuses versioned S3 buckets until a version-aware export is implemented.
+- `scripts/pull-full-backup.py` verifies age EOF/authentication and all manifest
+  hashes without extracting plaintext. Incomplete `.partial` is not a valid backup.
+- No unattended root execution/NOPASSWD for deploy-writable scripts. Limited pull
+  identity, root-owned installation, scheduling and complete app restore are separate
+  acceptance steps. See `PC_BACKUP_PLAN.md` and `FULL_BACKUP_2026-10-30.md`.
+
 ### Основные принципы
 1. **Filament-first** для административных CRUD и сложных форм (особенно конструктор квизов).
 2. **React islands** только для сложной интерактивности на стороне пользователя (проигрыватель квизов, календарь смен, просмотр документов, таймеры).

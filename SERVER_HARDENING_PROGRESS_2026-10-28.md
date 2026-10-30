@@ -274,3 +274,34 @@ FTP/passive ports в будущем firewall-плане снято. Следую
 реализацией полного PC backup по PC_BACKUP_PLAN.md. Автоматическое расписание,
 архив MinIO/ClickHouse/storage/секретов и полное восстановление ещё не сделаны.
 Потеря ПК вместе с ключом потеряет и эту копию; не объявлять весь backup завершённым.
+
+## Recovery-набор на ПК — 30 октября, 19:40 МСК
+
+- [x] Прочитаны backup-план, SDK/age docs, Compose/mounts, ClickHouseService,
+  состав прикладной аналитики. Установлены age на Mac, age/python3-boto3 на сервере
+  (0 upgrades/removals, 5 новых пакетов). Авто-restart/reboot не выполнялся.
+- [x] Закрытый age key только на Mac, production получил публичный recipient.
+  Сборщик root-only: PG dump/roles, 45 MinIO objects + metadata/config, storage/app,
+  прикладной ClickHouse Native/SQL, source/public, private host/app config.
+- [x] Стабильность object/storage inventories проверена; PG dump из архива прошёл
+  изолированный restore. Native analytics прочитан отдельным offline контейнером.
+  Storage/app файлов не содержал; framework cache/logs не архивировались.
+- [x] Архив /var/lib/arm-backups/arm-full-20261030T162223Z.tar.gz.age,
+  146 788 865 байт. Root staging удалён; приватный ключ серверу не передавался.
+  Первая сборка остановилась на Git safe.directory, повторная прошла после локальной
+  option для конкретного checkout. Глобальный Git config не менялся.
+- [x] На ПК архив принят в ~/.tch15-arm/backups/full; проверены ciphertext SHA-256,
+  полный age EOF/authentication, размеры/hashes всех 60 компонентов и соответствие
+  restore report PostgreSQL dump. Plaintext на диск ПК не записывался.
+- [x] Докачка, до 4 SSH ranges и 10 security/integration tests. Первая медленная
+  передача при переходе на resume потеряла незавершённую часть; повторная завершилась
+  с проверкой сохранённого префикса и параллельных частей. Временные части удалены.
+- [x] Production healthy, /login /install 200; предыдущие SSH/FTP/PHP/BIND меры
+  сохранены, тестовых контейнеров нет. Данные/схемы/события не менялись.
+
+Документ: FULL_BACKUP_2026-10-30.md. Это первый вручную принятый recovery-набор,
+не образ ОС и не завершённый full app restore. Нет OCI/vendor binaries, MinIO IAM
+export требует пересоздания runtime account, роли/ACL восстанавливаются отдельно.
+Не гарантируется распределённый snapshot PG/S3/CH. Расписание/retention/ограниченный
+pull-user не включены. Точка продолжения — root-owned exporter и dedicated SSH
+read-only key, затем Mac scheduling и отдельная проверка полного app restore.

@@ -217,3 +217,24 @@ Rollback возвращает исходные credentials/env/mounts и пре�
 
 Это локальный тест PostgreSQL, не полный backup ARM и не внешняя копия.
 Полный статус: BACKUP_AUDIT_2026-10-30.md; выбор хранилища: BACKUP_STORAGE_OPTIONS.md.
+
+## Зашифрованный recovery-набор на ПК — 30 октября
+
+Ручной builder `scripts/build-full-backup.py --run --recipient-file /etc/arm/backup-recipient`
+читает S3 через SDK, PostgreSQL dump/roles, прикладной ClickHouse Native, storage/app,
+source/public/configuration. Требует root, age и python3-boto3; staging только root,
+получатель age публичный. Закрытый ключ хранится на Mac, сервер расшифровать архив
+не может. Получатель/ключи не являются новыми Laravel APP_KEY.
+
+Данные/схемы/доступ production не меняются; при смене file inventory сборка отклоняется.
+PG dump проходит реальный изолированный restore, Native читается в отдельном
+clickhouse-local. Это не распределённая транзакция и не образ диска ОС.
+Скрипт не удаляет готовые копии и не включает расписание; требуется 8 ГиБ свободного
+headroom. После аварийного kill проверить root-only work-* и временные test containers.
+
+Архивы /var/lib/arm-backups/*.tar.gz.age, receipt *.age.json. Принимаются на Mac
+`scripts/pull-full-backup.py`: закрытый ключ локальный, sudo password только в памяти,
+resume/до четырёх SSH диапазонов, общий hash/age authentication/manifest.
+Не выдавать generic NOPASSWD и не планировать root execution deploy-writable scripts.
+Дальнейшие limited SSH exporter/пользователь/расписание — отдельный этап.
+Комплектация, ограничения IAM/dependencies и точный статус: FULL_BACKUP_2026-10-30.md.
