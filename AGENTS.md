@@ -384,17 +384,17 @@ php artisan optimize:clear
 
 - `/journal/training-requests`: web instructor-only planning cards, separate InstructorTrainingRequests service; see INSTRUCTOR_ATZ.md. Keep this separate from individual Podstroika and normative completion.
 - Explicit participant count must equal distinct active drivers of current instructor column. Check fresh role/activity, owner/column and membership under locks. Lock instructor User to enforce 10 cards per planning month across columns; UUID receipts and mutations commit together.
-- New migration 2026_10_31_100000 is local/tested, not deployed. Do not assume production tables exist. No normative dates, new analytics events, mobile API or arm-nrd delivery added in stage 1.
+- Migration 2026_10_31_100000 was deployed on 31 October 2026 together with stage 2 and Android 1.0.14/code15. Stage 1 alone did not add normative dates, mobile API or arm-nrd delivery. No new analytics events.
 - Tests: InstructorTrainingRequestsTest and isolated tests/Support/training-concurrency.php; read INSTRUCTOR_ATZ.md for scope and deployment constraints.
 
 
 ## Instructor ATZ accounting — 31 October 2026
 
-- Stage 2 is local/tested, not deployed. Migration 2026_10_31_110000 follows stage 1. See INSTRUCTOR_ATZ.md.
+- Stage 2 was deployed on 31 October 2026. Migration 2026_10_31_110000 followed stage 1. See INSTRUCTOR_ATZ.md and ATZ_RELEASE_2026-10-31.md.
 - InstructorTrainingAccounting records actual attendance and updates existing atz/atz_line normatives atomically with UUID receipts; planning alone never completes a normative. Freeze confirmed cards; preserve immutable session/participant snapshots.
 - Separate 1–24 month settings reuse JournalNormativeSetting; both settings forms recalculate current owned normative due dates. ATZ calendar uses addMonthsNoOverflow. Do not change KIP calendar as a side effect.
 - Serialize owner operations; only current active drivers in card and column can attend. Existing (user_id,type) normative ownership conflicts must fail atomically, never reassign another instructor silently.
 - tests/Support/training-accounting-concurrency.php requires an isolated temporary PostgreSQL database/socket; never run against production. No new analytics event names or mobile endpoints introduced.
 
 
-ATZ mobile API and Android 1.0.14/code15 are implemented locally. Sanctum routes reuse InstructorTrainingRequests/InstructorTrainingAccounting. Exact requests persist in scoped mobile training storage; logout clears it. Owner will deploy production manually; see ATZ_RELEASE_2026-10-31.md. Do not claim this release migrated or published on production. Full-suite legacy accounting failures reproduce on base HEAD; targeted ATZ checks are separate.
+ATZ mobile API and Android 1.0.14/code15 were published on production on 31 October 2026. Sanctum routes reuse InstructorTrainingRequests/InstructorTrainingAccounting. Exact requests persist in scoped mobile training storage; logout clears it. See ATZ_RELEASE_2026-10-31.md and PRODUCTION_DEPLOYMENT.md. Full-suite legacy accounting failures reproduce on base HEAD; targeted ATZ checks are separate. Physical-phone instructor acceptance is still pending.
