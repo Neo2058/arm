@@ -87,6 +87,10 @@ def main():
         for item in archive:
             name = PurePosixPath(item.name)
             assert not name.is_absolute() and '..' not in name.parts
+            # macOS tar includes AppleDouble metadata; never publish those files.
+            if name.name.startswith('._'):
+                assert item.isfile() and item.size <= 4096
+                continue
             assert name.parts and name.parts[0] in ['build', 'downloads']
             assert item.isdir() or item.isfile()
             total += item.size
