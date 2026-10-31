@@ -55,6 +55,15 @@ Route::prefix('mobile')->group(function () {
         Route::get('/naryads', [NaryadController::class, 'index']);
         Route::get('/naryads/{naryad}', [NaryadController::class, 'show']);
 
+        Route::prefix('journal/training-requests')->controller(\App\Http\Controllers\Api\Mobile\TrainingRequestController::class)->group(function () {
+            Route::get('/', 'index');
+            Route::get('/crew', 'crew');
+            Route::post('/', 'store')->middleware('throttle:20,1');
+            Route::post('/periods', 'periods')->middleware('throttle:20,1');
+            Route::patch('/{trainingRequest}', 'update')->whereNumber('trainingRequest')->middleware('throttle:20,1');
+            Route::delete('/{trainingRequest}', 'destroy')->whereNumber('trainingRequest')->middleware('throttle:20,1');
+            Route::post('/{trainingRequest}/complete', 'complete')->whereNumber('trainingRequest')->middleware('throttle:20,1');
+        });
         Route::get('/journal', [JournalController::class, 'summary']);
         Route::get('/journal/tasks', [JournalController::class, 'tasks']);
         Route::post('/journal/tasks', [JournalController::class, 'createTask'])->middleware('throttle:20,1');

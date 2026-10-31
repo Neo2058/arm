@@ -1,3 +1,4 @@
+import TrainingRequestsScreen from './src/screens/TrainingRequestsScreen';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
@@ -98,6 +99,7 @@ function DisciplineStack() {
       <Stack.Screen name="DisciplineList" component={DisciplineListScreen} options={{ title: 'Поручения' }} />
       <Stack.Screen name="Journal" component={JournalScreen} options={{ title: 'Журнал инструктора' }} />
       <Stack.Screen name="JournalTasks" component={JournalTasksScreen} options={{ title: 'Личные задачи' }} />
+      <Stack.Screen name="TrainingRequests" component={TrainingRequestsScreen} options={{ title: 'Занятия АТЗ' }} />
       <Stack.Screen name="JournalCrew" component={JournalCrewScreen} options={{ title: 'Нормативы' }} />
       <Stack.Screen name="DisciplineDetail" component={DisciplineDetailScreen} options={{ title: 'Карточка исполнения' }} />
       <Stack.Screen name="DisciplineAttachment" component={DisciplineAttachmentScreen} options={({ route }) => ({ title: route.params.file.name })} />

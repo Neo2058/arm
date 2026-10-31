@@ -6,6 +6,14 @@ use App\Http\Middleware\EnsureInstructor;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(EnsureInstructor::class)->prefix('journal')->group(function () {
+    Route::post('/training-requests/periods', [\App\Http\Controllers\Instructor\TrainingRequestController::class, 'periods'])->name('journal.training-requests.periods');
+    Route::post('/training-requests/{trainingRequest}/complete', [\App\Http\Controllers\Instructor\TrainingRequestController::class, 'complete'])->whereNumber('trainingRequest')->name('journal.training-requests.complete');
+
+    Route::get('/training-requests', [\App\Http\Controllers\Instructor\TrainingRequestController::class, 'index'])->name('journal.training-requests.index');
+    Route::post('/training-requests', [\App\Http\Controllers\Instructor\TrainingRequestController::class, 'store'])->name('journal.training-requests.store');
+    Route::patch('/training-requests/{trainingRequest}', [\App\Http\Controllers\Instructor\TrainingRequestController::class, 'update'])->whereNumber('trainingRequest')->name('journal.training-requests.update');
+    Route::delete('/training-requests/{trainingRequest}', [\App\Http\Controllers\Instructor\TrainingRequestController::class, 'destroy'])->whereNumber('trainingRequest')->name('journal.training-requests.destroy');
+
     Route::get('/', [TCHMJournalController::class, 'index'])->name('journal.index');
     Route::post('/todo', [TCHMJournalController::class, 'addTodo'])->name('journal.todo.add');
     Route::post('/todo/{id}/complete', [TCHMJournalController::class, 'completeTodo'])->name('journal.todo.complete');

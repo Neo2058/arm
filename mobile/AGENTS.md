@@ -42,3 +42,6 @@ Manual retry after uncertain responses; 409 requires comparison/rebase, 422 perm
 Reauthenticate preserves drafts; explicit logout clears them and blocks late writes. All breaks paid.
 Subtotal is incomplete, not salary payable. Published with web/API migrations in Android 1.0.12 (13);
 see ../RELEASE_2026-10-27.md. Future APK releases must increase versionCode and retain the release certificate.
+
+
+ATZ: TrainingRequestsScreen in instructor Journal stack; training-mutations.cjs persists draft/exact UUID operation in training-requests namespace, isolated by API URL/user. Manual retries only; explicit logout stops and clears, reauthentication preserves. Use existing server ATZ services via /journal/training-requests; do not treat planning as completion. Version 1.0.14/code15 built locally; production publication is manual by owner. See ../ATZ_RELEASE_2026-10-31.md.

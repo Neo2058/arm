@@ -18,7 +18,7 @@ export default function JournalScreen({ navigation }) {
     {data && <><Text style={s.heading}>Колонна: {data.column || 'не указана'}</Text>{!!data.error && <Text style={s.error}>{data.error}</Text>}
       <Text style={s.muted}>Сводка журнала совпадает с веб-версией. Поручения руководителя находятся в отдельном разделе «Поручения».</Text>
       {Object.entries(stats).map(([key, label]) => <View key={key} style={s.card}><Text style={s.muted}>{label}</Text><Text style={s.heading}>{data.stats[key]}{key === 'norms_completed' ? '%' : ''}</Text></View>)}
-      {!!data.column && <><Pressable style={s.button} onPress={() => navigation.navigate('JournalTasks')}><IconLabel name="tasks" textStyle={s.buttonText}>Личные задачи</IconLabel></Pressable><Pressable style={s.secondary} onPress={() => navigation.navigate('JournalCrew')}><IconLabel name="team" textStyle={s.buttonText}>Бригада и нормативы</IconLabel></Pressable></>}
+      {!!data.column && <><Pressable style={s.button} onPress={() => navigation.navigate('TrainingRequests')}><Text style={s.buttonText}>Занятия АТЗ — подстройки и учёт</Text></Pressable><Pressable style={s.button} onPress={() => navigation.navigate('JournalTasks')}><IconLabel name="tasks" textStyle={s.buttonText}>Личные задачи</IconLabel></Pressable><Pressable style={s.secondary} onPress={() => navigation.navigate('JournalCrew')}><IconLabel name="team" textStyle={s.buttonText}>Бригада и нормативы</IconLabel></Pressable></>}
     </>}
   </ScrollView>;
 }
@@ -37,7 +37,7 @@ export function JournalCrewScreen() {
   const query = useJournal('/journal/crew', 'crew');
   return <FlatList style={s.page} contentContainerStyle={s.content} data={query.data?.crew || []} keyExtractor={item => item.id}
     refreshControl={<RefreshControl refreshing={query.busy} tintColor="#fb923c" onRefresh={query.refresh} />}
-    ListHeaderComponent={<><Text style={s.title}>Бригада и нормативы</Text><Text style={s.muted}>Машинисты вашей колонны. Показаны нормативы, закреплённые за вами; отсутствие записи обозначено явно. Изменение дат выполняется в веб-журнале.</Text><Feedback query={query} /></>}
+    ListHeaderComponent={<><Text style={s.title}>Бригада и нормативы</Text><Text style={s.muted}>Машинисты вашей колонны. Показаны нормативы, закреплённые за вами; отсутствие записи обозначено явно. Выполнение АТЗ отмечается в разделе «Занятия АТЗ». Остальные даты изменяются в веб-журнале.</Text><Feedback query={query} /></>}
     ListEmptyComponent={!query.busy && !query.error ? <Text style={s.muted}>В вашей колонне нет машинистов.</Text> : null}
     renderItem={({ item }) => <View style={s.card}><Text style={s.heading}>{item.name}</Text><Text style={s.muted}>Класс: {item.class || 'не указан'}</Text>{item.normatives.map(norm => <View key={norm.type} style={{ marginTop: 12 }}><Text style={s.body}>{norm.label}</Text>{norm.recorded ? <><Text style={s.muted}>Выполнен: {date(norm.last_date)} · следующий: {date(norm.next_date)}</Text>{norm.is_overdue && <Text style={s.error}>Просрочено</Text>}</> : <Text style={s.muted}>Запись в журнале отсутствует</Text>}</View>)}</View>}
     ListFooterComponent={query.data?.pagination.next_page ? <Pressable style={s.secondary} disabled={query.busy} onPress={query.more}><Text style={s.buttonText}>Загрузить ещё</Text></Pressable> : null} />;

@@ -1,6 +1,7 @@
 @extends('teaching.layouts.index')
 
 @section('content')
+<p class="px-4 pt-4">Выполнение АТЗ отмечается в <a class="underline" href="{{ route('journal.training-requests.index') }}">карточках занятий</a> с выбором присутствовавших.</p>
 <div class="max-w-7xl mx-auto px-4 pt-2 pb-6 lg:pt-6 lg:px-6">
     <h1 class="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-200 pl-6 md:pl-0">Нормативы - Колонна {{ $column }}</h1>
 
@@ -51,7 +52,7 @@
                                     </td>
                                     <td class="p-2 text-gray-900 dark:text-gray-200">
                                         <input type="date" class="last-date border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-1 text-sm w-full rounded focus:outline-none focus:ring-1 focus:ring-orange-500" name="normatives[{{ $member->id }}][{{ $type }}][last_date]" 
-                                               value="{{ $norm?->last_date?->format('Y-m-d') }}" data-member-id="{{ $member->id }}" data-type="{{ $type }}">
+                                               value="{{ $norm?->last_date?->format('Y-m-d') }}" @readonly(in_array($type,['atz','atz_line'])) data-member-id="{{ $member->id }}" data-type="{{ $type }}">
                                     </td>
                                     <td class="p-2 text-gray-900 dark:text-gray-200">
                                         <input type="date" class="next-date border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-200 p-1 text-sm w-full rounded focus:outline-none" name="normatives[{{ $member->id }}][{{ $type }}][next_date]" 
@@ -141,6 +142,14 @@ function calculateNextDate(lastDateStr, classVal, type) {
         months = normativePeriods.atz || 12;
     } else if (type === 'atz_line') {
         months = normativePeriods.atz_line || 12;
+    }
+    if (type === 'atz' || type === 'atz_line') {
+        const day = last.getUTCDate();
+        last.setUTCDate(1);
+        last.setUTCMonth(last.getUTCMonth() + months);
+        const end = new Date(Date.UTC(last.getUTCFullYear(), last.getUTCMonth() + 1, 0)).getUTCDate();
+        last.setUTCDate(Math.min(day, end));
+        return last.toISOString().split('T')[0];
     }
     last.setMonth(last.getMonth() + months);
     return last.toISOString().split('T')[0];

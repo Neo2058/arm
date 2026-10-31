@@ -6,6 +6,7 @@ import { createQueue } from './queue.cjs';
 import { createStorage } from './storage';
 import { submitReport } from './api';
 import s from './styles';
+import { createTrainingMutations } from '../journal/training-mutations.cjs';
 import { createMutations } from '../journal/mutations.cjs';
 
 const Context = createContext(null);
@@ -16,6 +17,8 @@ export async function clearDisciplineData() {
   runtime.controller.abort();
   await runtime.queue.stop();
   await runtime.journal.stop();
+  await runtime.training.stop();
+  await runtime.trainingStorage.clear();
   await runtime.journalStorage.clear();
   await runtime.storage.clear();
   if (current === runtime) current = null;
@@ -38,9 +41,15 @@ export function DisciplineProvider({ user, children }) {
           return (await client.request({ url: path, method: request.action === 'update' ? 'patch' : request.action === 'delete' ? 'delete' : 'post', data: request.input, signal: controller.signal })).data;
         } });
         await journal.load();
-        local = { queue, storage, controller, journalStorage, journal };
+        const trainingStorage = await createStorage(API_URL, user.id, 'training-requests');
+        const training = createTrainingMutations({ storage: trainingStorage, uuid: Crypto.randomUUID, send: async request => {
+          const path = request.action === 'create' ? '/journal/training-requests' : request.action === 'periods' ? '/journal/training-requests/periods' : `/journal/training-requests/${request.id}${request.action === 'complete' ? '/complete' : ''}`;
+          return (await client.request({ url: path, method: request.action === 'update' ? 'patch' : request.action === 'delete' ? 'delete' : 'post', data: request.input, signal: controller.signal })).data;
+        }});
+        await training.load();
+        local = { queue, storage, controller, journalStorage, journal, trainingStorage, training };
         await queue.load();
-        if (disposed) { await queue.stop(); return; }
+        if (disposed) { controller.abort(); await queue.stop(); await journal.stop(); await training.stop(); return; }
         if (!user._offline) for (const [id, entry] of Object.entries(queue.snapshot().entries)) if (entry.httpStatus === 401) await queue.retry(id);
         current = local; setRuntime(local); setError('');
         const flush = () => { if (AppState.currentState === 'active') queue.flush().catch(() => setError('Не удалось сохранить состояние очереди. Отправка будет повторена с тем же ключом.')); };
@@ -49,7 +58,7 @@ export function DisciplineProvider({ user, children }) {
         flush();
       } catch { if (!disposed) setError('Не удалось открыть локальные черновики. Повторите попытку; сохранённые данные не удалены.'); }
     })();
-    return () => { disposed = true; clearInterval(timer); sub?.remove(); local?.controller.abort(); local?.queue.stop(); local?.journal.stop(); if (current === local) current = null; };
+    return () => { disposed = true; clearInterval(timer); sub?.remove(); local?.controller.abort(); local?.queue.stop(); local?.journal.stop(); local?.training.stop(); if (current === local) current = null; };
   }, [user.id, user.role, attempt]);
   if (user.role !== 'instructor') return children;
   if (!runtime) return <View style={s.center}><Text style={s.error}>{error || 'Загрузка сохранённых поручений…'}</Text>{!!error && <Pressable style={s.secondary} onPress={() => setAttempt(x => x + 1)}><Text style={s.buttonText}>Повторить</Text></Pressable>}</View>;

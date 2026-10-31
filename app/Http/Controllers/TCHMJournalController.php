@@ -11,6 +11,8 @@ use App\Models\JournalVacation;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Services\ClickHouseService;
+use App\Services\Journal\InstructorTrainingAccounting;
+use App\Services\Journal\InstructorTrainingRequests;
 use App\Services\Journal\JournalOverview;
 use App\Services\Journal\JournalTasks;
 use Carbon\Carbon;
@@ -18,6 +20,9 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class TCHMJournalController extends Controller implements HasMiddleware
 {
@@ -214,10 +219,19 @@ class TCHMJournalController extends Controller implements HasMiddleware
 
         $settingData = $validated;
         unset($settingData['crew']);
-        JournalNormativeSetting::updateOrCreate(
-            ['user_id' => $user->id],
-            array_merge($settingData, ['column' => $profile?->column])
-        );
+        DB::transaction(function () use ($user, $settingData) {
+            // Serialize the legacy settings form with ATZ completion and dedicated periods form.
+            User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            app(InstructorTrainingAccounting::class)->periods($user, [
+                'operation_id' => (string) Str::uuid(),
+                'atz_months' => $settingData['atz_months'],
+                'atz_line_months' => $settingData['atz_line_months'],
+            ]);
+            JournalNormativeSetting::updateOrCreate(
+                ['user_id' => $user->id],
+                array_merge($settingData, ['column' => app(InstructorTrainingRequests::class)->column($user->fresh())])
+            );
+        });
 
         // Save crew marks and class if provided (now in settings)
         $crewData = $request->input('crew', []);
@@ -293,83 +307,96 @@ class TCHMJournalController extends Controller implements HasMiddleware
 
     public function updateStandards(Request $request)
     {
-        $user = Auth::user();
-        $profile = $user->profile;
-        $column = $profile?->column;
+        return DB::transaction(function () use ($request) {
+            $user = Auth::user()->fresh();
+            User::whereKey($user->id)->lock(DB::getDriverName() === 'pgsql' ? 'for no key update' : true)->firstOrFail();
+            UserProfile::where('user_id', $user->id)->lockForUpdate()->first();
+            app(InstructorTrainingRequests::class)->column($user);
+            $profile = $user->profile;
+            $column = $profile?->column;
 
-        $validated = $request->validate([
-            'normatives' => 'array',
-        ]);
+            $validated = $request->validate([
+                'normatives' => 'array',
+            ]);
 
-        // Update class if provided in norms form
-        $crewData = $request->input('crew', []);
-        foreach ($crewData as $userId => $data) {
-            if (isset($data['class'])) {
-                UserProfile::where('user_id', $userId)->update([
-                    'normative_class' => $data['class'],
-                ]);
+            // Update class if provided in norms form
+            $crewData = $request->input('crew', []);
+            foreach ($crewData as $userId => $data) {
+                if (isset($data['class'])) {
+                    UserProfile::where('user_id', $userId)->where('column', $column)->update([
+                        'normative_class' => $data['class'],
+                    ]);
+                }
             }
-        }
 
-        // Update normatives and recalc next
-        if (! empty($validated['normatives'])) {
-            $setting = JournalNormativeSetting::firstOrCreate(['user_id' => $user->id], ['column' => $column]);
+            // Update normatives and recalc next
+            if (! empty($validated['normatives'])) {
+                $setting = JournalNormativeSetting::firstOrCreate(['user_id' => $user->id], ['column' => $column]);
 
-            foreach ($validated['normatives'] as $userId => $types) {
-                foreach ($types as $type => $dates) {
-                    $norm = JournalCrewNormative::where('user_id', $userId)
-                        ->where('type', $type)
-                        ->first();
+                foreach ($validated['normatives'] as $userId => $types) {
+                    foreach ($types as $type => $dates) {
+                        $norm = JournalCrewNormative::where('user_id', $userId)
+                            ->where('instructor_id', $user->id)
+                            ->where('column', $column)
+                            ->where('type', $type)
+                            ->first();
 
-                    if ($norm) {
-                        $oldLast = $norm->last_date;
-                        $norm->last_date = $dates['last_date'] ?? null;
-                        $norm->class = UserProfile::where('user_id', $userId)->value('normative_class');
-                        $norm->next_date = $this->calculateNextDate($norm->last_date, $type, $norm->class, $setting);
-                        if ($type === 'kip_linia') {
-                            $norm->start_time = $dates['start_time'] ?? null;
-                            $norm->start_station = $dates['start_station'] ?? null;
-                            $norm->end_time = $dates['end_time'] ?? null;
-                            $norm->end_station = $dates['end_station'] ?? null;
-                            $norm->remarks = $dates['remarks'] ?? null;
-                            if (isset($dates['occurrences']) && is_array($dates['occurrences'])) {
-                                $norm->occurrences = $dates['occurrences'];
+                        if ($norm) {
+                            $oldLast = $norm->last_date;
+                            if (in_array($type, ['atz', 'atz_line'], true) && ($oldLast?->toDateString() ?? '') !== ($dates['last_date'] ?? '')) {
+                                throw ValidationException::withMessages(['normatives' => 'Выполнение АТЗ отмечается через карточку занятия с выбором присутствовавших.']);
                             }
-                        } elseif ($type === 'kip_manevry') {
-                            $norm->start_time = $dates['start_time'] ?? null;
-                            $norm->end_time = $dates['end_time'] ?? null;
-                            $norm->details = ['alternation' => $dates['maneuver_alternation'] ?? ''];
-                            $norm->remarks = $dates['remarks'] ?? null;
-                        } elseif ($type === 'kip_scep') {
-                            $norm->details = ['status' => $dates['scep_status'] ?? ''];
-                            $norm->remarks = $dates['remarks'] ?? null;
-                        } elseif (isset($dates['remarks'])) {
-                            $norm->remarks = $dates['remarks'];
-                        }
-                        $norm->save();
+                            if (in_array($type, ['atz', 'atz_line'], true)) {
+                                continue; // ATZ dates are maintained by attendance accounting and period settings.
+                            }
+                            $norm->last_date = $dates['last_date'] ?? null;
+                            $norm->class = UserProfile::where('user_id', $userId)->value('normative_class');
+                            $norm->next_date = $this->calculateNextDate($norm->last_date, $type, $norm->class, $setting);
+                            if ($type === 'kip_linia') {
+                                $norm->start_time = $dates['start_time'] ?? null;
+                                $norm->start_station = $dates['start_station'] ?? null;
+                                $norm->end_time = $dates['end_time'] ?? null;
+                                $norm->end_station = $dates['end_station'] ?? null;
+                                $norm->remarks = $dates['remarks'] ?? null;
+                                if (isset($dates['occurrences']) && is_array($dates['occurrences'])) {
+                                    $norm->occurrences = $dates['occurrences'];
+                                }
+                            } elseif ($type === 'kip_manevry') {
+                                $norm->start_time = $dates['start_time'] ?? null;
+                                $norm->end_time = $dates['end_time'] ?? null;
+                                $norm->details = ['alternation' => $dates['maneuver_alternation'] ?? ''];
+                                $norm->remarks = $dates['remarks'] ?? null;
+                            } elseif ($type === 'kip_scep') {
+                                $norm->details = ['status' => $dates['scep_status'] ?? ''];
+                                $norm->remarks = $dates['remarks'] ?? null;
+                            } elseif (isset($dates['remarks'])) {
+                                $norm->remarks = $dates['remarks'];
+                            }
+                            $norm->save();
 
-                        if (! empty($dates['last_date'])) {
-                            ClickHouseService::log('normative_completed', 0, [
-                                'type' => $type,
-                                'last_date' => $dates['last_date'],
-                                'next_date' => $norm->next_date ? $norm->next_date->format('Y-m-d') : null,
-                                'remarks' => $norm->remarks ?? null,
-                                'start_time' => $norm->start_time ?? ($dates['start_time'] ?? null),
-                                'end_time' => $norm->end_time ?? ($dates['end_time'] ?? null),
-                                'recorded_by' => Auth::id(),
-                                'column' => $column,
-                            ], (int) $userId);
+                            if (! empty($dates['last_date'])) {
+                                ClickHouseService::log('normative_completed', 0, [
+                                    'type' => $type,
+                                    'last_date' => $dates['last_date'],
+                                    'next_date' => $norm->next_date ? $norm->next_date->format('Y-m-d') : null,
+                                    'remarks' => $norm->remarks ?? null,
+                                    'start_time' => $norm->start_time ?? ($dates['start_time'] ?? null),
+                                    'end_time' => $norm->end_time ?? ($dates['end_time'] ?? null),
+                                    'recorded_by' => Auth::id(),
+                                    'column' => $column,
+                                ], (int) $userId);
+                            }
                         }
                     }
                 }
             }
-        }
 
-        ClickHouseService::log('journal.standards.updated', $user->id, [
-            'column' => $column,
-        ]);
+            ClickHouseService::log('journal.standards.updated', $user->id, [
+                'column' => $column,
+            ]);
 
-        return redirect()->route('journal.standards')->with('success', 'Нормативы обновлены.');
+            return redirect()->route('journal.standards')->with('success', 'Нормативы обновлены.');
+        }, 3);
     }
 
     private function calculateNextDate($lastDate, $type, $class, $setting)
@@ -406,6 +433,10 @@ class TCHMJournalController extends Controller implements HasMiddleware
             $months = $setting->atz_months ?? 12;
         } elseif ($type === 'atz_line') {
             $months = $setting->atz_line_months ?? 12;
+        }
+
+        if (in_array($type, ['atz', 'atz_line'], true)) {
+            return InstructorTrainingAccounting::nextDate($last->toDateString(), (int) $months);
         }
 
         return $last->copy()->addMonths($months)->format('Y-m-d');

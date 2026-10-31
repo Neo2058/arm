@@ -209,6 +209,7 @@
     ]);
 
     $journalMenu = [
+        ['title' => 'Подстройки АТЗ', 'route' => 'journal.training-requests.index', 'icon' => 'results'],
         ['title' => 'Картотека машинистов', 'route' => 'personnel.index', 'icon' => 'results'],
         ['title' => 'Исполнительская дисциплина', 'route' => 'discipline.index', 'icon' => 'results'],
 
