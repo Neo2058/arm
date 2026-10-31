@@ -113,7 +113,9 @@ def main():
     old_release = json.loads((ROOT/('public/downloads/release-'+old_sha+'.json')).read_text())
     assert old_release['certificate_sha256'] == CERT and old_release['version_code'] < 15
     def logged(command, label, timeout=180):
-        result = subprocess.run(command, capture_output=True, timeout=timeout)
+        # Private backup umask must not make Git-created runtime source unreadable.
+        options = {'preexec_fn': lambda: os.umask(0o022)} if command[0] == 'runuser' else {}
+        result = subprocess.run(command, capture_output=True, timeout=timeout, **options)
         (backup/(label+'.log')).write_bytes(result.stdout+result.stderr)
         if result.returncode:
             raise RuntimeError('Release command failed: '+label)
