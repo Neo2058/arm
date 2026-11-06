@@ -256,7 +256,7 @@
 - При обновлении PHP-зависимостей сохраняй `composer.config.platform.php = 8.2.0`; проверяй реальный PHP контейнера через `composer check-platform-reqs --no-dev`.
 - Обновление зависимостей безопасности и открытые mobile advisories — `SECURITY_DEPENDENCIES.md`; production устанавливает зависимости по lock-файлам.
 - Основной способ запуска — `docker compose up`.
-- Production + дисциплина + чат: `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml`.
+- Production + дисциплина + чат: действующий COMPOSE_FILE (security/readonly/monitor-mobile), chat overlay после security. Локально: `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml`.
 - Redis — только кеш/сессии. `QUEUE_CONNECTION=deferred` на `arm-app`. `QUEUE_CONNECTION=database` **только** на `arm-chat-worker`. Не `docker exec arm-app queue:work --queue=chat`.
 - `docker/php-fpm/www.conf` → `/usr/local/etc/php-fpm.d/zz-www.conf`, `pm.max_children=15` (фото; текстовый пилот можно на стоковых 5).
 - При локальной разработке без Docker помни про зависимости (postgres host = `postgres`, clickhouse = `clickhouse` и т.д. в конфигах).
@@ -424,19 +424,21 @@ ATZ mobile API and Android 1.0.14/code15 were published on production on 31 Octo
 - Текст синхронно (воркер не нужен). Фото/PDF: ClamAV + `ProcessChatAttachment` в таблице `jobs`. `QUEUE_CONNECTION=database` только на `arm-chat-worker`; на `arm-app` остаётся `deferred`. Не `docker exec arm-app queue:work --queue=chat`.
 - Redis — только кеш/сессии. Файлы через FileProxyService, не `Storage::temporaryUrl()`. Audit Filament: `admin.chat_room.*` и `admin.column_deputy.*`, без тел сообщений. Антивирус — `ClamAvScanner` + `config/antivirus.php`, не `config('discipline.*')`.
 - Compose: `docker-compose.prod.yml` + `docker-compose.discipline.yml` + `docker-compose.chat.yml`. Не `docker compose.yaml` (там нет `chat-worker`).
+- Production COMPOSE_FILE: prod + discipline + discipline.runtime + security + readonly + chat + `docker-compose.monitor-mobile.yml` последним. Chat overlay после security, иначе `environment: !reset` стирает `CHAT_*`. Не подменять действующий COMPOSE_FILE базовым prod.
+- `docker-compose.chat.yml` задаёт `CHAT_*` в environment у `app` (после security) и у `chat-worker`. Воркер: checkout read-only, `QUEUE_CONNECTION=database`.
 - `docker/php-fpm/www.conf`: `pm.max_children=15`. После правки `.env` — `--force-recreate app` (`env_file` замораживается при create; `up -d chat-worker` API не трогает). Откат: `CHAT_ENABLED=false` + recreate `app` (воркер idle).
 
-Пилот (всегда `-f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml`):
+Пилот (на проде — действующий COMPOSE_FILE, не только prod+discipline+chat):
 
 1. Резервная копия Postgres и MinIO `chat/`.
 2. На проде миграции — `sudo python3 scripts/arm-admin-artisan.py migrate --force` (роль `arm_runtime` без DDL). Локально: `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml exec app php artisan migrate --force`.
 3. Выставить `CHAT_ENCRYPTION_KEY` (пустой — fail closed).
-4. `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml up -d --force-recreate app`
+4. Пересоздать только `app` с действующим COMPOSE_FILE (`up -d --no-deps --force-recreate --wait app`).
 5. Filament уже открыт → создать **одну** комнату вручную при `CHAT_ENABLED=false`.
-6. APK `/install` (1.1.0 / versionCode 16; live 1.0.14 уже 15).
-7. `CHAT_ENABLED=true`, при необходимости `CHAT_PILOT_COLUMN`. Затем `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml up -d --force-recreate app`.
-8. Текст работает без воркера. Фото: `pm.max_children ≥ 15` + `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml up -d chat-worker`; проверить `docker top arm-chat-worker`. Это не подхватывает `.env` в API.
-9. `CHAT_ENABLED=false`, затем `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml up -d --force-recreate app` — воркер idle.
+6. Основной APK уже 1.1.1 / versionCode 17: вкладка чата скрыта, пока `features.chat` не true. Не понижать versionCode и не трогать приватный мониторинг `ru.tch15.arm.monitor`.
+7. `CHAT_ENABLED=true`, при необходимости `CHAT_PILOT_COLUMN`. Затем снова пересоздать только `app`.
+8. Текст работает без воркера. Фото: `pm.max_children ≥ 15` + `docker compose up -d chat-worker`; проверить `docker top arm-chat-worker`. Это не подхватывает `.env` в API. После recreate проверить mount `/run/arm-metrics` и `/run/arm-installers`.
+9. `CHAT_ENABLED=false`, затем пересоздать только `app` — воркер idle.
 
 
 ## Сверка картотеки — 6 ноября 2026

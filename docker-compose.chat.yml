@@ -1,9 +1,21 @@
-# Overlay to docker-compose.prod.yml + docker-compose.discipline.yml.
+# Overlay after prod/discipline (and after security/readonly on production).
+# Production COMPOSE_FILE must keep docker-compose.monitor-mobile.yml last.
+# Place this file after docker-compose.security.yml so CHAT_* survive environment !reset.
 services:
+  app:
+    environment:
+      CHAT_ENABLED: ${CHAT_ENABLED:-false}
+      CHAT_PILOT_COLUMN: ${CHAT_PILOT_COLUMN:-}
+      CHAT_ENCRYPTION_KEY: ${CHAT_ENCRYPTION_KEY:-}
+      CHAT_PREVIOUS_KEYS: ${CHAT_PREVIOUS_KEYS:-}
+      CHAT_TIMEZONE: ${CHAT_TIMEZONE:-Europe/Moscow}
   chat-worker:
     image: ${DISCIPLINE_APP_IMAGE:-arm-app}
     container_name: arm-chat-worker
     restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
     env_file:
       - .env
     environment:
@@ -26,8 +38,16 @@ services:
       - AWS_ENDPOINT=http://minio:9000
       - AWS_USE_PATH_STYLE_ENDPOINT=true
       - DISCIPLINE_CLAMD_CONFIG=/var/www/docker/clamav/clamd-client.conf
+      - CHAT_ENABLED=${CHAT_ENABLED:-false}
+      - CHAT_PILOT_COLUMN=${CHAT_PILOT_COLUMN:-}
+      - CHAT_ENCRYPTION_KEY=${CHAT_ENCRYPTION_KEY:-}
+      - CHAT_PREVIOUS_KEYS=${CHAT_PREVIOUS_KEYS:-}
+      - CHAT_TIMEZONE=${CHAT_TIMEZONE:-Europe/Moscow}
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=64m,mode=1777
+      - /var/www/bootstrap/cache:rw,nosuid,nodev,noexec,size=16m,mode=0755
     volumes:
-      - .:/var/www
+      - .:/var/www:ro
       - app_storage:/var/www/storage
       - ./docker/chat-worker-entrypoint.sh:/usr/local/bin/chat-worker-entrypoint.sh:ro
     networks:

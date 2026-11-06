@@ -11,6 +11,7 @@ test "${ARM_BUCKET_PROVISIONED:-false}" = true
 for path in \
     /var/www/storage \
     /var/www/storage/app \
+    /var/www/storage/app/chat-pending \
     /var/www/storage/app/private \
     /var/www/storage/app/private/livewire-tmp \
     /var/www/storage/app/public \
