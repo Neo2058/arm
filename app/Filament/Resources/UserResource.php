@@ -153,6 +153,9 @@ class UserResource extends Resource
             ])
 
             ->filters([
+                Tables\Filters\TernaryFilter::make('is_active')
+                    ->label('Активность')->placeholder('Все аккаунты')
+                    ->trueLabel('Только активные')->falseLabel('Только отключённые')->default(true),
 
                 Tables\Filters\SelectFilter::make('role')
                     ->label('Роль')

@@ -28,19 +28,21 @@ class PersonnelController extends Controller implements HasMiddleware
                     ->orWhere('brigade_code', $q);
             });
         }
-        if ($request->boolean('active')) {
+        if ($request->boolean('active', true)) {
+            $query->whereHas('user', fn ($user) => $user->where('is_active', true));
             $query->where(function ($inner) {
                 $inner->whereNull('fired_on')->orWhereDate('fired_on', '>=', now()->toDateString());
             });
         }
 
+        $total = (clone $query)->count();
         $people = $query->limit(200)->get();
 
         return view('naryad.partials.personnel', [
             'people' => $people,
-            'total' => ArmPersonnel::count(),
+            'total' => $total,
             'q' => (string) $request->string('q'),
-            'active' => $request->boolean('active'),
+            'active' => $request->boolean('active', true),
         ]);
     }
 

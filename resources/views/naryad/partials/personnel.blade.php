@@ -1,7 +1,7 @@
 <div class="max-w-6xl">
     <h2 class="text-2xl font-bold mb-1">Картотека машинистов</h2>
     <p class="text-sm text-orange-700 dark:text-orange-200 mb-4">
-        Всего карточек: <strong>{{ $total }}</strong>.
+        Найдено карточек: <strong>{{ $total }}</strong>.
         <a href="{{ route('personnel.index') }}" class="underline font-semibold">Открыть полную картотеку и редактирование</a>
     </p>
 

@@ -9,6 +9,7 @@
     @endif
     <form method="GET" action="{{ route('personnel.index') }}" class="flex flex-wrap gap-3 mb-4">
         <input name="q" value="{{ $q }}" maxlength="100" placeholder="ФИО, табельный, бригада" aria-label="Поиск по картотеке" class="border rounded-xl px-3 py-2 text-gray-900">
+        <input type="hidden" name="active" value="0">
         <label class="flex items-center gap-2"><input type="checkbox" name="active" value="1" @checked($active)> Только работающие</label>
         <button class="bg-orange-600 text-white rounded-xl px-4 py-2">Найти</button>
     </form>
