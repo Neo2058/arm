@@ -69,10 +69,7 @@ def main():
     assert json.loads(receipt.read_text())['postgres_restore_test'] == 'PASS'
     assert receipt.with_suffix('').is_file()
     assert shutil.disk_usage(ROOT).free > 4*1024**3
-    mount = json.loads(run('docker','inspect','--format','{{json .Mounts}}','arm-app').stdout)
-    storage = Path(next(m['Source'] for m in mount if m['Destination']=='/var/www/storage'))
-    assert str(storage).startswith('/var/lib/docker/volumes/')
-    installer = storage/'app/private/installers/tch15-monitor.apk'
+    installer = Path('/var/lib/arm-monitoring/installers/tch15-monitor.apk')
     main_apk = ROOT/'public/downloads/tch15-android.apk'
     backup = Path('/root')/('arm-monitor-release-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ'))
     backup.mkdir(mode=0o700)
@@ -96,10 +93,11 @@ def main():
         os.umask(0o022)
         git('merge','--ff-only',a.commit);switched=True
         (ROOT/'.env').write_text(new_env)
+        installer.parent.mkdir(mode=0o755, exist_ok=True)
+        os.chown(installer.parent, 0, 0)
+        installer.parent.chmod(0o755)
+        copy_atomic(a.monitor_apk, installer,0o444,(0,0))
         compose()
-        for folder in [storage/'app/private',installer.parent]:
-            if not folder.exists(): folder.mkdir(mode=0o750);os.chown(folder,33,33)
-        copy_atomic(a.monitor_apk, installer,0o640,(33,33))
         result=run('python3','scripts/verify-readonly-runtime.py','--container','arm-app','--url','https://www.xn---15-7edz.xn--p1ai',timeout=120)
         (backup/'verify.log').write_bytes(result.stdout+result.stderr)
         run('docker','exec','-u','www-data','arm-app','test','-r','/run/arm-metrics/arm.prom')
@@ -113,12 +111,14 @@ def main():
         assert digest(main_apk)==a.main_sha and digest(installer)==a.monitor_sha
         (backup/'success').write_text(a.commit+'\n')
         print('MONITOR_RELEASE_OK '+a.commit+' BACKUP='+str(backup))
-    except Exception:
+    except Exception as failure:
         (backup/'failure.log').write_text(traceback.format_exc())
+        if isinstance(failure, subprocess.CalledProcessError):
+            (backup/'command-failure.log').write_bytes((failure.stdout or b'') + (failure.stderr or b''))
         if switched:
             (ROOT/'.env').write_text(old_env)
             git('restore','--source='+BASE,'--staged','--worktree','--',*changed)
-            if (backup/'monitor-before.apk').exists():copy_atomic(backup/'monitor-before.apk',installer,0o640,(33,33))
+            if (backup/'monitor-before.apk').exists():copy_atomic(backup/'monitor-before.apk',installer,0o444,(0,0))
             elif installer.exists():installer.unlink()
             copy_atomic(backup/'main-before.apk',main_apk,0o644)
             compose()
