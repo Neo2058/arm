@@ -422,11 +422,11 @@ ATZ mobile API and Android 1.0.14/code15 were published on production on 31 Octo
 Пилот (всегда `-f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml`):
 
 1. Резервная копия Postgres и MinIO `chat/`.
-2. `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml exec app php artisan migrate --force`
+2. На проде миграции — `sudo python3 scripts/arm-admin-artisan.py migrate --force` (роль `arm_runtime` без DDL). Локально: `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml exec app php artisan migrate --force`.
 3. Выставить `CHAT_ENCRYPTION_KEY` (пустой — fail closed).
 4. `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml up -d --force-recreate app`
 5. Filament уже открыт → создать **одну** комнату вручную при `CHAT_ENABLED=false`.
-6. APK `/install` (1.1.0 / versionCode 8).
+6. APK `/install` (1.1.0 / versionCode 16; live 1.0.14 уже 15).
 7. `CHAT_ENABLED=true`, при необходимости `CHAT_PILOT_COLUMN`. Затем `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml up -d --force-recreate app`.
 8. Текст работает без воркера. Фото: `pm.max_children ≥ 15` + `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml up -d chat-worker`; проверить `docker top arm-chat-worker`. Это не подхватывает `.env` в API.
 9. `CHAT_ENABLED=false`, затем `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml up -d --force-recreate app` — воркер idle.
