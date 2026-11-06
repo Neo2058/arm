@@ -1,0 +1,56 @@
+{
+  "date": "2026-11-02",
+  "captures": [
+    {
+      "file": "web-carousel.png",
+      "platform": "web",
+      "viewport": "1600x1000",
+      "data": "synthetic",
+      "route": "/mainMenu",
+      "source": "Laravel rendered views; in-memory SQLite; static local presentation harness"
+    },
+    {
+      "file": "web-naryad.png",
+      "platform": "web",
+      "viewport": "1600x1000",
+      "data": "synthetic",
+      "route": "/naryad?month=2026-11",
+      "source": "Laravel rendered views; in-memory SQLite; static local presentation harness"
+    },
+    {
+      "file": "web-journal.png",
+      "platform": "web",
+      "viewport": "1600x1000",
+      "data": "synthetic",
+      "route": "/journal",
+      "source": "Laravel rendered views; in-memory SQLite; static local presentation harness"
+    },
+    {
+      "file": "web-atz.png",
+      "platform": "web",
+      "viewport": "1600x1000",
+      "data": "synthetic",
+      "route": "/journal/training-requests?month=2026-11",
+      "source": "Laravel rendered views; in-memory SQLite; static local presentation harness"
+    },
+    {
+      "file": "web-driver-tasks.png",
+      "platform": "web",
+      "viewport": "1600x1000",
+      "data": "synthetic",
+      "route": "/rosisi",
+      "source": "Laravel rendered views; in-memory SQLite; static local presentation harness"
+    },
+    {
+      "file": "web-driver-podstroiki.png",
+      "platform": "web",
+      "viewport": "1600x1000",
+      "data": "synthetic",
+      "route": "/podstroiki",
+      "source": "Laravel rendered views; in-memory SQLite; static local presentation harness"
+    }
+  ],
+  "blockedExternalHosts": [
+    "fonts.bunny.net"
+  ]
+}

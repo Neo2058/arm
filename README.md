@@ -39,6 +39,10 @@
 
 ## Документация
 
+- [Единый дизайн-документ для руководства](docs/management/ARM_DESIGN_DOCUMENT.md) — редакция 0.1 от 02.11.2026: возможности, защита, шифрование, локальный помощник, долги и сценарий презентации. Основания: [структура](docs/management/DESIGN_DOCUMENT_OUTLINE.md) и [реестр источников](docs/management/SOURCE_INVENTORY.md).
+- [План развития внутреннего чата](INTERNAL_CHAT_PLAN.md).
+- [Презентация для руководства](docs/management/presentation/README.md) — основная версия на 18 слайдов и техническая на 20, PPTX/PDF/HTML и учебные снимки веба/Android, рабочая редакция от 02.11.2026.
+
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** — архитектура, файловый прокси, доступ, маршруты
 - **[AGENTS.md](./AGENTS.md)** — соглашения для разработки (роли, наряд, файлы)
 - **[TECHNICAL_DEBT.md](./TECHNICAL_DEBT.md)** — открытый долг и снимок того, что уже закрыто

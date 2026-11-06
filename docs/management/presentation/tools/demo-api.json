@@ -1,0 +1,627 @@
+{
+    "\/journal": {
+        "column": "УЧ",
+        "stats": {
+            "column_members": 8,
+            "tasks_pending": 2,
+            "tasks_done": 1,
+            "documents_count": 0,
+            "norms_completed": 100,
+            "reports_written": 0
+        },
+        "error": null
+    },
+    "\/journal\/tasks": {
+        "column": "УЧ",
+        "tasks": [
+            {
+                "id": "3",
+                "version": "1",
+                "title": "Согласовать учебный план",
+                "description": "Учебная запись для презентации",
+                "due_date": "2026-11-10",
+                "status": "done",
+                "source": "manual",
+                "is_overdue": false
+            },
+            {
+                "id": "1",
+                "version": "1",
+                "title": "Подготовить занятие по электробезопасности",
+                "description": "Учебная запись для презентации",
+                "due_date": "2026-11-10",
+                "status": "pending",
+                "source": "manual",
+                "is_overdue": false
+            },
+            {
+                "id": "2",
+                "version": "1",
+                "title": "Проверить сроки нормативов колонны",
+                "description": "Учебная запись для презентации",
+                "due_date": "2026-11-10",
+                "status": "pending",
+                "source": "manual",
+                "is_overdue": false
+            }
+        ],
+        "pagination": {
+            "page": 1,
+            "next_page": null,
+            "total": 3
+        }
+    },
+    "\/journal\/crew": {
+        "column": "УЧ",
+        "crew": [
+            {
+                "id": "2",
+                "name": "Машинист Альфа",
+                "class": "1",
+                "normatives": [
+                    {
+                        "type": "kip_linia",
+                        "label": "КИП Линия",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_manevry",
+                        "label": "КИП Манёвры",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_podem",
+                        "label": "КИП Подъём",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_kru",
+                        "label": "КИП КРУ",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_ars_r",
+                        "label": "КИП АРС-Р",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_pnevmatika",
+                        "label": "КИП Пневматика",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_scep",
+                        "label": "КИП Сцеп",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "atz",
+                        "label": "АТЗ",
+                        "recorded": true,
+                        "last_date": "2026-10-15",
+                        "next_date": "2027-10-15",
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "atz_line",
+                        "label": "АТЗ на Линии",
+                        "recorded": true,
+                        "last_date": "2026-10-15",
+                        "next_date": "2027-10-15",
+                        "is_overdue": false
+                    }
+                ]
+            },
+            {
+                "id": "3",
+                "name": "Машинист Бета",
+                "class": "1",
+                "normatives": [
+                    {
+                        "type": "kip_linia",
+                        "label": "КИП Линия",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_manevry",
+                        "label": "КИП Манёвры",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_podem",
+                        "label": "КИП Подъём",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_kru",
+                        "label": "КИП КРУ",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_ars_r",
+                        "label": "КИП АРС-Р",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_pnevmatika",
+                        "label": "КИП Пневматика",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_scep",
+                        "label": "КИП Сцеп",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "atz",
+                        "label": "АТЗ",
+                        "recorded": true,
+                        "last_date": "2026-10-15",
+                        "next_date": "2027-10-15",
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "atz_line",
+                        "label": "АТЗ на Линии",
+                        "recorded": true,
+                        "last_date": "2026-10-15",
+                        "next_date": "2027-10-15",
+                        "is_overdue": false
+                    }
+                ]
+            },
+            {
+                "id": "4",
+                "name": "Машинист Гамма",
+                "class": "1",
+                "normatives": [
+                    {
+                        "type": "kip_linia",
+                        "label": "КИП Линия",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_manevry",
+                        "label": "КИП Манёвры",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_podem",
+                        "label": "КИП Подъём",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_kru",
+                        "label": "КИП КРУ",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_ars_r",
+                        "label": "КИП АРС-Р",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_pnevmatika",
+                        "label": "КИП Пневматика",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_scep",
+                        "label": "КИП Сцеп",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "atz",
+                        "label": "АТЗ",
+                        "recorded": true,
+                        "last_date": "2026-10-15",
+                        "next_date": "2027-10-15",
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "atz_line",
+                        "label": "АТЗ на Линии",
+                        "recorded": true,
+                        "last_date": "2026-10-15",
+                        "next_date": "2027-10-15",
+                        "is_overdue": false
+                    }
+                ]
+            },
+            {
+                "id": "5",
+                "name": "Машинист Дельта",
+                "class": "1",
+                "normatives": [
+                    {
+                        "type": "kip_linia",
+                        "label": "КИП Линия",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_manevry",
+                        "label": "КИП Манёвры",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_podem",
+                        "label": "КИП Подъём",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_kru",
+                        "label": "КИП КРУ",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_ars_r",
+                        "label": "КИП АРС-Р",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_pnevmatika",
+                        "label": "КИП Пневматика",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_scep",
+                        "label": "КИП Сцеп",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "atz",
+                        "label": "АТЗ",
+                        "recorded": true,
+                        "last_date": "2026-10-15",
+                        "next_date": "2027-10-15",
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "atz_line",
+                        "label": "АТЗ на Линии",
+                        "recorded": true,
+                        "last_date": "2026-10-15",
+                        "next_date": "2027-10-15",
+                        "is_overdue": false
+                    }
+                ]
+            },
+            {
+                "id": "7",
+                "name": "Машинист Зета",
+                "class": "1",
+                "normatives": [
+                    {
+                        "type": "kip_linia",
+                        "label": "КИП Линия",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_manevry",
+                        "label": "КИП Манёвры",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_podem",
+                        "label": "КИП Подъём",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_kru",
+                        "label": "КИП КРУ",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_ars_r",
+                        "label": "КИП АРС-Р",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_pnevmatika",
+                        "label": "КИП Пневматика",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_scep",
+                        "label": "КИП Сцеп",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "atz",
+                        "label": "АТЗ",
+                        "recorded": true,
+                        "last_date": "2026-10-15",
+                        "next_date": "2027-10-15",
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "atz_line",
+                        "label": "АТЗ на Линии",
+                        "recorded": true,
+                        "last_date": "2026-10-15",
+                        "next_date": "2027-10-15",
+                        "is_overdue": false
+                    }
+                ]
+            },
+            {
+                "id": "6",
+                "name": "Машинист Эпсилон",
+                "class": "1",
+                "normatives": [
+                    {
+                        "type": "kip_linia",
+                        "label": "КИП Линия",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_manevry",
+                        "label": "КИП Манёвры",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_podem",
+                        "label": "КИП Подъём",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_kru",
+                        "label": "КИП КРУ",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_ars_r",
+                        "label": "КИП АРС-Р",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_pnevmatika",
+                        "label": "КИП Пневматика",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "kip_scep",
+                        "label": "КИП Сцеп",
+                        "recorded": false,
+                        "last_date": null,
+                        "next_date": null,
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "atz",
+                        "label": "АТЗ",
+                        "recorded": true,
+                        "last_date": "2026-10-15",
+                        "next_date": "2027-10-15",
+                        "is_overdue": false
+                    },
+                    {
+                        "type": "atz_line",
+                        "label": "АТЗ на Линии",
+                        "recorded": true,
+                        "last_date": "2026-10-15",
+                        "next_date": "2027-10-15",
+                        "is_overdue": false
+                    }
+                ]
+            }
+        ],
+        "pagination": {
+            "page": 1,
+            "next_page": null,
+            "total": 6
+        }
+    },
+    "\/journal\/training-requests": {
+        "column": "УЧ",
+        "month": "2026-11",
+        "used": 1,
+        "limit": 10,
+        "periods": {
+            "atz_months": 12,
+            "atz_line_months": 12
+        },
+        "cards": [
+            {
+                "id": "1",
+                "version": "1",
+                "planning_month": "2026-11",
+                "shift_type": "А2",
+                "participant_count": 3,
+                "participants": [
+                    {
+                        "id": "2",
+                        "name": "Машинист Альфа"
+                    },
+                    {
+                        "id": "3",
+                        "name": "Машинист Бета"
+                    },
+                    {
+                        "id": "4",
+                        "name": "Машинист Гамма"
+                    }
+                ],
+                "completion": null
+            }
+        ]
+    },
+    "\/journal\/training-requests\/crew": {
+        "column": "УЧ",
+        "crew": [
+            {
+                "id": "2",
+                "name": "Машинист Альфа",
+                "tab_number": "D100"
+            },
+            {
+                "id": "3",
+                "name": "Машинист Бета",
+                "tab_number": "D101"
+            },
+            {
+                "id": "4",
+                "name": "Машинист Гамма",
+                "tab_number": "D102"
+            },
+            {
+                "id": "5",
+                "name": "Машинист Дельта",
+                "tab_number": "D103"
+            },
+            {
+                "id": "7",
+                "name": "Машинист Зета",
+                "tab_number": "D105"
+            },
+            {
+                "id": "6",
+                "name": "Машинист Эпсилон",
+                "tab_number": "D104"
+            }
+        ],
+        "next_page": null
+    },
+    "\/documents": {
+        "categories": [
+            {
+                "name": "Учебные инструкции",
+                "items": [
+                    {
+                        "id": 1,
+                        "title": "Электробезопасность: учебный материал",
+                        "updated_at": "02.11.2026"
+                    },
+                    {
+                        "id": 2,
+                        "title": "Организация работы локомотивной бригады",
+                        "updated_at": "02.11.2026"
+                    }
+                ]
+            }
+        ]
+    }
+}

@@ -1,0 +1,88 @@
+{
+  "screenshots": [
+    {
+      "file": "screenshots/android-atz.png",
+      "sha256": "f847b8fe9599ecadd2cfc16eff17de8a7f6831a0c7f74031f8096161280b6805",
+      "width": 1080,
+      "height": 2400,
+      "platform": "Android emulator",
+      "data": "synthetic",
+      "captured_on": "2026-11-02"
+    },
+    {
+      "file": "screenshots/android-documents.png",
+      "sha256": "0a940305ae91b29c3bb1f0da9d658584972e8bbcec7296d9f04ae18d0159fb56",
+      "width": 1080,
+      "height": 2400,
+      "platform": "Android emulator",
+      "data": "synthetic",
+      "captured_on": "2026-11-02"
+    },
+    {
+      "file": "screenshots/android-journal.png",
+      "sha256": "10b436a783ced01df01e0918f3882137a1bbf5e23a856d107a598de850021cb7",
+      "width": 1080,
+      "height": 2400,
+      "platform": "Android emulator",
+      "data": "synthetic",
+      "captured_on": "2026-11-02"
+    },
+    {
+      "file": "screenshots/web-atz.png",
+      "sha256": "2ed45f153e39df07ab3cb49d81b300ef87763776c41a8cad67af1d151ee45419",
+      "width": 1600,
+      "height": 1000,
+      "platform": "web browser",
+      "data": "synthetic",
+      "captured_on": "2026-11-02"
+    },
+    {
+      "file": "screenshots/web-carousel.png",
+      "sha256": "121dbc95c2c9f14e653d1c5b5fc05820db4acb892d592c8fcaaaf526176c6d82",
+      "width": 1600,
+      "height": 1000,
+      "platform": "web browser",
+      "data": "synthetic",
+      "captured_on": "2026-11-02"
+    },
+    {
+      "file": "screenshots/web-driver-podstroiki.png",
+      "sha256": "84f57e39300d155fbdd73c1aa030c7ae282bb3a006395c141cbc6e6a4f9321c1",
+      "width": 1600,
+      "height": 1000,
+      "platform": "web browser",
+      "data": "synthetic",
+      "captured_on": "2026-11-02"
+    },
+    {
+      "file": "screenshots/web-driver-tasks.png",
+      "sha256": "6a4643e73a3a0c643125f72713ff0131a1a8a1271ccc195d99644eb85af58f29",
+      "width": 1600,
+      "height": 1000,
+      "platform": "web browser",
+      "data": "synthetic",
+      "captured_on": "2026-11-02"
+    },
+    {
+      "file": "screenshots/web-journal.png",
+      "sha256": "ac63e78ac19b46da2f6278f1fb167025a2d6f1bbf477e2c4ee29937f8f457ed7",
+      "width": 1600,
+      "height": 1000,
+      "platform": "web browser",
+      "data": "synthetic",
+      "captured_on": "2026-11-02"
+    },
+    {
+      "file": "screenshots/web-naryad.png",
+      "sha256": "1ffc111ad51b1dcf81c665a79d6abf84ce7d0e64ee68303bf0ece6bccc2b5c11",
+      "width": 1600,
+      "height": 1000,
+      "platform": "web browser",
+      "data": "synthetic",
+      "captured_on": "2026-11-02"
+    }
+  ],
+  "android": "Real screen components inside a temporary demonstration wrapper. Synthetic read-only Axios replies, fetch blocked, Wi-Fi/data disabled in read-only emulator. Debug-signed temporary APK; not the production release.",
+  "web": "Actual Laravel views rendered against in-memory SQLite, served as local snapshots. External browser requests blocked.",
+  "not_a_test_claim": "No production or physical-device acceptance performed."
+}
