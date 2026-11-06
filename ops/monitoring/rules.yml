@@ -1,0 +1,17 @@
+groups:
+  - name: arm-health
+    rules:
+      - alert: ARMCollectorStale
+        expr: time() - arm_collector_timestamp_seconds > 90 or absent(arm_collector_timestamp_seconds)
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: 'ARM collector is stale; check systemd timer'}
+      - alert: ARMOperationalAlert
+        expr: arm_alert_active == 1
+        labels: {severity: warning}
+        annotations: {summary: 'ARM operational check requires attention'}
+      - alert: ARMExporterUnavailable
+        expr: up{job="arm"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: 'ARM metrics endpoint unavailable'}

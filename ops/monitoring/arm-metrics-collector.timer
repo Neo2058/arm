@@ -1,0 +1,9 @@
+[Unit]
+Description=Collect ARM health and resource metrics every 30 seconds
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+AccuracySec=1s
+Persistent=false
+[Install]
+WantedBy=timers.target

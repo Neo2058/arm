@@ -27,7 +27,7 @@ Route::prefix('mobile')->group(function () {
         ->name('mobile.files.naryads')
         ->middleware('signed');
 
-    Route::middleware(['auth:sanctum', EnsureActiveApiUser::class])->group(function () {
+    Route::middleware(['auth:sanctum', EnsureActiveApiUser::class, \App\Http\Middleware\RejectMonitorToken::class])->group(function () {
         Route::get('/account/profile', [ProfileController::class, 'show']);
         Route::patch('/account/profile', [ProfileController::class, 'update'])->middleware('throttle:20,1');
         Route::get('/me', [AuthController::class, 'me']);
@@ -82,5 +82,16 @@ Route::prefix('mobile')->group(function () {
         Route::post('/discipline/{assignment}/read', [DisciplineController::class, 'read'])->whereNumber('assignment');
         Route::post('/discipline/{assignment}/submit', [DisciplineController::class, 'submit'])->whereNumber('assignment')->middleware('throttle:20,1');
 
+    });
+});
+
+// Separate read-only token boundary; a monitor token cannot use the main mobile API.
+Route::prefix('monitor')->group(function () {
+    Route::post('/login', [\App\Http\Controllers\Api\MonitorController::class, 'login'])->middleware('throttle:login');
+    Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureMonitorAccess::class, 'throttle:60,1'])->group(function () {
+        Route::get('/snapshot', [\App\Http\Controllers\Api\MonitorController::class, 'snapshot']);
+        Route::post('/logout', [\App\Http\Controllers\Api\MonitorController::class, 'logout']);
+        Route::get('/installer', [\App\Http\Controllers\Api\MonitorController::class, 'installer'])->name('monitor.installer')->middleware('throttle:5,10');
+        Route::get('/installer-info', [\App\Http\Controllers\Api\MonitorController::class, 'installerInfo'])->name('monitor.installer-info')->middleware('throttle:10,10');
     });
 });

@@ -1,0 +1,68 @@
+# Standalone project. No app compose overrides, Docker socket, host root mounts or public ports.
+name: arm-monitoring
+services:
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:?pinned digest required}
+    container_name: arm-monitor-prometheus
+    network_mode: host
+    user: '65534:65534'
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.listen-address=127.0.0.1:9090
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --storage.tsdb.retention.size=2GB
+    volumes:
+      - /etc/arm-monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - /etc/arm-monitoring/rules.yml:/etc/prometheus/rules.yml:ro
+      - /var/lib/arm-monitoring/prometheus:/prometheus
+    read_only: true
+    tmpfs: ['/tmp:rw,noexec,nosuid,nodev,size=32m']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 512m
+    cpus: 0.5
+    pids_limit: 96
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: '5m', max-file: '2'}
+  grafana:
+    image: ${GRAFANA_IMAGE:?pinned digest required}
+    container_name: arm-monitor-grafana
+    network_mode: host
+    user: '472:472'
+    environment:
+      GF_SERVER_HTTP_ADDR: 127.0.0.1
+      GF_SERVER_HTTP_PORT: '3000'
+      GF_SERVER_ROOT_URL: http://localhost:3000
+      GF_SECURITY_ADMIN_USER: arm-admin
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/admin_password
+      GF_SECURITY_SECRET_KEY__FILE: /run/secrets/secret_key
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_USERS_ALLOW_ORG_CREATE: 'false'
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+      GF_AUTH_BASIC_ENABLED: 'true'
+      GF_ANALYTICS_REPORTING_ENABLED: 'false'
+      GF_ANALYTICS_CHECK_FOR_UPDATES: 'false'
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: 'false'
+      GF_SNAPSHOTS_EXTERNAL_ENABLED: 'false'
+      GF_EXPLORE_ENABLED: 'false'
+      GF_LOG_LEVEL: warn
+    volumes:
+      - /etc/arm-monitoring/grafana:/etc/grafana/provisioning:ro
+      - /etc/arm-monitoring/dashboards:/var/lib/grafana/dashboards:ro
+      - /etc/arm-monitoring/grafana-admin-password:/run/secrets/admin_password:ro
+      - /etc/arm-monitoring/grafana-secret-key:/run/secrets/secret_key:ro
+      - /var/lib/arm-monitoring/grafana:/var/lib/grafana
+    read_only: true
+    tmpfs: ['/tmp:rw,noexec,nosuid,nodev,size=32m']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 384m
+    cpus: 0.5
+    pids_limit: 96
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: '5m', max-file: '2'}
