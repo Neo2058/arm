@@ -3,3 +3,4 @@ services:
   app:
     volumes:
       - /var/lib/arm-monitoring/metrics:/run/arm-metrics:ro
+      - /var/lib/arm-monitoring/installers:/run/arm-installers:ro
