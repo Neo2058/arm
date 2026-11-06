@@ -105,7 +105,9 @@ class ArmPersonnelResource extends Resource
             Tables\Columns\TextColumn::make('brigade_code')->label('Бригада')->sortable(),
             Tables\Columns\TextColumn::make('fired_on')->label('Уволен')->date('d.m.Y')->sortable(),
         ])->filters([
-            Tables\Filters\Filter::make('working')->label('Только работающие')->query(fn ($query) => $query->where(fn ($q) => $q->whereNull('fired_on')->orWhereDate('fired_on', '>=', today()))),
+            Tables\Filters\Filter::make('working')->label('Только работающие')->default()->query(fn ($query) => $query
+                ->whereHas('user', fn ($user) => $user->where('is_active', true))
+                ->where(fn ($q) => $q->whereNull('fired_on')->orWhereDate('fired_on', '>=', today()))),
         ])->actions([
             Tables\Actions\ViewAction::make(),
             Tables\Actions\EditAction::make()->using(function (ArmPersonnel $record, array $data): ArmPersonnel {

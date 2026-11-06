@@ -19,13 +19,14 @@ class PersonnelDirectoryController extends Controller
             $query->where(fn ($inner) => $inner->where('tab_number', $operator, '%'.$q.'%')
                 ->orWhere('full_name', $operator, '%'.$q.'%')->orWhere('brigade_code', $q));
         }
-        if ($request->boolean('active')) {
+        if ($request->boolean('active', true)) {
+            $query->whereHas('user', fn ($user) => $user->where('is_active', true));
             $query->where(fn ($inner) => $inner->whereNull('fired_on')->orWhereDate('fired_on', '>=', today()));
         }
         $people = $query->paginate(50)->withQueryString();
 
         return view('personnel.index', [
-            'people' => $people, 'q' => $filters['q'] ?? '', 'active' => $request->boolean('active'),
+            'people' => $people, 'q' => $filters['q'] ?? '', 'active' => $request->boolean('active', true),
             'column' => $actor->isInstructor() ? $actor->profile?->column : null,
             'isInstructor' => $actor->isInstructor(),
         ]);
