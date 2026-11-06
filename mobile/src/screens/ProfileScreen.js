@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, AppState, Linking, Pressable, ScrollView, Sty
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { client } from '../api';
+import MonitorInstaller from '../monitor/MonitorInstaller';
 import ProfileEditor from './ProfileEditor';
 import AppIcon, { IconLabel } from '../components/AppIcon';
 
@@ -73,6 +74,7 @@ export default function ProfileScreen({ user, onLogout, onReauthenticate, onProf
     <View style={s.avatar}><AppIcon name="profile" size={36} /></View>
     <Text style={s.name}>{user.name}</Text><Text style={s.meta}>{user.email}</Text><Text style={s.meta}>Роль: {user.role}</Text>
     <Pressable style={s.button} onPress={onOpenWorkTime}><IconLabel name="tasks">Личный табель · смены и параметры</IconLabel></Pressable>
+    {user.role === 'super_admin' && <MonitorInstaller />}
     <ProfileEditor userId={user.id} onSaved={onProfileSaved} />
     <View style={s.card}>
       <IconLabel name="send" color="#fb923c">Telegram</IconLabel>

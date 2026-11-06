@@ -1,0 +1,20 @@
+[Unit]
+Description=ARM loopback-only read-only metrics endpoint
+After=network.target
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/libexec/arm-monitoring/collector.py --serve
+User=nobody
+Group=nogroup
+Restart=on-failure
+MemoryMax=64M
+CPUQuota=10%
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET
+[Install]
+WantedBy=multi-user.target

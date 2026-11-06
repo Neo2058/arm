@@ -1,5 +1,7 @@
 # Эксплуатация изолированного runtime ARM
 
+Дополнение 06.11.2026: установлен отдельный закрытый мониторинг, [MONITORING_RUNBOOK.md](MONITORING_RUNBOOK.md). Панель доступна через SSH, рабочее приложение не пересоздавалось, его read-only ограничения сохранены. Не смешивать Compose-проект мониторинга с основным.
+
 Применено 28–29 октября 2026. После prod/discipline/runtime применяются
 `docker-compose.security.yml` и последним `docker-compose.readonly.yml`.
 Требуется Docker Compose >= 2.30

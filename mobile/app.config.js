@@ -1,19 +1,21 @@
 const { resolveApiUrl } = require('./api-config.cjs');
 const apiUrl = resolveApiUrl(process.env.EXPO_PUBLIC_API_URL);
 
+const monitor = process.env.EXPO_PUBLIC_MONITOR_APP === '1';
+
 const isHttp = apiUrl.startsWith('http://');
 
 export default {
   expo: {
-    name: 'ТЧ-15',
-    slug: 'arm-mobile',
-    version: '1.1.0',
+    name: monitor ? 'ТЧ-15 · Мониторинг' : 'ТЧ-15',
+    slug: monitor ? 'arm-monitor' : 'arm-mobile',
+    version: monitor ? '1.0.0' : '1.1.1',
     orientation: 'portrait',
-    icon: './assets/icon.png',
+    icon: monitor ? './assets/monitor/icon.png' : './assets/icon.png',
     userInterfaceStyle: 'automatic',
-    scheme: 'tch15',
+    scheme: monitor ? 'tch15-monitor' : 'tch15',
     splash: {
-      image: './assets/icon.png',
+      image: monitor ? './assets/monitor/icon.png' : './assets/icon.png',
       resizeMode: 'contain',
       backgroundColor: '#0b1018',
     },
@@ -29,18 +31,21 @@ export default {
       },
     },
     android: {
-      package: 'ru.tch15.arm',
+      package: monitor ? 'ru.tch15.arm.monitor' : 'ru.tch15.arm',
       allowBackup: false,
-      versionCode: 16,
+      versionCode: monitor ? 1 : 17,
+      permissions: monitor ? [] : ['android.permission.REQUEST_INSTALL_PACKAGES'],
+      blockedPermissions: monitor ? ['android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE', 'android.permission.READ_MEDIA_IMAGES', 'android.permission.READ_MEDIA_VIDEO', 'android.permission.SYSTEM_ALERT_WINDOW', 'android.permission.REQUEST_INSTALL_PACKAGES'] : [],
       usesCleartextTraffic: isHttp,
       adaptiveIcon: {
         backgroundColor: '#0b1018',
-        foregroundImage: './assets/android-icon-foreground.png',
-        backgroundImage: './assets/android-icon-background.png',
-        monochromeImage: './assets/android-icon-monochrome.png',
+        foregroundImage: monitor ? './assets/monitor/android-icon-foreground.png' : './assets/android-icon-foreground.png',
+        backgroundImage: monitor ? './assets/monitor/android-icon-background.png' : './assets/android-icon-background.png',
+        monochromeImage: monitor ? './assets/monitor/android-icon-monochrome.png' : './assets/android-icon-monochrome.png',
       },
     },
     plugins: [
+      './plugins/with-release-signing.cjs',
       'expo-secure-store',
       'expo-video',
       ['expo-audio', { microphonePermission: false, recordAudioAndroid: false }],

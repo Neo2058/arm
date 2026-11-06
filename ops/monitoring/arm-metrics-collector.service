@@ -1,0 +1,23 @@
+[Unit]
+Description=ARM bounded aggregate metrics collector
+After=docker.service network-online.target
+OnFailure=arm-monitoring-failure.service
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/libexec/arm-monitoring/collector.py
+User=root
+UMask=0077
+TimeoutStartSec=45
+MemoryMax=256M
+CPUQuota=35%
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ReadWritePaths=/var/lib/arm-monitoring/private /var/lib/arm-monitoring/metrics
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

@@ -1,0 +1,5 @@
+# Append AFTER all current production overlays; do not replace COMPOSE_FILE.
+services:
+  app:
+    volumes:
+      - /var/lib/arm-monitoring/metrics:/run/arm-metrics:ro

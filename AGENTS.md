@@ -39,6 +39,13 @@
 
 ## Архитектура
 
+### Private operational monitoring (6 November 2026)
+- Standalone `arm-monitoring` Compose project, root-owned config `/etc/arm-monitoring`, collector `/usr/local/libexec/arm-monitoring/collector.py`. Sources: `ops/monitoring/`; see `MONITORING_RUNBOOK.md`.
+- Grafana/Prometheus/metrics bind only 127.0.0.1:3000/9090/9108; owner access through SSH tunnel. Never publish these ports or mount Docker socket/service env in monitoring containers.
+- The systemd collector reads fixed aggregates, uses runtime DB permissions, emits no user identifiers, URLs or SQL text. No ClickHouse schema/events or financial calculations changed.
+- Nginx has an additional aggregate-only log stream. HTTP rates/latency exclude access_log-off locations. Queue metrics cover database jobs, not deferred analytics; FPM worker count is not worker occupancy. Server backup age is not proof of a fresh PC copy.
+- Alerts only notify; do not automatically delete, encrypt, retry jobs or block application files. Full host outage still needs an independent observer. Installation script is first-install-only, not an updater.
+
 ### Production runtime isolation (28 October 2026)
 - Production uses `docker-compose.security.yml`, then `docker-compose.readonly.yml`
   after prod/discipline/runtime;
@@ -441,3 +448,7 @@ ATZ mobile API and Android 1.0.14/code15 were published on production on 31 Octo
 - Обновление кадровых полей использует сравнение с прежним source_data; ручные правки ФИО, класса и телефона сохранены. Новый полный исходный снимок содержит все 36 полей. Не запускать обычный arm:import-dbf поверх этой сверки без отдельной проверки: он снова создаст архивных людей и не обработает повторное использование табельного.
 - Списки пользователей и картотеки по умолчанию показывают активных/работающих. Архив выбирается явно через фильтр. «Работающие» требует одновременно отсутствия прошедшего увольнения и активного связанного аккаунта; active=0 сохраняет поиск по архиву с прежним ограничением по колонне инструктора.
 - Проверки: CurrentPersonnelListsTest и существующие PersonnelDirectoryTest/JournalAccessTest/FileProxyTest/NaryadPlanningTest/WebRoutesSplitTest/UserRoleAccessTest; отдельные 12 проверок алгоритма слияния и проверка плана без записи перед применением. Миграции и мобильный код в этом шаге не меняются.
+
+## Закрытый мобильный мониторинг (06.11.2026)
+
+`/api/monitor` — отдельные Sanctum-токены `monitor` с `monitor:read` на 12 часов, только активный `super_admin`. `RejectMonitorToken` запрещает этим токенам обычный `/api/mobile`. Скачивание приватного APK требует обычный токен `mobile` и актуальную роль. APK не размещать в public; путь `storage/app/private/installers/tch15-monitor.apk`. Снимок фиксированных агрегатов читается из `/run/arm-metrics/arm.prom`, readonly mount через последний `docker-compose.monitor-mobile.yml`. Секреты Grafana/SSH и Docker socket в приложении не используются. План: `MONITOR_MOBILE_PLAN.md`.

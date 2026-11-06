@@ -1,0 +1,14 @@
+[Unit]
+Description=Notify ARM administrator when the monitoring collector fails
+StartLimitIntervalSec=30min
+StartLimitBurst=2
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/python3 /usr/local/libexec/arm-monitoring/collector.py --notify-failure
+TimeoutStartSec=12
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+MemoryMax=64M

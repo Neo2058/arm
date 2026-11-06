@@ -13,7 +13,11 @@ use App\Http\Controllers\Api\Mobile\ProfileController;
 use App\Http\Controllers\Api\Mobile\QuizController;
 use App\Http\Controllers\Api\Mobile\TelegramAccountController;
 use App\Http\Controllers\Api\Mobile\TrainingController;
+use App\Http\Controllers\Api\Mobile\TrainingRequestController;
+use App\Http\Controllers\Api\MonitorController;
 use App\Http\Middleware\EnsureActiveApiUser;
+use App\Http\Middleware\EnsureMonitorAccess;
+use App\Http\Middleware\RejectMonitorToken;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('mobile')->group(function () {
@@ -32,11 +36,13 @@ Route::prefix('mobile')->group(function () {
         ->name('mobile.files.chats')
         ->middleware('signed');
 
-    Route::middleware(['auth:sanctum', EnsureActiveApiUser::class])->group(function () {
+    Route::middleware(['auth:sanctum', EnsureActiveApiUser::class, RejectMonitorToken::class])->group(function () {
         Route::get('/account/profile', [ProfileController::class, 'show']);
         Route::patch('/account/profile', [ProfileController::class, 'update'])->middleware('throttle:20,1');
         Route::get('/me', [AuthController::class, 'me']);
-        Route::prefix('worktime')->group(function () { require __DIR__.'/personal-worktime.php'; });
+        Route::prefix('worktime')->group(function () {
+            require __DIR__.'/personal-worktime.php';
+        });
         Route::post('/logout', [AuthController::class, 'logout']);
 
         Route::get('/account/telegram', [TelegramAccountController::class, 'show']);
@@ -60,7 +66,7 @@ Route::prefix('mobile')->group(function () {
         Route::get('/naryads', [NaryadController::class, 'index']);
         Route::get('/naryads/{naryad}', [NaryadController::class, 'show']);
 
-        Route::prefix('journal/training-requests')->controller(\App\Http\Controllers\Api\Mobile\TrainingRequestController::class)->group(function () {
+        Route::prefix('journal/training-requests')->controller(TrainingRequestController::class)->group(function () {
             Route::get('/', 'index');
             Route::get('/crew', 'crew');
             Route::post('/', 'store')->middleware('throttle:20,1');
@@ -99,5 +105,16 @@ Route::prefix('mobile')->group(function () {
         Route::post('/chats/{room}/members', [ChatController::class, 'addMember']);
         Route::delete('/chats/{room}/members/{user}', [ChatController::class, 'removeMember']);
 
+    });
+});
+
+// Separate read-only token boundary; a monitor token cannot use the main mobile API.
+Route::prefix('monitor')->group(function () {
+    Route::post('/login', [MonitorController::class, 'login'])->middleware('throttle:login');
+    Route::middleware(['auth:sanctum', EnsureMonitorAccess::class, 'throttle:60,1'])->group(function () {
+        Route::get('/snapshot', [MonitorController::class, 'snapshot']);
+        Route::post('/logout', [MonitorController::class, 'logout']);
+        Route::get('/installer', [MonitorController::class, 'installer'])->name('monitor.installer')->middleware('throttle:5,10');
+        Route::get('/installer-info', [MonitorController::class, 'installerInfo'])->name('monitor.installer-info')->middleware('throttle:10,10');
     });
 });
