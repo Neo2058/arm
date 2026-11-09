@@ -10,12 +10,19 @@ class Podstroika extends Model
     protected $fillable = [
         'user_id',
         'for_month',
+        'target_date',
+        'route_code',
+        'shift_code',
         'details',
         'status',
+        'source',
+        'conflict_reason',
+        'operation_id',
     ];
 
     protected $casts = [
         'for_month' => 'date',
+        'target_date' => 'date',
     ];
 
     public function user(): BelongsTo

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Mobile\FileController;
 use App\Http\Controllers\Api\Mobile\JournalController;
 use App\Http\Controllers\Api\Mobile\NaryadController;
 use App\Http\Controllers\Api\Mobile\PhoneController;
+use App\Http\Controllers\Api\Mobile\PodstroikaApiController;
 use App\Http\Controllers\Api\Mobile\ProfileController;
 use App\Http\Controllers\Api\Mobile\QuizController;
 use App\Http\Controllers\Api\Mobile\TelegramAccountController;
@@ -105,6 +106,12 @@ Route::prefix('mobile')->group(function () {
         Route::post('/chats/{room}/members', [ChatController::class, 'addMember']);
         Route::delete('/chats/{room}/members/{user}', [ChatController::class, 'removeMember']);
 
+        // Подстройки смен (Shift Adjustments) для мобильного приложения
+        Route::get('/podstroiki', [PodstroikaApiController::class, 'index']);
+        Route::post('/podstroiki', [PodstroikaApiController::class, 'store'])->middleware('throttle:15,1');
+        Route::get('/podstroiki/limits', [PodstroikaApiController::class, 'limits']);
+        Route::delete('/podstroiki/{id}', [PodstroikaApiController::class, 'destroy'])->whereNumber('id');
+        Route::get('/podstroiki/sync-for-naryad', [PodstroikaApiController::class, 'syncForNaryad']);
     });
 });
 
