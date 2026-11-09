@@ -12,6 +12,8 @@ import LoginScreen from './src/screens/LoginScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import WorkTimeScreen from './src/screens/WorkTimeScreen';
 import { clearWorkTimeData } from './src/worktime/storage';
+import { clearPodstroikiData } from './src/podstroiki/storage';
+import { canSubmitPodstroiki } from './src/podstroiki/mutations.cjs';
 import DocumentsScreen from './src/screens/DocumentsScreen';
 import DocumentViewScreen from './src/screens/DocumentViewScreen';
 import TopicsScreen from './src/screens/TopicsScreen';
@@ -22,6 +24,7 @@ import QuizPlayScreen from './src/screens/QuizPlayScreen';
 import NaryadsScreen from './src/screens/NaryadsScreen';
 import NaryadViewScreen from './src/screens/NaryadViewScreen';
 import PhonesScreen from './src/screens/PhonesScreen';
+import PodstroikiScreen from './src/screens/PodstroikiScreen';
 import DisciplineListScreen from './src/screens/DisciplineListScreen';
 import DisciplineDetailScreen from './src/screens/DisciplineDetailScreen';
 import DisciplineAttachmentScreen from './src/screens/DisciplineAttachmentScreen';
@@ -79,24 +82,33 @@ function QuizzesStack() {
   );
 }
 
-function NaryadsStack() {
+function NaryadsStack({ user }) {
   return (
     <Stack.Navigator screenOptions={{ headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}>
       <Stack.Screen
         name="NaryadsList"
-        component={NaryadsScreen}
         options={({ navigation }) => ({
           title: 'Наряды',
           headerRight: () => (
-            <Pressable accessibilityRole="button" accessibilityLabel="Телефоны" hitSlop={10} onPress={() => navigation.navigate('Phones')} style={{ padding: 10 }}>
-              <AppIcon name="phone" />
-            </Pressable>
+            <View style={{ flexDirection: 'row' }}>
+              {canSubmitPodstroiki(user) && (
+                <Pressable accessibilityRole="button" accessibilityLabel="Подстройки" hitSlop={10} onPress={() => navigation.navigate('Podstroiki')} style={{ padding: 10 }}>
+                  <AppIcon name="send" />
+                </Pressable>
+              )}
+              <Pressable accessibilityRole="button" accessibilityLabel="Телефоны" hitSlop={10} onPress={() => navigation.navigate('Phones')} style={{ padding: 10 }}>
+                <AppIcon name="phone" />
+              </Pressable>
+            </View>
           ),
         })}
-      />
+      >
+        {(props) => <NaryadsScreen {...props} user={user} />}
+      </Stack.Screen>
       <Stack.Screen name="NaryadView" component={NaryadViewScreen} options={({ route }) => ({ title: route.params?.title || 'Наряд' })} />
       <Stack.Screen name="DocumentView" component={DocumentViewScreen} options={({ route }) => ({ title: route.params?.title || 'PDF' })} />
       <Stack.Screen name="Phones" component={PhonesScreen} options={{ title: 'Телефоны' }} />
+      <Stack.Screen name="Podstroiki" options={{ title: 'Подстройки' }}>{() => <PodstroikiScreen user={user} />}</Stack.Screen>
     </Stack.Navigator>
   );
 }
@@ -117,8 +129,9 @@ function DisciplineStack() {
 
 function ProfileStack({ user, onLogout, onReauthenticate, onProfileSaved }) {
   return <Stack.Navigator screenOptions={{ headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}>
-    <Stack.Screen name="ProfileHome" options={{ title: 'Профиль' }}>{({ navigation }) => <ProfileScreen user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} onProfileSaved={onProfileSaved} onOpenWorkTime={() => navigation.navigate('PersonalWorkTime')} />}</Stack.Screen>
+    <Stack.Screen name="ProfileHome" options={{ title: 'Профиль' }}>{({ navigation }) => <ProfileScreen user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} onProfileSaved={onProfileSaved} onOpenWorkTime={() => navigation.navigate('PersonalWorkTime')} onOpenPodstroiki={() => navigation.navigate('Podstroiki')} />}</Stack.Screen>
     <Stack.Screen name="PersonalWorkTime" options={{ title: 'Личный табель' }}>{() => <WorkTimeScreen userId={user.id} />}</Stack.Screen>
+    {canSubmitPodstroiki(user) && <Stack.Screen name="Podstroiki" options={{ title: 'Подстройки' }}>{() => <PodstroikiScreen user={user} />}</Stack.Screen>}
   </Stack.Navigator>;
 }
 
@@ -240,7 +253,7 @@ function MainTabs({ user, onLogout, onReauthenticate, onProfileSaved }) {
       {user.role === 'instructor' && <Tab.Screen name="DisciplineTab" component={DisciplineStack} options={{ title: 'Поручения' }} />}
       <Tab.Screen name="DocsTab" component={DocumentsStack} options={{ title: 'Документы' }} />
       <Tab.Screen name="QuizTab" component={QuizzesStack} options={{ title: 'Тесты' }} />
-      <Tab.Screen name="NaryadTab" component={NaryadsStack} options={{ title: 'Наряды' }} />
+      <Tab.Screen name="NaryadTab" options={{ title: 'Наряды' }}>{() => <NaryadsStack user={user} />}</Tab.Screen>
       <Tab.Screen name="TrainTab" component={TrainingStack} options={{ title: 'Обучение' }} />
       <Tab.Screen
         name="ProfileTab"
@@ -305,6 +318,7 @@ export default function App() {
           onLogout={async () => {
             try {
               await clearWorkTimeData(user.id);
+              await clearPodstroikiData(user.id);
               await clearDisciplineData();
               await clearChatData(createFileStorage(FileSystem));
               await SecureStore.deleteItemAsync('disciplineIdentity');

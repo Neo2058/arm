@@ -6,8 +6,9 @@ import { client } from '../api';
 import MonitorInstaller from '../monitor/MonitorInstaller';
 import ProfileEditor from './ProfileEditor';
 import AppIcon, { IconLabel } from '../components/AppIcon';
+import { canSubmitPodstroiki } from '../podstroiki/mutations.cjs';
 
-export default function ProfileScreen({ user, onLogout, onReauthenticate, onProfileSaved, onOpenWorkTime }) {
+export default function ProfileScreen({ user, onLogout, onReauthenticate, onProfileSaved, onOpenWorkTime, onOpenPodstroiki }) {
   const [telegram, setTelegram] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -74,6 +75,9 @@ export default function ProfileScreen({ user, onLogout, onReauthenticate, onProf
     <View style={s.avatar}><AppIcon name="profile" size={36} /></View>
     <Text style={s.name}>{user.name}</Text><Text style={s.meta}>{user.email}</Text><Text style={s.meta}>Роль: {user.role}</Text>
     <Pressable style={s.button} onPress={onOpenWorkTime}><IconLabel name="tasks">Личный табель · смены и параметры</IconLabel></Pressable>
+    {canSubmitPodstroiki(user) && onOpenPodstroiki && (
+      <Pressable style={s.button} onPress={onOpenPodstroiki}><IconLabel name="send">Подстройки смен</IconLabel></Pressable>
+    )}
     {user.role === 'super_admin' && <MonitorInstaller />}
     <ProfileEditor userId={user.id} onSaved={onProfileSaved} />
     <View style={s.card}>

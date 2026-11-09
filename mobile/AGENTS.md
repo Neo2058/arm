@@ -34,6 +34,8 @@ Version is visible in profile. Icons use local react-native-svg paths in compone
 
 Journal task mutations: TaskEditor + journal/mutations.cjs, shared JournalTasks service. Persist exact UUID/version/body before sending; manual retries survive restarts. Keep TextInput defaultValue stable while saving asynchronously. Reauthenticate preserves editor, explicit logout clears journal-tasks storage. No package/App/version changes from parallel profile development are included here. See JOURNAL_TASKS.md.
 
+Shift adjustments (подстройки): driver and instructor only. `PodstroikiScreen` from Naryads (header + list card) and Profile. Sanctum `GET/POST /podstroiki`, `GET /podstroiki/limits`, `DELETE /podstroiki/{id}`. Structured `target_date` / `route_code` / `shift_code` / `details` plus frozen `operation_id`. Instructors skip the monthly count cap; drivers use dispatcher `NaryadPodstroikaLimit` (default 1). Unique date, rest-interval warning, and cancel of pending stay. A cancelled row on the same date is reopened instead of inserting a second. Keep this out of ATZ `TrainingRequestsScreen` and dispatcher `/naryad`. Logout clears `podstroiki` storage. Tests: `MobilePodstroikiTest`, `PodstroikiReviewResolutionTest`, `mobile/tests/podstroiki-mutations.test.cjs`. Android 1.1.2 / versionCode 18.
+
 Personal work time: ProfileStack → WorkTimeScreen, GET/POST/PUT/PATCH `/worktime` on mobile API.
 See ../PERSONAL_WORKTIME_UI.md. Shared pure model.mjs/controller.mjs are also imported by web;
 inject platform React rather than importing mobile React from web. All payroll math is server-side.

@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\Api\Mobile\PodstroikaApiController;
+use App\Models\NaryadPodstroikaLimit;
 use App\Models\Podstroika;
 use App\Models\User;
 use App\Models\UserProfile;
+use App\Services\ClickHouseService;
 use App\Services\PodstroikaService;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
@@ -24,6 +26,7 @@ class PodstroikiReviewResolutionTest extends TestCase
     {
         $this->travelTo(Carbon::parse('2026-11-06 12:00:00'));
         putenv('REDIS_PORT=9');
+        ClickHouseService::fake();
 
         if (!Schema::hasTable('arm_podstroika_limits')) {
             Schema::create('arm_podstroika_limits', function (Blueprint $t) {
@@ -258,5 +261,76 @@ class PodstroikiReviewResolutionTest extends TestCase
         // Никакого частичного применения: основная заявка осталась pending!
         $this->assertSame('pending', $p->fresh()->status);
         $this->assertSame('APPLIED', DB::table('arm_podstroiki')->where('id', $p->id)->value('status'));
+    }
+
+    public function test_instructor_ignores_monthly_count_limit_but_keeps_unique_date(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-06 12:00:00'));
+        putenv('REDIS_PORT=9');
+        ClickHouseService::fake();
+
+        $instructor = User::factory()->instructor()->create();
+        UserProfile::create(['user_id' => $instructor->id, 'tab_number' => '0438', 'column' => '15']);
+        NaryadPodstroikaLimit::create([
+            'user_id' => $instructor->id,
+            'for_month' => '2026-11-01',
+            'max_approved' => 1,
+        ]);
+
+        $first = PodstroikaService::createPodstroika($instructor, '2026-11-10', '01', '1', 'one');
+        $second = PodstroikaService::createPodstroika($instructor, '2026-11-11', '02', '2', 'two');
+        $third = PodstroikaService::createPodstroika($instructor, '2026-11-12', '03', '3', 'three');
+
+        $this->assertTrue($first['success']);
+        $this->assertTrue($second['success']);
+        $this->assertTrue($third['success']);
+        $this->assertTrue($first['limit']['unlimited']);
+        $this->assertTrue($third['limit']['can_submit']);
+        $this->assertSame(3, $third['limit']['used']);
+        $this->assertDatabaseCount('podstroikas', 3);
+
+        $duplicate = PodstroikaService::createPodstroika($instructor, '2026-11-10', '04', '1', 'same day');
+        $this->assertFalse($duplicate['success']);
+        $this->assertStringContainsString('уже подана активная заявка', $duplicate['message']);
+    }
+
+    public function test_driver_default_monthly_limit_is_one(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-06 12:00:00'));
+        putenv('REDIS_PORT=9');
+        ClickHouseService::fake();
+
+        $driver = User::factory()->driver()->create();
+        UserProfile::create(['user_id' => $driver->id, 'tab_number' => '0322', 'column' => '15']);
+
+        $first = PodstroikaService::createPodstroika($driver, '2026-11-10', '01', '1', 'one');
+        $second = PodstroikaService::createPodstroika($driver, '2026-11-11', '02', '2', 'two');
+
+        $this->assertTrue($first['success']);
+        $this->assertFalse($second['success']);
+        $this->assertStringContainsString('Превышен лимит подстроек', $second['message']);
+        $this->assertDatabaseCount('podstroikas', 1);
+        $this->assertFalse($first['limit']['unlimited']);
+    }
+
+    public function test_cancelled_same_date_is_reopened_instead_of_inserting(): void
+    {
+        $u = $this->prepare();
+        $created = PodstroikaService::createPodstroika($u, '2026-11-10', '01', '1', 'first');
+        $this->assertTrue($created['success']);
+        $id = $created['podstroika']['id'];
+
+        $this->assertTrue(PodstroikaService::cancelPodstroika($id, $u)['success']);
+        $this->assertSame('cancelled', Podstroika::find($id)?->status);
+        $this->assertSame('CANCELLED', DB::table('arm_podstroiki')->where('id', $id)->value('status'));
+
+        $again = PodstroikaService::createPodstroika($u, '2026-11-10', '05', '2', 'after cancel');
+        $this->assertTrue($again['success']);
+        $this->assertSame($id, $again['podstroika']['id']);
+        $this->assertDatabaseCount('podstroikas', 1);
+        $this->assertDatabaseCount('arm_podstroiki', 1);
+        $this->assertSame('pending', Podstroika::find($id)?->status);
+        $this->assertSame('PENDING', DB::table('arm_podstroiki')->where('id', $id)->value('status'));
+        $this->assertSame('05', DB::table('arm_podstroiki')->where('id', $id)->value('route_code'));
     }
 }

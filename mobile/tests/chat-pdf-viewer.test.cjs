@@ -38,11 +38,11 @@ test('ChatPdfScreen fetches capability URL bytes and does not lock screenshots',
   assert.doesNotMatch(src, /Bearer/);
 });
 
-test('APK 1.1.0 uses versionCode 16, picker plugins, and no screen-capture plugin', () => {
+test('APK 1.1.2 uses versionCode 18, picker plugins, and no screen-capture plugin', () => {
   const config = fs.readFileSync(path.join(__dirname, '../app.config.js'), 'utf8');
   const api = fs.readFileSync(path.join(__dirname, '../src/api.js'), 'utf8');
-  assert.match(config, /version:\s*'1\.1\.0'/);
-  assert.match(config, /versionCode:\s*16/);
+  assert.match(config, /version:\s*monitor \? '1\.0\.0' : '1\.1\.2'/);
+  assert.match(config, /versionCode:\s*monitor \? 1 : 18/);
   assert.match(config, /expo-image-picker/);
   const picker = config.slice(config.indexOf('expo-image-picker'), config.indexOf('expo-document-picker'));
   assert.match(picker, /cameraPermission:\s*false/);

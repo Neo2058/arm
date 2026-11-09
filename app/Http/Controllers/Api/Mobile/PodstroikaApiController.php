@@ -29,15 +29,17 @@ class PodstroikaApiController extends Controller
         $startDate = $startOfMonth->format('Y-m-d');
         $endDate = $startOfMonth->copy()->endOfMonth()->format('Y-m-d');
 
-        $limitStatus = PodstroikaService::getLimitStatus($tabNumber, $user->id, $month);
+        $limitStatus = PodstroikaService::getLimitStatus($tabNumber, $user->id, $month, $user);
 
         $items = [];
 
         if (Schema::hasTable('podstroikas')) {
             $myPodstroikas = Podstroika::where('user_id', $user->id)
                 ->where(function ($q) use ($startDate, $endDate) {
-                    $q->whereBetween('target_date', [$startDate, $endDate])
-                      ->orWhere('for_month', $startDate);
+                    $q->where(function ($inner) use ($startDate, $endDate) {
+                        $inner->whereDate('target_date', '>=', $startDate)
+                            ->whereDate('target_date', '<=', $endDate);
+                    })->orWhereDate('for_month', $startDate);
                 })
                 ->orderBy('target_date', 'asc')
                 ->get();
@@ -63,6 +65,7 @@ class PodstroikaApiController extends Controller
                     'status_label' => $statusLabel,
                     'is_applied' => in_array($statusUpper, ['APPLIED', 'PODSTROENO']),
                     'can_cancel' => !in_array($statusUpper, ['APPLIED', 'PODSTROENO', 'CANCELLED', 'REJECTED']),
+                    'warning' => $p->conflict_reason,
                     'created_at' => $p->created_at?->toIso8601String(),
                 ];
             }
@@ -94,6 +97,7 @@ class PodstroikaApiController extends Controller
                     'status_label' => $statusLabel,
                     'is_applied' => in_array($statusUpper, ['APPLIED', 'PODSTROENO']),
                     'can_cancel' => !in_array($statusUpper, ['APPLIED', 'PODSTROENO', 'CANCELLED', 'REJECTED']),
+                    'warning' => $r->conflict_reason ?? null,
                     'created_at' => $r->created_at,
                 ];
             }
@@ -173,8 +177,8 @@ class PodstroikaApiController extends Controller
         return response()->json([
             'success' => true,
             'tab_number' => $tabNumber,
-            'current_month' => PodstroikaService::getLimitStatus($tabNumber, $user->id, $curYm),
-            'next_month' => PodstroikaService::getLimitStatus($tabNumber, $user->id, $nextYm),
+            'current_month' => PodstroikaService::getLimitStatus($tabNumber, $user->id, $curYm, $user),
+            'next_month' => PodstroikaService::getLimitStatus($tabNumber, $user->id, $nextYm, $user),
         ]);
     }
 
@@ -206,8 +210,10 @@ class PodstroikaApiController extends Controller
 
         // 1. Индивидуальные подстройки машинистов
         $podstroikas = Podstroika::where(function ($q) use ($startDate, $endDate) {
-                $q->whereBetween('target_date', [$startDate, $endDate])
-                  ->orWhere('for_month', $startDate);
+                $q->where(function ($inner) use ($startDate, $endDate) {
+                    $inner->whereDate('target_date', '>=', $startDate)
+                        ->whereDate('target_date', '<=', $endDate);
+                })->orWhereDate('for_month', $startDate);
             })
             ->with(['user.profile'])
             ->orderBy('id', 'asc')

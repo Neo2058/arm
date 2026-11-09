@@ -6,6 +6,7 @@ use App\Models\NaryadPodstroikaLimit;
 use App\Models\Podstroika;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -48,8 +49,9 @@ class PodstroikaService
     /**
      * Получить статус лимита подстроек для сотрудника на указанный месяц.
      * Канонический источник данных: таблица `podstroikas`.
+     * Инструкторы отправляют заявки без месячного количественного лимита.
      */
-    public static function getLimitStatus(string $tabNumber, ?int $userId = null, ?string $yearMonth = null): array
+    public static function getLimitStatus(string $tabNumber, ?int $userId = null, ?string $yearMonth = null, ?User $user = null): array
     {
         // Календарная арифметика без перескока 31-го числа
         $ym = $yearMonth ?: Carbon::now()->startOfMonth()->addMonthsNoOverflow(1)->format('Y-m');
@@ -73,7 +75,8 @@ class PodstroikaService
             } catch (\Throwable $e) {}
         }
 
-        $maxApproved = 1; // Лимит по умолчанию
+        $unlimited = self::isUnlimitedSubmitter($user, $userId);
+        $maxApproved = 1; // Лимит по умолчанию для машинистов
 
         // 1. Проверяем arm_podstroika_limits или NaryadPodstroikaLimit
         $limitFound = false;
@@ -108,8 +111,10 @@ class PodstroikaService
             $usedCount = DB::table('podstroikas')
                 ->where('user_id', $userId)
                 ->where(function ($q) use ($startDate, $endDate) {
-                    $q->whereBetween('target_date', [$startDate, $endDate])
-                      ->orWhere('for_month', $startDate);
+                    $q->where(function ($inner) use ($startDate, $endDate) {
+                        $inner->whereDate('target_date', '>=', $startDate)
+                            ->whereDate('target_date', '<=', $endDate);
+                    })->orWhereDate('for_month', $startDate);
                 })
                 ->whereIn('status', ['pending', 'podstroeno', 'PENDING', 'APPLIED'])
                 ->count();
@@ -122,6 +127,19 @@ class PodstroikaService
                 ->count();
         }
 
+        if ($unlimited) {
+            return [
+                'tab_number' => $tabNumber,
+                'month' => $ym,
+                'month_label' => Carbon::parse($ym . '-01')->translatedFormat('F Y'),
+                'max_approved' => null,
+                'used' => $usedCount,
+                'remaining' => null,
+                'can_submit' => true,
+                'unlimited' => true,
+            ];
+        }
+
         $remaining = max(0, $maxApproved - $usedCount);
 
         return [
@@ -132,7 +150,26 @@ class PodstroikaService
             'used' => $usedCount,
             'remaining' => $remaining,
             'can_submit' => ($usedCount < $maxApproved),
+            'unlimited' => false,
         ];
+    }
+
+    /**
+     * Инструктор подаёт заявки без месячного количественного лимита нарядчика.
+     */
+    public static function isUnlimitedSubmitter(?User $user, ?int $userId = null): bool
+    {
+        if ($user?->isInstructor()) {
+            return true;
+        }
+
+        if ($userId && (!$user || (int) $user->id !== (int) $userId)) {
+            $found = User::query()->find($userId);
+
+            return $found?->isInstructor() === true;
+        }
+
+        return false;
     }
 
     /**
@@ -143,7 +180,8 @@ class PodstroikaService
         string $targetDate,
         string $routeCode,
         string $shiftCode,
-        ?int $userId = null
+        ?int $userId = null,
+        ?User $user = null
     ): array {
         $dt = Carbon::parse($targetDate);
         $today = Carbon::today();
@@ -164,9 +202,9 @@ class PodstroikaService
 
         $ym = $dt->format('Y-m');
 
-        // 3. Проверка месячного лимита
-        $limitStatus = self::getLimitStatus($tabNumber, $userId, $ym);
-        if (!$limitStatus['can_submit']) {
+        // 3. Проверка месячного лимита (инструкторы без количественного потолка)
+        $limitStatus = self::getLimitStatus($tabNumber, $userId, $ym, $user);
+        if (empty($limitStatus['unlimited']) && !$limitStatus['can_submit']) {
             return [
                 false,
                 "Превышен лимит подстроек на {$limitStatus['month_label']} (максимум: {$limitStatus['max_approved']}, уже подано: {$limitStatus['used']}).",
@@ -178,7 +216,7 @@ class PodstroikaService
         if ($userId && Schema::hasTable('podstroikas')) {
             $existsInCanonical = DB::table('podstroikas')
                 ->where('user_id', $userId)
-                ->where('target_date', $dt->format('Y-m-d'))
+                ->whereDate('target_date', $dt->format('Y-m-d'))
                 ->whereIn('status', ['pending', 'podstroeno', 'PENDING', 'APPLIED'])
                 ->exists();
 
@@ -348,7 +386,7 @@ class PodstroikaService
             }
 
             // Повторная валидация лимита и условий под блокировкой
-            [$isValid, $error, $warning] = self::validateConditions($tabNumber, $dt->format('Y-m-d'), $cleanRoute, $cleanShift, $user->id);
+            [$isValid, $error, $warning] = self::validateConditions($tabNumber, $dt->format('Y-m-d'), $cleanRoute, $cleanShift, $user->id, $user);
             if (!$isValid) {
                 return [
                     'success' => false,
@@ -360,7 +398,9 @@ class PodstroikaService
             $conflictReason = $warning ? $warning['message'] : null;
             $startOfMonth = $dt->copy()->startOfMonth();
 
-            // 1. Сохранение в каноническую модель Podstroika
+            // 1. Сохранение в каноническую модель Podstroika.
+            // Отозванную или отклонённую заявку на ту же дату открываем снова —
+            // уникальный индекс (user_id, target_date) иначе блокирует повтор.
             $fullDetails = "[М-{$cleanRoute} см.{$cleanShift}] " . $cleanDetails;
             $podstroikaData = [
                 'user_id' => $user->id,
@@ -376,26 +416,72 @@ class PodstroikaService
             if (Schema::hasColumn('podstroikas', 'operation_id')) {
                 $podstroikaData['operation_id'] = $cleanOpId;
             }
-            $podstroika = Podstroika::create($podstroikaData);
+
+            $existing = Podstroika::query()
+                ->where('user_id', $user->id)
+                ->whereDate('target_date', $dt->format('Y-m-d'))
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing && in_array(strtolower((string) $existing->status), ['pending', 'podstroeno', 'applied'], true)) {
+                return [
+                    'success' => false,
+                    'message' => "На дату {$dt->format('d.m.Y')} уже подана активная заявка на подстройку.",
+                    'data' => null,
+                ];
+            }
+
+            $mirror = null;
+            if (Schema::hasTable('arm_podstroiki') && $existing) {
+                $mirror = DB::table('arm_podstroiki')
+                    ->where('id', $existing->id)
+                    ->where('tab_number', $tabNumber)
+                    ->lockForUpdate()
+                    ->first();
+                if ($mirror && in_array(strtoupper((string) $mirror->status), ['APPLIED', 'PODSTROENO'], true)) {
+                    abort(422, 'Нельзя подать заявку, которая уже занесена в наряд.');
+                }
+            }
+
+            if ($existing) {
+                $existing->fill($podstroikaData);
+                $existing->save();
+                $podstroika = $existing;
+            } else {
+                try {
+                    $podstroika = Podstroika::create($podstroikaData);
+                } catch (UniqueConstraintViolationException $e) {
+                    abort(422, "На дату {$dt->format('d.m.Y')} уже подана активная заявка на подстройку.");
+                }
+            }
 
             // 2. Синхронная запись в arm_podstroiki (если таблица существует в данном окружении)
             // Ошибки SQL не подавляются, гарантируя целостность транзакции без половинчатых записей
             if (Schema::hasTable('arm_podstroiki')) {
-                DB::table('arm_podstroiki')->insert([
-                    'id' => $podstroika->id, // Согласованный единый ID
+                $mirrorPayload = [
                     'tab_number' => $tabNumber,
                     'target_date' => $dt->format('Y-m-d'),
                     'route_code' => $cleanRoute,
                     'shift_code' => $cleanShift,
                     'details' => $cleanDetails,
                     'status' => 'PENDING',
-                    'created_at' => Carbon::now(),
                     'updated_at' => Carbon::now(),
-                ]);
+                ];
+                if ($mirror) {
+                    DB::table('arm_podstroiki')
+                        ->where('id', $podstroika->id)
+                        ->where('tab_number', $tabNumber)
+                        ->update($mirrorPayload);
+                } elseif (!DB::table('arm_podstroiki')->where('id', $podstroika->id)->exists()) {
+                    DB::table('arm_podstroiki')->insert($mirrorPayload + [
+                        'id' => $podstroika->id,
+                        'created_at' => Carbon::now(),
+                    ]);
+                }
             }
 
-            // 3. Отправка в Redis Pub/Sub строго ПОСЛЕ коммита транзакции
-            DB::afterCommit(function () use ($podstroika, $tabNumber, $dt, $cleanRoute, $cleanShift, $source, $conflictReason) {
+            // 3. Отправка в Redis Pub/Sub и журнал действий строго ПОСЛЕ коммита транзакции
+            DB::afterCommit(function () use ($podstroika, $tabNumber, $dt, $cleanRoute, $cleanShift, $source, $conflictReason, $user, $monthStr) {
                 self::publishRedisEvent([
                     'event' => 'podstroika_created',
                     'id' => $podstroika->id,
@@ -406,9 +492,14 @@ class PodstroikaService
                     'source' => $source,
                     'warning' => $conflictReason,
                 ]);
+                ClickHouseService::log('podstroika.submitted', $podstroika->id, [
+                    'for_month' => $monthStr,
+                    'target_date' => $dt->format('Y-m-d'),
+                    'source' => $source,
+                ], $user);
             });
 
-            $limitStatus = self::getLimitStatus($tabNumber, $user->id, $monthStr);
+            $limitStatus = self::getLimitStatus($tabNumber, $user->id, $monthStr, $user);
 
             $result = [
                 'success' => true,
@@ -511,12 +602,16 @@ class PodstroikaService
                     ]);
             }
 
-            DB::afterCommit(function () use ($id, $ownerTabNumber) {
+            $ownerId = (int) $podstroika->user_id;
+            DB::afterCommit(function () use ($id, $ownerTabNumber, $user, $ownerId) {
                 self::publishRedisEvent([
                     'event' => 'podstroika_cancelled',
                     'id' => $id,
                     'tab' => $ownerTabNumber,
                 ]);
+                ClickHouseService::log('podstroika.cancelled', $id, [
+                    'target_user_id' => $ownerId,
+                ], $user);
             });
 
             return ['success' => true, 'message' => 'Заявка успешно отозвана.'];

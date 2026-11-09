@@ -11,8 +11,10 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { client } from '../api';
 import { IconHeading } from '../components/AppIcon';
+import { canSubmitPodstroiki } from '../podstroiki/mutations.cjs';
+import { PodstroikiEntry } from './PodstroikiScreen';
 
-export default function NaryadsScreen({ navigation }) {
+export default function NaryadsScreen({ navigation, user }) {
   const [naryads, setNaryads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -35,14 +37,6 @@ export default function NaryadsScreen({ navigation }) {
     }, [])
   );
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color="#fb923c" />
-      </View>
-    );
-  }
-
   return (
     <FlatList
       style={styles.list}
@@ -50,7 +44,17 @@ export default function NaryadsScreen({ navigation }) {
       data={naryads}
       keyExtractor={(item) => String(item.id)}
       refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
-      ListEmptyComponent={<Text style={styles.muted}>{error || 'Выданных нарядов нет'}</Text>}
+      ListHeaderComponent={
+        <>
+          {canSubmitPodstroiki(user) ? (
+            <View style={{ marginBottom: 12 }}>
+              <PodstroikiEntry onPress={() => navigation.navigate('Podstroiki')} />
+            </View>
+          ) : null}
+          {loading ? <ActivityIndicator color="#fb923c" style={{ marginBottom: 12 }} /> : null}
+        </>
+      }
+      ListEmptyComponent={!loading ? <Text style={styles.muted}>{error || 'Выданных нарядов нет'}</Text> : null}
       renderItem={({ item }) => (
         <Pressable
           style={styles.card}
