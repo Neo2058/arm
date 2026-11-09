@@ -245,24 +245,40 @@ class PodstroikaApiController extends Controller
 
             $members = collect();
             if (Schema::hasTable('instructor_training_members') && $trainingCards->isNotEmpty()) {
-                $members = DB::table('instructor_training_members')
+                $q = DB::table('instructor_training_members')
                     ->join('users', 'users.id', '=', 'instructor_training_members.user_id')
                     ->leftJoin('user_profiles', 'user_profiles.user_id', '=', 'users.id')
-                    ->whereIn('request_id', $trainingCards->pluck('id'))
-                    ->select('request_id', 'users.id as user_id', 'users.name', 'user_profiles.tab_number')
-                    ->get()
-                    ->groupBy('request_id');
+                    ->whereIn('request_id', $trainingCards->pluck('id'));
+
+                if (Schema::hasTable('arm_personnel')) {
+                    $q->leftJoin('arm_personnel', 'arm_personnel.user_id', '=', 'users.id')
+                      ->select(
+                          'request_id',
+                          'users.id as user_id',
+                          'users.name',
+                          DB::raw('COALESCE(NULLIF(user_profiles.tab_number, \'\'), arm_personnel.tab_number, \'\') as tab_number')
+                      );
+                } else {
+                    $q->select('request_id', 'users.id as user_id', 'users.name', 'user_profiles.tab_number');
+                }
+
+                $members = $q->get()->groupBy('request_id');
             }
 
             $instructorCards = $trainingCards->map(function ($tc) use ($members, $completedIds) {
                 $instructor = User::find($tc->instructor_id);
                 $isCompleted = isset($completedIds[$tc->id]);
+                $instTab = $instructor?->profile?->tab_number ?? '';
+                if (empty($instTab) && $instructor && Schema::hasTable('arm_personnel')) {
+                    $instTab = DB::table('arm_personnel')->where('user_id', $instructor->id)->value('tab_number') ?? '';
+                }
+
                 return [
                     'id' => $tc->id,
                     'server_id' => $tc->id,
                     'instructor_id' => $tc->instructor_id,
                     'instructor_name' => $instructor?->name ?? 'Инструктор',
-                    'instructor_tab' => $instructor?->profile?->tab_number ?? '',
+                    'instructor_tab' => $instTab,
                     'column' => $tc->column,
                     'planning_month' => substr($tc->planning_month, 0, 7),
                     'shift_type' => $tc->shift_type,
