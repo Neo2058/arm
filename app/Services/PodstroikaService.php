@@ -449,23 +449,24 @@ class PodstroikaService
 
     /**
      * Отозвать (отменить) поданную заявку безопасно.
-     * Не допускает удаления или изменения строк других сотрудников.
-     * Сохраняет отмену как статус (CANCELLED / cancelled).
+     * Не допускает частичного изменения: блокирует и проверяет обе таблицы ДО первого UPDATE.
+     * Определяет табельный номер владельца заявки (а не исполнителя).
      */
     public static function cancelPodstroika(int $id, User $user): array
     {
-        $tabNumber = self::resolveTabNumber($user);
-
-        return DB::transaction(function () use ($id, $user, $tabNumber) {
+        return DB::transaction(function () use ($id, $user) {
+            // 1. Блокируем каноническую запись podstroika
             $podstroika = Podstroika::where('id', $id)->lockForUpdate()->first();
             if (!$podstroika) {
                 return ['success' => false, 'message' => 'Заявка не найдена.'];
             }
 
+            // Проверяем права: владелец, диспетчер или администратор
             if ($podstroika->user_id !== $user->id && !$user->isDispatcher() && !$user->isAdmin()) {
                 return ['success' => false, 'message' => 'У вас нет прав на отмену этой заявки.'];
             }
 
+            // Проверяем статус канонической записи
             if (in_array(strtolower($podstroika->status), ['podstroeno', 'applied'])) {
                 return ['success' => false, 'message' => 'Нельзя отменить заявку, которая уже занесена в наряд.'];
             }
@@ -474,39 +475,47 @@ class PodstroikaService
                 return ['success' => false, 'message' => 'Заявка уже отозвана или отклонена.'];
             }
 
-            // Устанавливаем статус отмены в канонической модели
+            // Определяем табельный номер владельца заявки (а не администратора, если отменяет админ)
+            $ownerUser = ($podstroika->user_id === $user->id) ? $user : User::find($podstroika->user_id);
+            $ownerTabNumber = $ownerUser ? self::resolveTabNumber($ownerUser) : null;
+
+            // 2. Блокируем и проверяем зеркальную строку ДО внесения любых изменений
+            $mirrorRow = null;
+            if (Schema::hasTable('arm_podstroiki') && !empty($ownerTabNumber)) {
+                $mirrorRow = DB::table('arm_podstroiki')
+                    ->where('id', $id)
+                    ->where('tab_number', $ownerTabNumber)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($mirrorRow && in_array(strtoupper($mirrorRow->status), ['APPLIED', 'PODSTROENO'])) {
+                    // Если в зеркале уже занесено в наряд, отменять НЕЛЬЗЯ!
+                    // Никаких изменений не вносим ни в одну таблицу!
+                    return ['success' => false, 'message' => 'Нельзя отменить заявку, которая уже занесена в наряд.'];
+                }
+            }
+
+            // 3. Только после того как ВСЕ проверки пройдены, обновляем обе таблицы
             $podstroika->update([
                 'status' => 'cancelled',
                 'updated_at' => Carbon::now(),
             ]);
 
-            // Зеркальное обновление в arm_podstroiki строго для строки данного сотрудника
-            if (Schema::hasTable('arm_podstroiki')) {
-                $mirrorRow = DB::table('arm_podstroiki')
+            if ($mirrorRow) {
+                DB::table('arm_podstroiki')
                     ->where('id', $id)
-                    ->where('tab_number', $tabNumber)
-                    ->first();
-
-                if ($mirrorRow) {
-                    if (in_array(strtoupper($mirrorRow->status), ['APPLIED', 'PODSTROENO'])) {
-                        return ['success' => false, 'message' => 'Нельзя отменить заявку, которая уже занесена в наряд.'];
-                    }
-
-                    DB::table('arm_podstroiki')
-                        ->where('id', $id)
-                        ->where('tab_number', $tabNumber)
-                        ->update([
-                            'status' => 'CANCELLED',
-                            'updated_at' => Carbon::now(),
-                        ]);
-                }
+                    ->where('tab_number', $ownerTabNumber)
+                    ->update([
+                        'status' => 'CANCELLED',
+                        'updated_at' => Carbon::now(),
+                    ]);
             }
 
-            DB::afterCommit(function () use ($id, $tabNumber) {
+            DB::afterCommit(function () use ($id, $ownerTabNumber) {
                 self::publishRedisEvent([
                     'event' => 'podstroika_cancelled',
                     'id' => $id,
-                    'tab' => $tabNumber,
+                    'tab' => $ownerTabNumber,
                 ]);
             });
 

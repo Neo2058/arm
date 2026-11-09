@@ -110,7 +110,7 @@ class PodstroikaApiController extends Controller
     }
 
     /**
-     * Подача новой заявки из мобильного приложения с поддержкой operation_id.
+     * Подача новой заявки из мобильного приложения с обязательным operation_id для идемпотентности.
      */
     public function store(Request $request): JsonResponse
     {
@@ -128,7 +128,7 @@ class PodstroikaApiController extends Controller
             'route_code' => 'required|string|max:20',
             'shift_code' => 'required|string|max:10',
             'details' => 'nullable|string|max:1000',
-            'operation_id' => 'nullable|uuid',
+            'operation_id' => 'required|uuid',
         ]);
 
         try {
@@ -140,7 +140,7 @@ class PodstroikaApiController extends Controller
                 $validated['details'] ?? '',
                 'mobile',
                 null,
-                $validated['operation_id'] ?? null
+                $validated['operation_id']
             );
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return response()->json([
@@ -190,7 +190,7 @@ class PodstroikaApiController extends Controller
     /**
      * Защищенный эндпоинт синхронизации для диспетчера АРМ Наряд.
      * Требует полномочий нарядчика (isDispatcher / admin).
-     * Передает версии карточек АТЗ, server_id и полные составы.
+     * Передает версии карточек АТЗ, server_id, статус и полные составы.
      */
     public function syncForNaryad(Request $request): JsonResponse
     {
@@ -227,13 +227,21 @@ class PodstroikaApiController extends Controller
                 ];
             });
 
-        // 2. Групповые карточки АТЗ инструкторов (с версиями и участниками)
+        // 2. Групповые карточки АТЗ инструкторов (с версиями, статусом и участниками)
         $instructorCards = collect();
         if (Schema::hasTable('instructor_training_requests')) {
             $trainingCards = DB::table('instructor_training_requests')
                 ->where('planning_month', $startDate)
                 ->orderBy('id', 'asc')
                 ->get();
+
+            $completedIds = collect();
+            if (Schema::hasTable('instructor_training_completions')) {
+                $completedIds = DB::table('instructor_training_completions')
+                    ->whereIn('request_id', $trainingCards->pluck('id'))
+                    ->pluck('request_id')
+                    ->flip();
+            }
 
             $members = collect();
             if (Schema::hasTable('instructor_training_members') && $trainingCards->isNotEmpty()) {
@@ -246,8 +254,9 @@ class PodstroikaApiController extends Controller
                     ->groupBy('request_id');
             }
 
-            $instructorCards = $trainingCards->map(function ($tc) use ($members) {
+            $instructorCards = $trainingCards->map(function ($tc) use ($members, $completedIds) {
                 $instructor = User::find($tc->instructor_id);
+                $isCompleted = isset($completedIds[$tc->id]);
                 return [
                     'id' => $tc->id,
                     'server_id' => $tc->id,
@@ -259,6 +268,7 @@ class PodstroikaApiController extends Controller
                     'shift_type' => $tc->shift_type,
                     'participant_count' => (int)$tc->participant_count,
                     'version' => (int)($tc->version ?? 1),
+                    'status' => $isCompleted ? 'COMPLETED' : 'PENDING',
                     'participants' => $members->get($tc->id, collect())->map(fn ($m) => [
                         'id' => $m->user_id,
                         'tab_number' => $m->tab_number ?? '',

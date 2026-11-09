@@ -217,7 +217,46 @@ class PodstroikiReviewResolutionTest extends TestCase
         $this->assertEquals($reqId, $card['id']);
         $this->assertEquals($reqId, $card['server_id']);
         $this->assertEquals(3, $card['version']);
+        $this->assertEquals('PENDING', $card['status']);
         $this->assertCount(1, $card['participants']);
         $this->assertEquals('0321', $card['participants'][0]['tab_number']);
+    }
+
+    /**
+     * 6. Защита от частичного изменения при отказе отмены:
+     * Если зеркало APPLIED, отказ возвращается ДО изменения основной заявки,
+     * поэтому статус основной заявки остаётся 'pending' (не меняется на 'cancelled').
+     */
+    public function test_cancel_refusal_does_not_modify_canonical_or_mirror_status(): void
+    {
+        $u = $this->prepare();
+        $p = Podstroika::create([
+            'user_id' => $u->id,
+            'for_month' => '2026-11-01',
+            'target_date' => '2026-11-10',
+            'route_code' => '01',
+            'shift_code' => '1',
+            'details' => 'own',
+            'status' => 'pending',
+        ]);
+        DB::table('arm_podstroiki')->insert([
+            'id' => $p->id,
+            'tab_number' => '0321',
+            'target_date' => '2026-11-10',
+            'route_code' => '01',
+            'shift_code' => '1',
+            'details' => 'own',
+            'status' => 'APPLIED',
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
+        ]);
+
+        $r = PodstroikaService::cancelPodstroika($p->id, $u);
+        $this->assertFalse($r['success']);
+        $this->assertSame('Нельзя отменить заявку, которая уже занесена в наряд.', $r['message']);
+
+        // Никакого частичного применения: основная заявка осталась pending!
+        $this->assertSame('pending', $p->fresh()->status);
+        $this->assertSame('APPLIED', DB::table('arm_podstroiki')->where('id', $p->id)->value('status'));
     }
 }
