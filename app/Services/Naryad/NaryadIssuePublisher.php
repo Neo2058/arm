@@ -12,25 +12,27 @@ use App\Services\InstructorNaryad\NaryadDocumentLoader;
 use App\Services\InstructorNaryad\SearchEngine;
 use App\Services\InstructorNaryad\ShiftCatalog;
 use App\Services\InstructorNaryad\Text;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Throwable;
 
 class NaryadIssuePublisher
 {
     /**
      * Разбор TXT-нарядов и разбивки смен (ядро searching) → личный файл на каждого найденного пользователя.
+     * Безопасная публикация: сначала подготавливаются и проверяются новые файлы, затем атомарно
+     * обновляются записи в БД, и только после успешного коммита удаляются старые файлы.
      */
     public function publish(Naryad $naryad): int
     {
         $docs = $this->loadNaryads($naryad);
-        $this->deletePersonFiles($naryad);
         if ($docs === []) {
             return 0;
         }
 
         $work = $this->loadShiftEntries($naryad->work_shifts_path, 'work');
         $weekend = $this->loadShiftEntries($naryad->weekend_shifts_path, 'weekend');
-        $created = 0;
 
         $users = User::query()
             ->where('is_active', true)
@@ -38,30 +40,73 @@ class NaryadIssuePublisher
             ->orderBy('id')
             ->get();
 
-        foreach ($users as $user) {
-            $query = $this->queryForUser($user);
-            if ($query === '') {
-                continue;
+        $newRecords = [];
+        $writtenPaths = [];
+
+        try {
+            foreach ($users as $user) {
+                $query = $this->queryForUser($user);
+                if ($query === '') {
+                    continue;
+                }
+                $result = SearchEngine::run($docs, [$query], $work, $weekend);
+                $hits = count($result['hits']);
+                if ($hits === 0) {
+                    continue;
+                }
+                $fio = FioParser::label(FioParser::parseQuery($query));
+                $fileName = $fio.'.txt';
+                $path = 'naryads/'.$naryad->id.'/people/'.$user->id.'.txt';
+
+                $putOk = Storage::disk('s3')->put($path, $result['text']);
+                if ($putOk === false) {
+                    throw new RuntimeException("Не удалось сохранить персональный файл в S3: {$path}");
+                }
+                $writtenPaths[] = $path;
+
+                $newRecords[] = [
+                    'naryad_id' => $naryad->id,
+                    'user_id' => $user->id,
+                    'fio' => $fio,
+                    'file_name' => $fileName,
+                    'file_path' => $path,
+                    'hits_count' => $hits,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
             }
-            $result = SearchEngine::run($docs, [$query], $work, $weekend);
-            $hits = count($result['hits']);
-            if ($hits === 0) {
-                continue;
+
+            // Получаем список старых записей до их замены
+            $oldFiles = $naryad->personFiles()->get();
+            $oldPaths = $oldFiles->pluck('file_path')->all();
+
+            // Атомарное обновление записей в БД
+            DB::transaction(function () use ($naryad, $newRecords) {
+                $naryad->personFiles()->delete();
+                if ($newRecords !== []) {
+                    NaryadPersonFile::insert($newRecords);
+                }
+            });
+
+            // Безопасная очистка старых файлов, которые больше не используются
+            $newPathsSet = array_flip($writtenPaths);
+            foreach ($oldPaths as $oldPath) {
+                if (!isset($newPathsSet[$oldPath])) {
+                    Storage::disk('s3')->delete($oldPath);
+                }
             }
-            $fio = FioParser::label(FioParser::parseQuery($query));
-            $fileName = $fio.'.txt';
-            $path = 'naryads/'.$naryad->id.'/people/'.$user->id.'.txt';
-            Storage::disk('s3')->put($path, $result['text']);
-            NaryadPersonFile::create([
-                'naryad_id' => $naryad->id,
-                'user_id' => $user->id,
-                'fio' => $fio,
-                'file_name' => $fileName,
-                'file_path' => $path,
-                'hits_count' => $hits,
-            ]);
-            $created++;
+        } catch (Throwable $e) {
+            // При ошибке во время записи очищаем новые частично созданные файлы
+            foreach ($writtenPaths as $p) {
+                try {
+                    Storage::disk('s3')->delete($p);
+                } catch (Throwable) {
+                }
+            }
+            throw $e;
         }
+
+        $created = count($newRecords);
 
         try {
             ClickHouseService::log('naryad_issue_published', $naryad->id, [
