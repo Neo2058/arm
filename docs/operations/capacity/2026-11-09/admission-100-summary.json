@@ -1,0 +1,82 @@
+{
+  "result": "STOPPED",
+  "reason": "Sustained client p95 >1s",
+  "started_utc": "2026-11-09T13:26:18.324713+00:00",
+  "finished_utc": "2026-11-09T13:30:22.487577+00:00",
+  "requests_recorded": 1290,
+  "invalid_recorded": 0,
+  "max_inflight": 12,
+  "cpu_max": 45.8405905283238,
+  "ram_available_min_ratio": 0.6350746067832321,
+  "db_connections_max": 4.0,
+  "new_5xx": 0.0,
+  "stages": [
+    {
+      "name": "admission-warm-2",
+      "target_rps": 2,
+      "duration_target": 30,
+      "profile": "mixed",
+      "started_utc": "2026-11-09T13:26:22.204847+00:00",
+      "requests": 60,
+      "elapsed": 30.001363929361105,
+      "unique_users": 60,
+      "by_kind": {
+        "inbox": 60
+      },
+      "p50": 0.13027267344295979,
+      "p95": 0.15799373295158148,
+      "p99": 0.17753772530704737,
+      "max": 0.17753772530704737,
+      "finished_utc": "2026-11-09T13:26:52.206315+00:00",
+      "generator_cpu_seconds": 1.0376599999999998,
+      "observed_rps": 1.9999090755097457,
+      "result": "PASS",
+      "recorded_rows": 60,
+      "recorded_unique_slots": 60,
+      "recorded_p95": 0.15799373295158148,
+      "recorded_max": 0.17753772530704737
+    },
+    {
+      "name": "admission-warm-5",
+      "target_rps": 5,
+      "duration_target": 30,
+      "profile": "mixed",
+      "started_utc": "2026-11-09T13:27:12.288119+00:00",
+      "requests": 150,
+      "elapsed": 30.0010655047372,
+      "unique_users": 100,
+      "by_kind": {
+        "inbox": 124,
+        "month": 12,
+        "thread": 6,
+        "documents": 4,
+        "topics": 4
+      },
+      "p50": 0.1320569859817624,
+      "p95": 0.21277367789298296,
+      "p99": 0.24358994606882334,
+      "max": 0.2540988326072693,
+      "finished_utc": "2026-11-09T13:27:42.289463+00:00",
+      "generator_cpu_seconds": 1.3659519999999996,
+      "observed_rps": 4.999822422184134,
+      "result": "PASS",
+      "recorded_rows": 150,
+      "recorded_unique_slots": 100,
+      "recorded_p95": 0.21277367789298296,
+      "recorded_max": 0.2540988326072693
+    },
+    {
+      "name": "100-active-mixed",
+      "target_rps": 7.67,
+      "duration_target": 300,
+      "profile": "mixed",
+      "started_utc": "2026-11-09T13:28:02.375788+00:00",
+      "requests": 1073,
+      "result": "STOPPED",
+      "recorded_rows": 1074,
+      "recorded_unique_slots": 100,
+      "recorded_p95": 0.2418814469128847,
+      "recorded_max": 1.6093791285529733
+    }
+  ]
+}

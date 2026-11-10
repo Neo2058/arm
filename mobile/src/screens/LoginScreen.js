@@ -8,8 +8,8 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_URL, login } from '../api';
 import { loginErrorMessage } from '../../api-config.cjs';
 import { IconLabel } from '../components/AppIcon';
@@ -34,8 +34,9 @@ export default function LoginScreen({ onLoggedIn }) {
   };
 
   return (
+    <SafeAreaView style={styles.wrap} edges={['top', 'bottom', 'left', 'right']}>
     <KeyboardAvoidingView
-      style={styles.wrap}
+      style={styles.form}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Text style={styles.title}>ТЧ-15</Text>
@@ -74,11 +75,13 @@ export default function LoginScreen({ onLoggedIn }) {
         <Text style={styles.recovery}>Забыли пароль?</Text>
       </Pressable>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: '#0b1018', justifyContent: 'center', padding: 24 },
+  wrap: { flex: 1, backgroundColor: '#0b1018' },
+  form: { flex: 1, justifyContent: 'center', padding: 24 },
   title: { color: '#fb923c', fontSize: 36, fontWeight: '700', textAlign: 'center' },
   sub: { color: '#9ca3af', textAlign: 'center', marginBottom: 28, marginTop: 6 },
   input: {

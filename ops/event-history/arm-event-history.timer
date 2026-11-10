@@ -1,0 +1,11 @@
+[Unit]
+Description=Clean ARM user events every 72 hours
+
+[Timer]
+OnActiveSec=72h
+OnUnitActiveSec=72h
+AccuracySec=1min
+Unit=arm-event-history.service
+
+[Install]
+WantedBy=timers.target

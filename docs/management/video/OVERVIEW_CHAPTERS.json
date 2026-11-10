@@ -1,0 +1,381 @@
+[
+  {
+    "code": "OPEN",
+    "kicker": "Единое рабочее пространство",
+    "title": "Веб, Android\nи локальная программа",
+    "bullets": [
+      "Один продукт — разные рабочие места",
+      "Каждый видит разделы по своей роли"
+    ],
+    "duration": 10,
+    "note": "Обзор возможностей",
+    "image": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/presentation/screenshots/web-carousel.png",
+    "source_type": "previous synthetic screenshot"
+  },
+  {
+    "code": "U01",
+    "kicker": "Машинист",
+    "title": "От общего наряда\nк своей работе",
+    "bullets": [
+      "Общий документ и личная выборка",
+      "Поиск и расшифровки смен"
+    ],
+    "duration": 10,
+    "note": "Учебный пример · возможности зависят от подготовки файлов",
+    "image": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/presentation/screenshots/web-naryad.png",
+    "source_type": "previous synthetic screenshot"
+  },
+  {
+    "code": "U02",
+    "kicker": "Машинист",
+    "title": "Видно, сколько\nотработано",
+    "bullets": [
+      "Смена, оплачиваемое время и отдых",
+      "Данные доступны на компьютере и телефоне"
+    ],
+    "duration": 12,
+    "note": "Предварительные начисления — не зарплата к выплате",
+    "sequence": {
+      "folder": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/video/recordings/web",
+      "from": 20.4,
+      "to": 28.7
+    },
+    "source_type": "real isolated application recording"
+  },
+  {
+    "code": "U02",
+    "kicker": "Машинист",
+    "title": "Отсутствия\nучитываются отдельно",
+    "bullets": [
+      "Больничный, отпуск и учёба",
+      "Периоды не смешиваются с рабочими часами"
+    ],
+    "duration": 10,
+    "note": "Учёт периодов · оплата требует подтверждённых правил",
+    "image": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/video/recordings/screens/driver--worktime.png",
+    "source_type": "real isolated web page"
+  },
+  {
+    "code": "U03",
+    "kicker": "Машинист и нарядчик",
+    "title": "Пожелание\nне потеряется",
+    "bullets": [
+      "Заявка на подстройку и её статус",
+      "Решение остаётся в рабочем контуре"
+    ],
+    "duration": 10,
+    "note": "Реализацию нового обмена и публикацию необходимо сверить",
+    "image": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/presentation/screenshots/web-driver-podstroiki.png",
+    "source_type": "previous synthetic screenshot"
+  },
+  {
+    "code": "U04",
+    "kicker": "Документы",
+    "title": "Нужные материалы\nрядом с работой",
+    "bullets": [
+      "Каталоги, просмотр PDF и поиск",
+      "Доступ с учётом полномочий"
+    ],
+    "duration": 10,
+    "note": "На экране только учебные материалы",
+    "image": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/video/recordings/screens/content-documents.png",
+    "source_type": "real isolated web page"
+  },
+  {
+    "code": "U07",
+    "kicker": "Машинист",
+    "title": "Ознакомление\nи запись в формуляр",
+    "bullets": [
+      "Личный список действий",
+      "Персональная отметка и сохранённый текст"
+    ],
+    "duration": 10,
+    "note": "Юридическая замена бумажной подписи отдельно согласуется",
+    "sequence": {
+      "folder": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/video/recordings/web",
+      "from": 11.5,
+      "to": 20.3
+    },
+    "source_type": "real isolated application recording"
+  },
+  {
+    "code": "U05",
+    "kicker": "Обучение",
+    "title": "Прочитать, посмотреть\nи прослушать",
+    "bullets": [
+      "Темы, материалы, аудио и видео",
+      "Комментарии в предусмотренных разделах"
+    ],
+    "duration": 10,
+    "note": "Материал и факт посещения занятия — разные записи",
+    "image": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/video/recordings/screens/content-training-video-demo.png",
+    "source_type": "real isolated web page"
+  },
+  {
+    "code": "U06",
+    "kicker": "Проверка знаний",
+    "title": "Ответ — результат —\nвозврат к материалу",
+    "bullets": [
+      "Тесты по документам и общий тест",
+      "История результатов и ссылки на страницы"
+    ],
+    "duration": 10,
+    "note": "Учебный тест · не действующая проверка знаний",
+    "sequence": {
+      "folder": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/video/recordings/android",
+      "from": 27.7,
+      "to": 44.5
+    },
+    "source_type": "real isolated application recording"
+  },
+  {
+    "code": "I01",
+    "kicker": "Инструктор",
+    "title": "Колонна\nпод контролем",
+    "bullets": [
+      "Рабочий журнал, задачи и нормативы",
+      "История, отчёты и состояние подготовки"
+    ],
+    "duration": 12,
+    "note": "Создание и завершение задачи записаны в локальном приложении",
+    "sequence": {
+      "folder": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/video/recordings/web",
+      "from": 0.0,
+      "to": 10.8
+    },
+    "source_type": "real isolated application recording"
+  },
+  {
+    "code": "I03",
+    "kicker": "Инструктор",
+    "title": "План занятия\nи фактическая явка",
+    "bullets": [
+      "АТЗ: участники, периоды и проведение",
+      "Подтверждённый результат учитывается отдельно"
+    ],
+    "duration": 12,
+    "note": "Запланированное занятие не считается проведённым",
+    "image": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/presentation/screenshots/web-atz.png",
+    "source_type": "previous synthetic screenshot"
+  },
+  {
+    "code": "I04",
+    "kicker": "Инструктор",
+    "title": "Из больших нарядов —\nк нужной колонне",
+    "bullets": [
+      "Наряды, разбивки и список сотрудников",
+      "Поиск, расшифровка и выгрузка результата"
+    ],
+    "duration": 10,
+    "note": "Отбор по подготовленным спискам, в пределах разрешённого доступа",
+    "image": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/presentation/screenshots/web-journal.png",
+    "source_type": "previous synthetic screenshot"
+  },
+  {
+    "code": "I05",
+    "kicker": "Поручения",
+    "title": "У задания видны\nсрок и результат",
+    "bullets": [
+      "Поручение, отчёт и приложения",
+      "Приёмка или возврат на доработку"
+    ],
+    "duration": 12,
+    "note": "Отправка отчёта ещё не означает его принятие",
+    "image": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/video/recordings/screens/instructor--journal.png",
+    "source_type": "real isolated web page"
+  },
+  {
+    "code": "D01",
+    "kicker": "Нарядчик",
+    "title": "Организовать работу\nи проверить ограничения",
+    "bullets": [
+      "Месячная сетка и назначения",
+      "Контроль часов, отдыха и полноты"
+    ],
+    "duration": 12,
+    "note": "Правила проверяются сервером в предусмотренном контуре",
+    "image": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/presentation/screenshots/web-naryad.png",
+    "source_type": "previous synthetic screenshot"
+  },
+  {
+    "code": "L01",
+    "kicker": "Локальный ARM-NRD",
+    "title": "Рабочее место\nлокомотивных бригад",
+    "bullets": [
+      "Сетка, поиск, календарь и разбивки",
+      "Карточки, замены, отвлечения и печать"
+    ],
+    "duration": 14,
+    "note": "Реальная Qt demo-копия · вымышленные сотрудники",
+    "sequence": {
+      "folder": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/video/recordings/desktop",
+      "from": 0.0,
+      "to": 18.9
+    },
+    "source_type": "real isolated application recording"
+  },
+  {
+    "code": "L03",
+    "kicker": "Взаимодействие компонентов",
+    "title": "Обмен\nчерез API",
+    "bullets": [
+      "Локальное рабочее место — часть АРМ",
+      "Передача сведений между контурами"
+    ],
+    "duration": 12,
+    "note": "Подготовленный API-контур · сквозная синхронизация — следующий этап",
+    "diagram": "API",
+    "source_type": "explanatory diagram; status in caption"
+  },
+  {
+    "code": "D03",
+    "kicker": "Картотека и справочники",
+    "title": "Настроить работу\nпод подразделение",
+    "bullets": [
+      "Сотрудники, назначения и отвлечения",
+      "Графики, нормативы и справочники"
+    ],
+    "duration": 12,
+    "note": "Специфические процессы адаптируются после обследования",
+    "image": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/video/recordings/screens/dispatcher--nsi.png",
+    "source_type": "real isolated web page"
+  },
+  {
+    "code": "O01",
+    "kicker": "Учёт",
+    "title": "Сохранить результаты\nи подготовить отчётность",
+    "bullets": [
+      "Лицевые счета, листы, доплаты и архив",
+      "Отчёты, выгрузки и закрытие периода"
+    ],
+    "duration": 12,
+    "note": "Эталонная сверка и бухгалтерская приёмка — отдельные условия",
+    "image": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/video/recordings/screens/operator--uchet.png",
+    "source_type": "real isolated web page"
+  },
+  {
+    "code": "C01",
+    "kicker": "Рабочее общение",
+    "title": "Переписка\nв понятной структуре",
+    "bullets": [
+      "Комнаты, участники и история",
+      "Сообщения и вложения по полномочиям"
+    ],
+    "duration": 12,
+    "note": "Работа зависит от собственного сервера и сети; это не E2EE",
+    "sequence": {
+      "folder": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/video/recordings/android",
+      "from": 0.0,
+      "to": 16.8
+    },
+    "source_type": "real isolated application recording"
+  },
+  {
+    "code": "U08",
+    "kicker": "Профиль и связь",
+    "title": "Рабочая информация\nпод рукой",
+    "bullets": [
+      "Профиль, общий справочник телефонов",
+      "Telegram, восстановление и поддержка"
+    ],
+    "duration": 10,
+    "note": "Внешние интеграции отличаются от внутреннего чата",
+    "sequence": {
+      "folder": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/video/recordings/android",
+      "from": 17.0,
+      "to": 20.5
+    },
+    "source_type": "real isolated application recording"
+  },
+  {
+    "code": "A01",
+    "kicker": "Администрирование",
+    "title": "Управлять доступом\nи содержимым",
+    "bullets": [
+      "Пользователи, документы, обучение и квизы",
+      "Справочники, уведомления и аналитика"
+    ],
+    "duration": 12,
+    "note": "Административные функции доступны только предусмотренным ролям",
+    "image": "/Users/vyacheslavandreevich/PhpstormProjects/arm/docs/management/video/recordings/screens/super_admin--admin.png",
+    "source_type": "real isolated web page"
+  },
+  {
+    "code": "SEC04",
+    "kicker": "Защита ресурса",
+    "title": "Несколько рубежей\nзащиты",
+    "bullets": [
+      "Firewall, роли и изоляция сервисов",
+      "Read-only код, копии и мониторинг"
+    ],
+    "duration": 12,
+    "note": "Защита снижает риски, но не означает неуязвимость",
+    "diagram": "SECURITY",
+    "source_type": "explanatory diagram; status in caption"
+  },
+  {
+    "code": "FUT01",
+    "kicker": "Следующий этап защиты",
+    "title": "Персональные поля\nи ключи устройств",
+    "bullets": [
+      "Доступ только разрешённым устройствам",
+      "Отзыв, ротация и аварийное восстановление"
+    ],
+    "duration": 14,
+    "note": "План развития · шифрование полей по устройствам ещё не внедрено",
+    "diagram": "DEVICES",
+    "source_type": "explanatory diagram; status in caption"
+  },
+  {
+    "code": "FUT02",
+    "kicker": "Локальный архив",
+    "title": "Хранение на 45 лет —\nорганизованный процесс",
+    "bullets": [
+      "Независимые копии и проверка восстановления",
+      "Замена носителей, форматов и ключей"
+    ],
+    "duration": 16,
+    "note": "Вариант внедрения на инфраструктуре заказчика, не гарантия текущего сервера",
+    "diagram": "ARCHIVE",
+    "source_type": "explanatory diagram; status in caption"
+  },
+  {
+    "code": "FUT04",
+    "kicker": "Ресурсы и сопровождение",
+    "title": "Масштаб растёт\nвместе с потребностями",
+    "bullets": [
+      "Сервер, хранилище, сеть и обслуживание",
+      "Нагрузка проверяется по реальным сценариям"
+    ],
+    "duration": 14,
+    "note": "Стартовая оценка: 4–8 vCPU / 16 ГБ / SSD от 160 ГБ; требуется испытание",
+    "diagram": "CAPACITY",
+    "source_type": "explanatory diagram; status in caption"
+  },
+  {
+    "code": "FUT03",
+    "kicker": "Развитие АРМ",
+    "title": "Локальный\nИИ-помощник",
+    "bullets": [
+      "Поиск по разрешённым материалам",
+      "Работа внутри закрытой сети"
+    ],
+    "duration": 14,
+    "note": "План развития · права, качество и мощности проверяются отдельно",
+    "diagram": "AI",
+    "source_type": "explanatory diagram; status in caption"
+  },
+  {
+    "code": "END",
+    "kicker": "Единый рабочий цикл",
+    "title": "Организация.\nКонтроль. Подготовка.",
+    "bullets": [
+      "Машинист, инструктор, нарядчик и учёт",
+      "Меньше повторного ввода и поиска информации"
+    ],
+    "duration": 12,
+    "note": "Сценарный черновик · подробные демонстрации и приёмка продолжаются",
+    "diagram": "END",
+    "source_type": "explanatory diagram; status in caption"
+  }
+]

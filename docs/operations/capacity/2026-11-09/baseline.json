@@ -1,0 +1,973 @@
+{
+  "captured_utc": "2026-11-09T11:57:50.748147+00:00",
+  "queries": {
+    "cpu_count": {
+      "promql": "arm_host_cpu_count",
+      "result": [
+        {
+          "metric": {
+            "__name__": "arm_host_cpu_count",
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.78,
+            "4"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "cpu_percent_now": {
+      "promql": "arm_host_cpu_percent",
+      "result": [
+        {
+          "metric": {
+            "__name__": "arm_host_cpu_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.782,
+            "13.435303844563872"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "cpu_percent_24h_avg": {
+      "promql": "avg_over_time(arm_host_cpu_percent[24h])",
+      "result": [
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.784,
+            "10.097261817956253"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "cpu_percent_24h_max": {
+      "promql": "max_over_time(arm_host_cpu_percent[24h])",
+      "result": [
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.79,
+            "37.839771101573675"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "cpu_samples_24h": {
+      "promql": "count_over_time(arm_host_cpu_percent[24h])",
+      "result": [
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.792,
+            "5760"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "memory_now": {
+      "promql": "arm_host_memory_bytes",
+      "result": [
+        {
+          "metric": {
+            "__name__": "arm_host_memory_bytes",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "kind": "MemTotal"
+          },
+          "value": [
+            1794225470.794,
+            "8219254784"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_host_memory_bytes",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "kind": "MemAvailable"
+          },
+          "value": [
+            1794225470.794,
+            "5375377408"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_host_memory_bytes",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "kind": "SwapTotal"
+          },
+          "value": [
+            1794225470.794,
+            "4109365248"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_host_memory_bytes",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "kind": "SwapFree"
+          },
+          "value": [
+            1794225470.794,
+            "2430070784"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "memory_available_24h_min": {
+      "promql": "min_over_time(arm_host_memory_bytes{kind=\"MemAvailable\"}[24h])",
+      "result": [
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "kind": "MemAvailable"
+          },
+          "value": [
+            1794225470.795,
+            "5052116992"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "disk_now": {
+      "promql": "arm_host_disk_bytes",
+      "result": [
+        {
+          "metric": {
+            "__name__": "arm_host_disk_bytes",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "kind": "total"
+          },
+          "value": [
+            1794225470.799,
+            "84508024832"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_host_disk_bytes",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "kind": "free"
+          },
+          "value": [
+            1794225470.799,
+            "42810466304"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "disk_busy_5m": {
+      "promql": "rate(arm_host_disk_io_seconds_total[5m])",
+      "result": [
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.8,
+            "0.004368421052628004"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "disk_busy_24h_max": {
+      "promql": "max_over_time(rate(arm_host_disk_io_seconds_total[5m])[24h:5m])",
+      "result": [
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.802,
+            "0.03169122807017278"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "load": {
+      "promql": "arm_host_load",
+      "result": [
+        {
+          "metric": {
+            "__name__": "arm_host_load",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "window": "1m"
+          },
+          "value": [
+            1794225470.804,
+            "0.52734375"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_host_load",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "window": "5m"
+          },
+          "value": [
+            1794225470.804,
+            "0.50439453125"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_host_load",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "window": "15m"
+          },
+          "value": [
+            1794225470.804,
+            "0.45849609375"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "requests_24h": {
+      "promql": "sum(increase(arm_http_requests_total[24h]))",
+      "result": [
+        {
+          "metric": {},
+          "value": [
+            1794225470.806,
+            "3549.6162467905306"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "requests_by_status_24h": {
+      "promql": "increase(arm_http_requests_total[24h])",
+      "result": [
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "status_class": "1xx"
+          },
+          "value": [
+            1794225470.812,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "status_class": "2xx"
+          },
+          "value": [
+            1794225470.812,
+            "2885.500955026914"
+          ]
+        },
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "status_class": "3xx"
+          },
+          "value": [
+            1794225470.812,
+            "298.0517450946345"
+          ]
+        },
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "status_class": "4xx"
+          },
+          "value": [
+            1794225470.812,
+            "365.06337905886437"
+          ]
+        },
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "status_class": "5xx"
+          },
+          "value": [
+            1794225470.812,
+            "1.0001676795740002"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "rpm_5m": {
+      "promql": "sum(rate(arm_http_requests_total[5m])) * 60",
+      "result": [
+        {
+          "metric": {},
+          "value": [
+            1794225470.817,
+            "5.2627999999999995"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "rpm_24h_max": {
+      "promql": "max_over_time((sum(rate(arm_http_requests_total[5m])) * 60)[24h:5m])",
+      "result": [
+        {
+          "metric": {},
+          "value": [
+            1794225470.819,
+            "27.999999999999996"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "http_p95_24h": {
+      "promql": "histogram_quantile(0.95, sum by(le)(increase(arm_http_request_duration_seconds_bucket[24h])))",
+      "result": [
+        {
+          "metric": {},
+          "value": [
+            1794225470.824,
+            "0.09888879456706283"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "http_mean_24h": {
+      "promql": "sum(increase(arm_http_request_duration_seconds_sum[24h])) / sum(increase(arm_http_request_duration_seconds_count[24h]))",
+      "result": [
+        {
+          "metric": {},
+          "value": [
+            1794225470.833,
+            "0.07285404339250591"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "probe_duration_now": {
+      "promql": "arm_http_probe_duration_seconds",
+      "result": [
+        {
+          "metric": {
+            "__name__": "arm_http_probe_duration_seconds",
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.851,
+            "0.161222"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "probe_duration_24h_max": {
+      "promql": "max_over_time(arm_http_probe_duration_seconds[24h])",
+      "result": [
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.852,
+            "0.33548"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "db_connections_now": {
+      "promql": "arm_db_connections",
+      "result": [
+        {
+          "metric": {
+            "__name__": "arm_db_connections",
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.856,
+            "3"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "db_connections_24h_max": {
+      "promql": "max_over_time(arm_db_connections[24h])",
+      "result": [
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.857,
+            "4"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "db_limit": {
+      "promql": "arm_db_max_connections",
+      "result": [
+        {
+          "metric": {
+            "__name__": "arm_db_max_connections",
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.86,
+            "100"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "db_active_24h_max": {
+      "promql": "max_over_time(arm_db_active[24h])",
+      "result": [
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.861,
+            "1"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "db_slow_24h_max": {
+      "promql": "max_over_time(arm_db_slow[24h])",
+      "result": [
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.864,
+            "0"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "queue_now": {
+      "promql": "{__name__=~\"arm_queue_(pending|failed|oldest_age)\"}",
+      "result": [
+        {
+          "metric": {
+            "__name__": "arm_queue_pending",
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.868,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_queue_failed",
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.868,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_queue_oldest_age",
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.868,
+            "0"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "fpm_processes": {
+      "promql": "arm_fpm_workers",
+      "result": [
+        {
+          "metric": {
+            "__name__": "arm_fpm_workers",
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.885,
+            "2"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "container_health": {
+      "promql": "arm_container_healthy",
+      "result": [
+        {
+          "metric": {
+            "__name__": "arm_container_healthy",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-app"
+          },
+          "value": [
+            1794225470.887,
+            "1"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_healthy",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-nginx"
+          },
+          "value": [
+            1794225470.887,
+            "1"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_healthy",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-postgres"
+          },
+          "value": [
+            1794225470.887,
+            "1"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_healthy",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-redis"
+          },
+          "value": [
+            1794225470.887,
+            "1"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_healthy",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-minio"
+          },
+          "value": [
+            1794225470.887,
+            "1"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_healthy",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-clickhouse"
+          },
+          "value": [
+            1794225470.887,
+            "1"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_healthy",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-meilisearch"
+          },
+          "value": [
+            1794225470.887,
+            "1"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_healthy",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-clamav-1"
+          },
+          "value": [
+            1794225470.887,
+            "1"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "container_cpu": {
+      "promql": "arm_container_cpu_percent",
+      "result": [
+        {
+          "metric": {
+            "__name__": "arm_container_cpu_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-app"
+          },
+          "value": [
+            1794225470.888,
+            "0.03"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_cpu_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-nginx"
+          },
+          "value": [
+            1794225470.888,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_cpu_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-postgres"
+          },
+          "value": [
+            1794225470.888,
+            "0.12"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_cpu_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-redis"
+          },
+          "value": [
+            1794225470.888,
+            "0.51"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_cpu_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-minio"
+          },
+          "value": [
+            1794225470.888,
+            "0.13"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_cpu_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-clickhouse"
+          },
+          "value": [
+            1794225470.888,
+            "11.68"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_cpu_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-meilisearch"
+          },
+          "value": [
+            1794225470.888,
+            "0.15"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_cpu_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-clamav-1"
+          },
+          "value": [
+            1794225470.888,
+            "0.01"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "container_memory_percent": {
+      "promql": "arm_container_memory_percent",
+      "result": [
+        {
+          "metric": {
+            "__name__": "arm_container_memory_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-app"
+          },
+          "value": [
+            1794225470.89,
+            "1.73"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_memory_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-nginx"
+          },
+          "value": [
+            1794225470.89,
+            "0.12"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_memory_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-postgres"
+          },
+          "value": [
+            1794225470.89,
+            "0.37"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_memory_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-redis"
+          },
+          "value": [
+            1794225470.89,
+            "0.11"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_memory_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-minio"
+          },
+          "value": [
+            1794225470.89,
+            "1.37"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_memory_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-clickhouse"
+          },
+          "value": [
+            1794225470.89,
+            "16.18"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_memory_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-meilisearch"
+          },
+          "value": [
+            1794225470.89,
+            "0.04"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "arm_container_memory_percent",
+            "instance": "127.0.0.1:9108",
+            "job": "arm",
+            "service": "arm-clamav-1"
+          },
+          "value": [
+            1794225470.89,
+            "3.12"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "collector_age": {
+      "promql": "time() - arm_collector_timestamp_seconds",
+      "result": [
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.893,
+            "18.22793221473694"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "collector_stage": {
+      "promql": "arm_collector_stage_up",
+      "result": [],
+      "status": "success"
+    },
+    "log_tail_limit_24h": {
+      "promql": "max_over_time(arm_nginx_log_tail_limit_hit[24h])",
+      "result": [
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.896,
+            "0"
+          ]
+        }
+      ],
+      "status": "success"
+    },
+    "up_24h": {
+      "promql": "avg_over_time(up[24h])",
+      "result": [
+        {
+          "metric": {
+            "instance": "127.0.0.1:9090",
+            "job": "prometheus"
+          },
+          "value": [
+            1794225470.899,
+            "1"
+          ]
+        },
+        {
+          "metric": {
+            "instance": "127.0.0.1:9108",
+            "job": "arm"
+          },
+          "value": [
+            1794225470.899,
+            "1"
+          ]
+        }
+      ],
+      "status": "success"
+    }
+  },
+  "container_limits": [
+    {
+      "name": "/arm-app",
+      "memory_bytes": 0,
+      "nano_cpus": 0,
+      "pids_limit": null
+    },
+    {
+      "name": "/arm-postgres",
+      "memory_bytes": 0,
+      "nano_cpus": 0,
+      "pids_limit": null
+    },
+    {
+      "name": "/arm-clickhouse",
+      "memory_bytes": 0,
+      "nano_cpus": 0,
+      "pids_limit": null
+    },
+    {
+      "name": "/arm-redis",
+      "memory_bytes": 0,
+      "nano_cpus": 0,
+      "pids_limit": null
+    },
+    {
+      "name": "/arm-minio",
+      "memory_bytes": 0,
+      "nano_cpus": 0,
+      "pids_limit": null
+    },
+    {
+      "name": "/arm-meilisearch",
+      "memory_bytes": 0,
+      "nano_cpus": 0,
+      "pids_limit": null
+    },
+    {
+      "name": "/arm-chat-worker",
+      "memory_bytes": 0,
+      "nano_cpus": 0,
+      "pids_limit": null
+    }
+  ],
+  "fpm_limits": "pm = dynamic\npm.max_children = 5\npm.start_servers = 2\npm.min_spare_servers = 1\npm.max_spare_servers = 3\npm.max_children = 15\n"
+}

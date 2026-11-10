@@ -1,0 +1,56 @@
+{
+  "result": "PASS",
+  "started_utc": "2026-11-09T12:52:55.685500+00:00",
+  "finished_utc": "2026-11-09T12:58:51.859488+00:00",
+  "requests": 276,
+  "successes": 276,
+  "max_inflight": 5,
+  "stages": [
+    {
+      "parallel_target": 2,
+      "duration_target": 90,
+      "requests": 82,
+      "batches": 41,
+      "interval_seconds": 2.2,
+      "elapsed": 90.08589058300001,
+      "observed_rpm": 54.61454583131409,
+      "p50": 0.16892933300000834,
+      "p95": 0.3805207079999988,
+      "p99": 0.5721092920000004,
+      "max": 0.5721092920000004
+    },
+    {
+      "parallel_target": 3,
+      "duration_target": 90,
+      "requests": 84,
+      "batches": 28,
+      "interval_seconds": 3.3000000000000003,
+      "elapsed": 90.09845008399998,
+      "observed_rpm": 55.93880910605167,
+      "p50": 0.18031325000001175,
+      "p95": 0.2700634590000277,
+      "p99": 0.28391595799999436,
+      "max": 0.28391595799999436
+    },
+    {
+      "parallel_target": 5,
+      "duration_target": 90,
+      "requests": 85,
+      "batches": 17,
+      "interval_seconds": 5.5,
+      "elapsed": 90.062094291,
+      "observed_rpm": 56.62759721666442,
+      "p50": 0.25288020800002187,
+      "p95": 0.7779981250000105,
+      "p99": 0.9358237089999761,
+      "max": 0.9358237089999761
+    }
+  ],
+  "server": {
+    "cpu_max": 14.157899097009363,
+    "available_ratio_min": 0.6593922021434687,
+    "db_connections_max": 3.0,
+    "new_5xx": 0.0,
+    "failed_max": 0.0
+  }
+}

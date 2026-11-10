@@ -1,0 +1,9 @@
+{
+  "samples": 282,
+  "first_epoch": 1794230117.5948186,
+  "last_epoch": 1794231016.6103284,
+  "max_workers": 7,
+  "max_listen_rx_queue_raw": 2,
+  "max_established_fpm_connections": 7,
+  "note": "Partial test coverage; sampler ended before final 50-user acceptance run"
+}

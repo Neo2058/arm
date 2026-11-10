@@ -2,16 +2,23 @@ import axios from 'axios';
 import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
 import { resolveApiUrl } from '../api-config.cjs';
+import { isPublicAuthRequest, withTimeout } from './auth-storage.cjs';
 
 export const API_URL = resolveApiUrl(
   process.env.EXPO_PUBLIC_API_URL ||
   Constants.expoConfig?.extra?.apiUrl
 );
 
+const STORE_MS = 2000;
+const clientHeaders = {
+  Accept: 'application/json',
+  'X-TCH15-Client': `ru.tch15.arm/${Constants.expoConfig?.version || 'unknown'}`,
+};
+
 export const client = axios.create({
   baseURL: API_URL,
   timeout: 25000,
-  headers: { Accept: 'application/json' },
+  headers: clientHeaders,
 });
 
 export const CHAT_UPLOAD_TIMEOUT_MS = 30000;
@@ -19,13 +26,18 @@ export const CHAT_UPLOAD_TIMEOUT_MS = 30000;
 export const chatUploadClient = axios.create({
   baseURL: API_URL,
   timeout: CHAT_UPLOAD_TIMEOUT_MS,
-  headers: { Accept: 'application/json' },
+  headers: clientHeaders,
 });
 
 async function attachToken(config) {
-  const token = await SecureStore.getItemAsync('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (isPublicAuthRequest(config)) return config;
+  try {
+    const token = await withTimeout(SecureStore.getItemAsync('token'), STORE_MS);
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch {
+    // A hung SecureStore must not block login or the first authenticated call.
   }
   return config;
 }
@@ -41,7 +53,7 @@ export async function login(email, password) {
     throw error;
   }
   try {
-    await SecureStore.setItemAsync('token', data.token);
+    await withTimeout(SecureStore.setItemAsync('token', data.token), STORE_MS);
   } catch {
     const error = new Error('Authentication storage unavailable');
     error.code = 'AUTH_STORAGE_FAILED';
@@ -56,7 +68,11 @@ export async function logout() {
   } catch {
     // token already invalid
   }
-  await SecureStore.deleteItemAsync('token');
+  try {
+    await withTimeout(SecureStore.deleteItemAsync('token'), STORE_MS);
+  } catch {
+    // local token may remain; next boot treats storage failure as logged out
+  }
 }
 
 export async function me() {

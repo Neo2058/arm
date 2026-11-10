@@ -1,0 +1,61 @@
+{
+  "result": "STOPPED",
+  "reason": "Client latency exceeded conservative 1s threshold",
+  "transport": "new HTTPS connection/request",
+  "started_utc": "2026-11-09T12:32:19.960336+00:00",
+  "finished_utc": "2026-11-09T12:34:22.777373+00:00",
+  "requests": 45,
+  "successes": 45,
+  "max_inflight": 1,
+  "stages": [
+    {
+      "rps_cap": 0.2,
+      "duration_target": 120,
+      "requests": 20
+    }
+  ],
+  "endpoints": {
+    "chats/sync": {
+      "requests": 0,
+      "successes": 0,
+      "p50": null,
+      "p95": null,
+      "max": null
+    },
+    "documents": {
+      "requests": 5,
+      "successes": 5,
+      "p50": 0.39015820799999545,
+      "p95": 0.4689957089999979,
+      "max": 0.4689957089999979
+    },
+    "naryads": {
+      "requests": 5,
+      "successes": 5,
+      "p50": 0.3756429169999933,
+      "p95": 0.4844449999999938,
+      "max": 0.4844449999999938
+    },
+    "training/topics": {
+      "requests": 5,
+      "successes": 5,
+      "p50": 0.3928091249999994,
+      "p95": 2.081580625000001,
+      "max": 2.081580625000001
+    },
+    "worktime/month": {
+      "requests": 5,
+      "successes": 5,
+      "p50": 0.4502233330000003,
+      "p95": 0.5114462909999986,
+      "max": 0.5114462909999986
+    }
+  },
+  "server": {
+    "cpu_max": 13.211083944580281,
+    "available_ram_ratio_min": 0.6598820723453072,
+    "db_connections_max": 3.0,
+    "queue_failed_max": 0.0,
+    "new_5xx": 0.0
+  }
+}

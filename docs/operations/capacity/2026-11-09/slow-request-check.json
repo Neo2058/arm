@@ -1,0 +1,11 @@
+[
+  {
+    "logged_at": "2026-11-09T12:34:22.698969613Z",
+    "endpoint": "training/topics"
+  },
+  {
+    "logged_at": "2026-11-09T12:34:22.699113435Z",
+    "status": 200,
+    "nginx_seconds": 0.109
+  }
+]

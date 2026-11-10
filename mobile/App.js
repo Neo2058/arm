@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, AppState, Pressable, StyleSheet, Text, View }
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -14,6 +15,7 @@ import WorkTimeScreen from './src/screens/WorkTimeScreen';
 import { clearWorkTimeData } from './src/worktime/storage';
 import { clearPodstroikiData } from './src/podstroiki/storage';
 import { canSubmitPodstroiki } from './src/podstroiki/mutations.cjs';
+import { withTimeout } from './src/auth-storage.cjs';
 import DocumentsScreen from './src/screens/DocumentsScreen';
 import DocumentViewScreen from './src/screens/DocumentViewScreen';
 import TopicsScreen from './src/screens/TopicsScreen';
@@ -41,6 +43,26 @@ import { createFileStorage, createOutbox } from './src/chatOutbox';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+const STORE_MS = 2000;
+
+async function readStore(key) {
+  try {
+    return await withTimeout(SecureStore.getItemAsync(key), STORE_MS);
+  } catch {
+    return null;
+  }
+}
+
+async function rememberIdentity(user) {
+  try {
+    await withTimeout(
+      SecureStore.setItemAsync('disciplineIdentity', JSON.stringify({ server: API_URL, user })),
+      STORE_MS,
+    );
+  } catch {
+    // Optional cache. Login already stored the token.
+  }
+}
 
 const navTheme = {
   ...DefaultTheme,
@@ -273,26 +295,32 @@ export default function App() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
+    let alive = true;
     (async () => {
       try {
-        const token = await SecureStore.getItemAsync('token');
+        const token = await readStore('token');
         if (token) {
           try {
             const fresh = await me();
-            await SecureStore.setItemAsync('disciplineIdentity', JSON.stringify({ server: API_URL, user: fresh }));
-            setUser(fresh);
+            await rememberIdentity(fresh);
+            if (alive) setUser(fresh);
           } catch (error) {
             if (error.response) throw error;
-            const saved = JSON.parse(await SecureStore.getItemAsync('disciplineIdentity') || 'null');
-            if (saved?.server === API_URL && saved.user?.role === 'instructor') setUser({ ...saved.user, _offline: true });
+            const saved = JSON.parse((await readStore('disciplineIdentity')) || 'null');
+            if (saved?.server === API_URL && saved.user?.role === 'instructor' && alive) {
+              setUser({ ...saved.user, _offline: true });
+            }
           }
         }
       } catch {
-        setUser(null);
+        if (alive) setUser(null);
       } finally {
-        setBoot(false);
+        if (alive) setBoot(false);
       }
     })();
+    return () => {
+      alive = false;
+    };
   }, []);
 
   if (boot) {
@@ -304,6 +332,7 @@ export default function App() {
   }
 
   return (
+    <SafeAreaProvider>
     <NavigationContainer theme={navTheme}>
       <StatusBar style="light" />
       {user && !reauth ? (
@@ -311,7 +340,7 @@ export default function App() {
           key={String(user.id)}
           user={user}
           onProfileSaved={async fresh => {
-            await SecureStore.setItemAsync('disciplineIdentity', JSON.stringify({ server: API_URL, user: fresh }));
+            await rememberIdentity(fresh);
             setUser(fresh);
           }}
           onReauthenticate={() => setReauth(true)}
@@ -321,7 +350,7 @@ export default function App() {
               await clearPodstroikiData(user.id);
               await clearDisciplineData();
               await clearChatData(createFileStorage(FileSystem));
-              await SecureStore.deleteItemAsync('disciplineIdentity');
+              try { await withTimeout(SecureStore.deleteItemAsync('disciplineIdentity'), STORE_MS); } catch { /* optional */ }
               await logout();
               setUser(null);
             } catch { Alert.alert('Выход', 'Не удалось очистить локальные черновики. Повторите выход.'); }
@@ -329,11 +358,12 @@ export default function App() {
         /></DisciplineProvider>
       ) : (
         <LoginScreen onLoggedIn={async fresh => {
-          await SecureStore.setItemAsync('disciplineIdentity', JSON.stringify({ server: API_URL, user: fresh }));
+          await rememberIdentity(fresh);
           setUser(fresh); setReauth(false);
         }} />
       )}
     </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
 

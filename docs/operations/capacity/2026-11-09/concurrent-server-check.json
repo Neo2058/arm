@@ -1,0 +1,41 @@
+{
+  "evaluation_epoch": 1794229111.859488,
+  "note": "Aggregate logged traffic, approximate 90s stage window; not endpoint-specific",
+  "queries": {
+    "http_p95_last_stage_approx": [
+      {
+        "metric": {},
+        "value": [
+          1794229111.859,
+          "0.3218749999999998"
+        ]
+      }
+    ],
+    "http_mean_last_stage_approx": [
+      {
+        "metric": {},
+        "value": [
+          1794229111.859,
+          "0.1682807017543877"
+        ]
+      }
+    ],
+    "fpm_processes_max_run": [
+      {
+        "metric": {
+          "instance": "127.0.0.1:9108",
+          "job": "arm"
+        },
+        "value": [
+          1794229111.859,
+          "3"
+        ]
+      }
+    ]
+  },
+  "fpm_warning_counts": {
+    "seems busy": 0,
+    "server reached pm.max_children": 0,
+    "child exited on signal": 0
+  }
+}

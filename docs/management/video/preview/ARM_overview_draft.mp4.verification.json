@@ -1,0 +1,9 @@
+{
+  "audio_tracks" : 0,
+  "decode_checks" : "10%,50%,90% passed",
+  "duration_seconds" : 316,
+  "file" : "ARM_overview_draft.mp4",
+  "fps" : 30,
+  "height" : 1080,
+  "width" : 1920
+}

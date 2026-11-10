@@ -1,0 +1,30 @@
+[
+  {
+    "audio_tracks" : 0,
+    "codec" : "avc1",
+    "decoded_seconds" : [
+      3,
+      9,
+      15
+    ],
+    "duration_seconds" : 18,
+    "file" : "ARM_style_pilot.mp4",
+    "fps" : 30,
+    "height" : 1080,
+    "width" : 1920
+  },
+  {
+    "audio_tracks" : 0,
+    "codec" : "apcn",
+    "decoded_seconds" : [
+      3,
+      9,
+      15
+    ],
+    "duration_seconds" : 18,
+    "file" : "ARM_style_pilot_ProRes.mov",
+    "fps" : 30,
+    "height" : 1080,
+    "width" : 1920
+  }
+]

@@ -40,7 +40,7 @@ class AuthController extends Controller
 
         $user->tokens()->where('name', 'mobile')->delete();
         $token = $user->createToken('mobile')->plainTextToken;
-        $this->enrollment->remember($user);
+        $this->rememberEnrollment($user);
 
         return response()->json([
             'token' => $token,
@@ -51,7 +51,7 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();
-        $this->enrollment->remember($user);
+        $this->rememberEnrollment($user);
 
         return response()->json([
             'user' => $this->payload($user),
@@ -70,6 +70,15 @@ class AuthController extends Controller
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    private function rememberEnrollment(User $user): void
+    {
+        try {
+            $this->enrollment->remember($user);
+        } catch (\Throwable) {
+            // Chat enrollment must not block mobile login or session restore.
+        }
     }
 
     private function payload(User $user): array

@@ -13,6 +13,7 @@ use App\Models\ChatRoom;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Services\Chat\ChatCrypto;
+use App\Services\Chat\ChatEnrollment;
 use App\Services\Chat\ChatService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -117,6 +118,22 @@ class ChatApiTest extends TestCase
             ->assertJsonPath('user.can_manage_column_chats', true);
 
         $this->assertNotNull($user->fresh()->mobile_enrolled_at);
+    }
+
+    public function test_login_returns_token_if_enrollment_throws(): void
+    {
+        $user = $this->instructor();
+        $this->mock(ChatEnrollment::class, function ($mock) {
+            $mock->shouldReceive('remember')->once()->andThrow(new \RuntimeException('enrollment'));
+        });
+
+        $this->postJson('/api/mobile/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ])
+            ->assertOk()
+            ->assertJsonPath('user.id', $user->id)
+            ->assertJsonStructure(['token', 'user']);
     }
 
     public function test_fingerprint_mismatch_is_409_and_same_fingerprint_is_200(): void

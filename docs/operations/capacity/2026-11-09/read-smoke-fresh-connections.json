@@ -1,0 +1,550 @@
+{
+  "started_utc": "2026-11-09T12:32:19.960336+00:00",
+  "scope": "Five driver accounts, empty shifts/chat, listing API only; no login/PDF/writes/browser rendering",
+  "stages": [
+    {
+      "rps_cap": 0.2,
+      "duration_target": 120,
+      "requests": 20
+    }
+  ],
+  "monitoring": [
+    {
+      "cpu": 9.874266554903599,
+      "available_ratio": 0.6639246227800109,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 29.339808225631714,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true
+    },
+    {
+      "cpu": 11.904377321918913,
+      "available_ratio": 0.6639904039261377,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 23.85920238494873,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 2.4590000009538926e-06,
+      "rps_cap": 0.2
+    },
+    {
+      "cpu": 13.211083944580281,
+      "available_ratio": 0.6598820723453072,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 8.053747415542603,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 15.265018125000001,
+      "rps_cap": 0.2
+    },
+    {
+      "cpu": 13.211083944580281,
+      "available_ratio": 0.6598820723453072,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 23.185737371444702,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 30.386227709,
+      "rps_cap": 0.2
+    },
+    {
+      "cpu": 10.588813364998773,
+      "available_ratio": 0.6668444086524135,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 7.76247501373291,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 45.542384334000005,
+      "rps_cap": 0.2
+    },
+    {
+      "cpu": 10.588813364998773,
+      "available_ratio": 0.6668444086524135,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 22.879799127578735,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 60.688495833999994,
+      "rps_cap": 0.2
+    },
+    {
+      "cpu": 10.82807832724859,
+      "available_ratio": 0.6645046928867657,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 7.656649827957153,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 75.818245625,
+      "rps_cap": 0.2
+    },
+    {
+      "cpu": 10.82807832724859,
+      "available_ratio": 0.6645046928867657,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 22.970715045928955,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 90.970855792,
+      "rps_cap": 0.2
+    }
+  ],
+  "requests": [
+    {
+      "phase": "preflight",
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 1.037981583
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.4670505840000001
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.4986031670000002
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.3773487080000004
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.590256042
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.3067854169999995
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.3090963750000002
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.33486612500000046
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.3089051250000008
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.3166009169999988
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.37531770900000083
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.2905582080000002
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.38903120900000054
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.4287419579999998
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.3694303330000004
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.3101455840000007
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.3194469160000004
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.45395883399999803
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.32180954200000045
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.33253966699999893
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.42923858300000006
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.42777545899999936
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.8733147080000023
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.40235129099999867
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.34951316700000135
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.4526370419999992
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.4502233330000003
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.34902424999999937
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.3447595829999983
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.5114462909999986
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.39015820799999545
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.4689957089999979
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.33959924999999913
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.34975529199999755
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.41784166600000106
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.38044220799999096
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.3219156250000026
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.30636175000000776
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.3756429169999933
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.4844449999999938
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.3928091249999994
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.31300729199999466
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.2980477080000128
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.4106359580000003
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 2.081580625000001
+    }
+  ],
+  "max_inflight": 1,
+  "result": "STOPPED",
+  "reason": "Client latency exceeded conservative 1s threshold",
+  "finished_utc": "2026-11-09T12:34:22.777373+00:00"
+}

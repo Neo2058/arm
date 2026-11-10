@@ -1,0 +1,19 @@
+[Unit]
+Description=ARM event history cleanup (72 hours, no automatic archives)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/arm-event-history --apply --prune-only
+TimeoutStartSec=5min
+UMask=0077
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/arm-event-history
+MemoryMax=256M

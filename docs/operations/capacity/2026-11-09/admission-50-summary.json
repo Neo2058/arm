@@ -1,0 +1,58 @@
+{
+  "result": "PASS",
+  "requests": 1217,
+  "invalid": 0,
+  "max_inflight": 2,
+  "stages": [
+    {
+      "name": "admission-50-warm",
+      "target_rps": 2,
+      "duration_target": 30,
+      "profile": "mixed",
+      "started_utc": "2026-11-09T13:35:54.110757+00:00",
+      "requests": 60,
+      "elapsed": 30.001201171427965,
+      "unique_users": 50,
+      "by_kind": {
+        "inbox": 60
+      },
+      "p50": 0.13694745860993862,
+      "p95": 0.17798619531095028,
+      "p99": 0.19017802085727453,
+      "max": 0.19017802085727453,
+      "finished_utc": "2026-11-09T13:36:24.112068+00:00",
+      "generator_cpu_seconds": 1.100036,
+      "observed_rps": 1.9999199251109245,
+      "result": "PASS"
+    },
+    {
+      "name": "50-active-mixed",
+      "target_rps": 3.834,
+      "duration_target": 300,
+      "profile": "mixed",
+      "started_utc": "2026-11-09T13:36:44.181330+00:00",
+      "requests": 1151,
+      "elapsed": 300.0798939522356,
+      "unique_users": 50,
+      "by_kind": {
+        "inbox": 995,
+        "month": 72,
+        "thread": 36,
+        "documents": 24,
+        "topics": 24
+      },
+      "p50": 0.13041306845843792,
+      "p95": 0.21713632810860872,
+      "p99": 0.26980997901409864,
+      "max": 0.4482309799641371,
+      "finished_utc": "2026-11-09T13:41:44.261808+00:00",
+      "generator_cpu_seconds": 12.329175,
+      "observed_rps": 3.83564518382297,
+      "result": "PASS"
+    }
+  ],
+  "cpu_max": 30.364177184661145,
+  "ram_available_min_ratio": 0.6288587868162623,
+  "db_connections_max": 4.0,
+  "new_5xx": 0.0
+}

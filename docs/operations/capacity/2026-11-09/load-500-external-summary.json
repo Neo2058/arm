@@ -1,0 +1,53 @@
+{
+  "result": "STOPPED",
+  "reason": "Sustained client p95 >1s",
+  "started_utc": "2026-11-09T13:13:28.967149+00:00",
+  "finished_utc": "2026-11-09T13:15:20.003965+00:00",
+  "requests_recorded": 292,
+  "invalid_recorded": 0,
+  "max_inflight": 7,
+  "cpu_max": 20.691853977363305,
+  "ram_available_min_ratio": 0.6578991694631959,
+  "db_connections_max": 3.0,
+  "new_5xx": 0.0,
+  "stages": [
+    {
+      "name": "mixed-2",
+      "target_rps": 2,
+      "duration_target": 45,
+      "profile": "mixed",
+      "started_utc": "2026-11-09T13:13:34.679689+00:00",
+      "requests": 90,
+      "elapsed": 45.002338917,
+      "unique_users": 87,
+      "by_kind": {
+        "inbox": 87,
+        "month": 3
+      },
+      "p50": 0.21148758300000026,
+      "p95": 0.5208318330000008,
+      "p99": 0.602960916999999,
+      "max": 0.602960916999999,
+      "finished_utc": "2026-11-09T13:14:19.678659+00:00",
+      "observed_rps": 1.9998960535360477,
+      "result": "PASS",
+      "recorded_rows": 90,
+      "recorded_unique_slots": 87,
+      "recorded_p95": 0.5208318330000008,
+      "recorded_max": 0.602960916999999
+    },
+    {
+      "name": "mixed-5",
+      "target_rps": 5,
+      "duration_target": 45,
+      "profile": "mixed",
+      "started_utc": "2026-11-09T13:14:39.877763+00:00",
+      "requests": 196,
+      "result": "STOPPED",
+      "recorded_rows": 196,
+      "recorded_unique_slots": 185,
+      "recorded_p95": 0.674324208999991,
+      "recorded_max": 1.8097117920000017
+    }
+  ]
+}

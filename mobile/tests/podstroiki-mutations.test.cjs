@@ -17,11 +17,13 @@ function setup(send, saved = null) {
   return { queue, disk: () => disk };
 }
 
-test('only drivers and instructors submit podstroiki', () => {
+test('drivers instructors and admins submit podstroiki; dispatchers do not', () => {
   assert.equal(canSubmitPodstroiki({ role: 'driver' }), true);
   assert.equal(canSubmitPodstroiki({ role: 'instructor' }), true);
+  assert.equal(canSubmitPodstroiki({ role: 'admin' }), true);
+  assert.equal(canSubmitPodstroiki({ role: 'super_admin' }), true);
   assert.equal(canSubmitPodstroiki({ role: 'dispatcher' }), false);
-  assert.equal(canSubmitPodstroiki({ role: 'admin' }), false);
+  assert.equal(canSubmitPodstroiki({ role: 'operator' }), false);
 });
 
 test('normalize rejects empty date route shift and details', () => {

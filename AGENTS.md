@@ -1,5 +1,10 @@
 # AGENTS.md — Правила работы с проектом ARM (для Grok, Claude и других AI-ассистентов)
 
+### Event history maintenance (9 November 2026)
+- `default.user_actions`: root-owned systemd job every 72h deletes events older than 72h at execution, without schema/TTL changes. Between runs rows may approach six days old.
+- Owner selected manual archives only. Export with `/usr/local/sbin/arm-event-history --apply --export-only`; never assume an automatic archive before deletion. System logs retain their separate monthly TTL.
+- Historical failed_jobs 1–21 were backed up and removed once; recurring cleanup never deletes new failed jobs or retries notifications. See `EVENT_HISTORY_RUNBOOK.md`.
+
 ## О проекте
 
 **ARM** — внутреннее веб-приложение для автоматизации рабочих процессов (предположительно локомотивное депо / железнодорожная инфраструктура).

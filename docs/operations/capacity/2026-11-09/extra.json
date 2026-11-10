@@ -1,0 +1,54 @@
+{
+  "effective_fpm": [
+    "listen.backlog = -1",
+    "listen.backlog = -1",
+    "pm = dynamic",
+    "pm = dynamic",
+    "pm.max_children = 15",
+    "pm.max_children = 15",
+    "pm.start_servers = 2",
+    "pm.start_servers = 2",
+    "pm.min_spare_servers = 1",
+    "pm.min_spare_servers = 1",
+    "pm.max_spare_servers = 3",
+    "pm.max_spare_servers = 3",
+    "pm.status_path = undefined",
+    "pm.status_path = undefined",
+    "request_terminate_timeout = 0s",
+    "request_terminate_timeout = 0s"
+  ],
+  "vmstat": "procs -----------memory---------- ---swap-- -----io---- -system-- -------cpu-------\n r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st gu\n 6  0 1639680 461876 471288 4744284    0    0    18   472 1936   12  4  3 91  0  2  0\n 0  0 1639680 463928 471288 4745488    0    0     0     0 7495 8188  7  7 85  0  2  0\n 0  0 1639680 471916 471288 4746256    0    0     0    12 6355 6358  2  4 93  0  2  0\n 1  0 1639680 480228 471288 4747276    0    0     0  2772 7029 7150  2  5 92  0  1  0\n 0  0 1639680 469648 471288 4748464    0    0     0   376 7859 8590  4  6 88  0  2  0\n 0  0 1639680 469648 471288 4749484    0    0     0     0 7082 6796  2  4 91  0  2  0\n",
+  "fpm_max_24h": [
+    {
+      "metric": {
+        "instance": "127.0.0.1:9108",
+        "job": "arm"
+      },
+      "value": [
+        1794225525.139,
+        "3"
+      ]
+    }
+  ],
+  "recent_5xx": [
+    {
+      "metric": {},
+      "value": [
+        1794225525.143,
+        "1.0024591352859136"
+      ]
+    }
+  ],
+  "freshness": [
+    {
+      "metric": {
+        "instance": "127.0.0.1:9108",
+        "job": "arm"
+      },
+      "value": [
+        1794225525.146,
+        "42.00519371032715"
+      ]
+    }
+  ]
+}

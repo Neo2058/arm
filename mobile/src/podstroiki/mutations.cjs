@@ -1,5 +1,5 @@
 function canSubmitPodstroiki(user) {
-  return user?.role === 'driver' || user?.role === 'instructor';
+  return ['driver', 'instructor', 'admin', 'super_admin'].includes(user?.role);
 }
 
 function normalizeSubmit(fields) {

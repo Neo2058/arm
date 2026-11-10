@@ -1,0 +1,2608 @@
+{
+  "started_utc": "2026-11-09T12:36:53.545857+00:00",
+  "scope": "Five driver accounts, empty shifts/chat, listing API only; no login/PDF/writes/browser rendering",
+  "stages": [
+    {
+      "rps_cap": 0.2,
+      "duration_target": 120,
+      "requests": 24,
+      "elapsed": 120.047182666,
+      "p50": 0.17393699999999512,
+      "p95": 0.28419337500000097,
+      "p99": 0.4169245420000003
+    },
+    {
+      "rps_cap": 0.5,
+      "duration_target": 120,
+      "requests": 60,
+      "elapsed": 120.036241125,
+      "p50": 0.17855049999997163,
+      "p95": 0.40589395800000716,
+      "p99": 0.46778958299995566
+    },
+    {
+      "rps_cap": 1.0,
+      "duration_target": 120,
+      "requests": 118,
+      "elapsed": 120.00480166700004,
+      "p50": 0.17280133299999534,
+      "p95": 0.3726910419999854,
+      "p99": 0.45532050000002755
+    }
+  ],
+  "monitoring": [
+    {
+      "cpu": 13.502587322121606,
+      "available_ratio": 0.6641279463225848,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 27.13206720352173,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true
+    },
+    {
+      "cpu": 11.31386861313869,
+      "available_ratio": 0.6628666426798043,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 22.770297288894653,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 2.9579999996087736e-06,
+      "rps_cap": 0.2
+    },
+    {
+      "cpu": 12.439379243452963,
+      "available_ratio": 0.6637232926055014,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 6.885920524597168,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 16.131965583,
+      "rps_cap": 0.2
+    },
+    {
+      "cpu": 12.439379243452963,
+      "available_ratio": 0.6637232926055014,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 22.127355813980103,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 31.261941957999998,
+      "rps_cap": 0.2
+    },
+    {
+      "cpu": 10.915464253688755,
+      "available_ratio": 0.662266638892405,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 6.437207221984863,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 46.50179087500001,
+      "rps_cap": 0.2
+    },
+    {
+      "cpu": 10.915464253688755,
+      "available_ratio": 0.662266638892405,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 21.628225088119507,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 61.678439666,
+      "rps_cap": 0.2
+    },
+    {
+      "cpu": 10.70790712778048,
+      "available_ratio": 0.6657316109304344,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 5.857726097106934,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 76.876425916,
+      "rps_cap": 0.2
+    },
+    {
+      "cpu": 10.70790712778048,
+      "available_ratio": 0.6657316109304344,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 21.045042991638184,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 92.09745879100001,
+      "rps_cap": 0.2
+    },
+    {
+      "cpu": 10.671617694543102,
+      "available_ratio": 0.6622830841789367,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 4.857408046722412,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 107.28434979100001,
+      "rps_cap": 0.2
+    },
+    {
+      "cpu": 10.671617694543102,
+      "available_ratio": 0.6622830841789367,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 27.613218784332275,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true
+    },
+    {
+      "cpu": 10.916673481069594,
+      "available_ratio": 0.6607780912902772,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 6.974755525588989,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true
+    },
+    {
+      "cpu": 10.916673481069594,
+      "available_ratio": 0.6607780912902772,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 17.066266536712646,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true
+    },
+    {
+      "cpu": 10.916673481069594,
+      "available_ratio": 0.6607780912902772,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 17.28671669960022,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 2.207999983738773e-06,
+      "rps_cap": 0.5
+    },
+    {
+      "cpu": 10.916673481069594,
+      "available_ratio": 0.6607780912902772,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 32.781866788864136,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 15.245742791999987,
+      "rps_cap": 0.5
+    },
+    {
+      "cpu": 12.291683602959115,
+      "available_ratio": 0.6604387203773047,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 17.1455020904541,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 30.762769458000008,
+      "rps_cap": 0.5
+    },
+    {
+      "cpu": 12.291683602959115,
+      "available_ratio": 0.6604387203773047,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 32.25797200202942,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 45.970759999999984,
+      "rps_cap": 0.5
+    },
+    {
+      "cpu": 13.21819993357688,
+      "available_ratio": 0.6656927402531777,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 17.423696756362915,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 61.098088792,
+      "rps_cap": 0.5
+    },
+    {
+      "cpu": 13.21819993357688,
+      "available_ratio": 0.6656927402531777,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 32.518457889556885,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 76.33270383299998,
+      "rps_cap": 0.5
+    },
+    {
+      "cpu": 13.550835823306151,
+      "available_ratio": 0.6659384228671211,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 16.91613507270813,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 91.44524170799997,
+      "rps_cap": 0.5
+    },
+    {
+      "cpu": 13.550835823306151,
+      "available_ratio": 0.6659384228671211,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 32.14647912979126,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 106.75685783299997,
+      "rps_cap": 0.5
+    },
+    {
+      "cpu": 12.801267617379697,
+      "available_ratio": 0.665370811310769,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 25.268908977508545,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true
+    },
+    {
+      "cpu": 11.79743569067011,
+      "available_ratio": 0.6616038440109755,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 4.312623023986816,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true
+    },
+    {
+      "cpu": 11.79743569067011,
+      "available_ratio": 0.6616038440109755,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 14.59635305404663,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true
+    },
+    {
+      "cpu": 11.79743569067011,
+      "available_ratio": 0.6616038440109755,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 14.790284872055054,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 3.4999999911633495e-06,
+      "rps_cap": 1.0
+    },
+    {
+      "cpu": 11.79743569067011,
+      "available_ratio": 0.6616038440109755,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 29.921557903289795,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 15.214635334000036,
+      "rps_cap": 1.0
+    },
+    {
+      "cpu": 11.732206694832625,
+      "available_ratio": 0.6583885413230183,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 4.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 14.308122396469116,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 30.325450542,
+      "rps_cap": 1.0
+    },
+    {
+      "cpu": 11.732206694832625,
+      "available_ratio": 0.6583885413230183,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 4.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 29.472100257873535,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 45.73904958400004,
+      "rps_cap": 1.0
+    },
+    {
+      "cpu": 13.311215407023791,
+      "available_ratio": 0.6641035275637952,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 13.916221618652344,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 60.89256695900002,
+      "rps_cap": 1.0
+    },
+    {
+      "cpu": 13.311215407023791,
+      "available_ratio": 0.6641035275637952,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 29.258620738983154,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 76.36533316700002,
+      "rps_cap": 1.0
+    },
+    {
+      "cpu": 12.935242434103477,
+      "available_ratio": 0.6645161547531363,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 13.458001613616943,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 91.72267925,
+      "rps_cap": 1.0
+    },
+    {
+      "cpu": 12.935242434103477,
+      "available_ratio": 0.6645161547531363,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 28.59706997871399,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true,
+      "elapsed_stage": 106.86729108400004,
+      "rps_cap": 1.0
+    },
+    {
+      "cpu": 14.39491470872224,
+      "available_ratio": 0.664528114961523,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 20.725061416625977,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true
+    },
+    {
+      "cpu": 14.39491470872224,
+      "available_ratio": 0.664528114961523,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 30.830220222473145,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true
+    },
+    {
+      "cpu": 11.773774748458287,
+      "available_ratio": 0.6628945498327066,
+      "failed": 0.0,
+      "pending": 0.0,
+      "queue_age": 0.0,
+      "db_connections": 3.0,
+      "db_limit": 100.0,
+      "db_slow": 0.0,
+      "age": 10.101512908935547,
+      "http_5xx": 1.0,
+      "probe_up": 1.0,
+      "stages_ok": true
+    }
+  ],
+  "requests": [
+    {
+      "phase": "preflight",
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.7532049169999999
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.5408412499999999
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.9091245000000003
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.5433534999999998
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.4106540000000001
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.1430888330000002
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.18806866699999958
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.14527991699999987
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.18640279200000087
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.15100979199999998
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.17885895899999937
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.14685954100000131
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.17564529199999868
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.16320283299999971
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.15767083399999926
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.1299849169999998
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.25794387500000227
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.6233649999999997
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.4473336670000023
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.4760513330000009
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.5440927920000007
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.5581169159999995
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.46698650000000086
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.34606549999999814
+    },
+    {
+      "phase": "preflight",
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.17401791599999683
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.4169245420000003
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.28419337500000097
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.21516120799999783
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.1990853329999993
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.2782542090000035
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.18561179099999947
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.17422504200000333
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.16909770899999899
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.16068737499999486
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.17077508299999522
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.1844564169999927
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.17393699999999512
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.16635008400000117
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.17245358399999589
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.1743462080000029
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.13965870900000255
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.23108812499999942
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.16343720899999425
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.14718000000000586
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.15577945799999782
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.17327224999999657
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.2055111249999868
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.1762711670000101
+    },
+    {
+      "phase": 0.2,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.1693164159999867
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.27702641700000186
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.1595172079999827
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.1878950000000259
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.25561104099998033
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.17876433399999314
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.19692904199999361
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.45468674999997916
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.18803075000002423
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.22490049999998973
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.15931120800001963
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.38622054199998956
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.15164195899998845
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.15054579200000262
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.14000041699998178
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.15620204199998966
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.19979758399998104
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.1744705829999873
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.1676184169999999
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.15710116700000754
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.16440291700001808
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.15365216699998996
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.40589395800000716
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.4666089579999948
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.2455345829999942
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.18846612499999083
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.27152137499999185
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.19569554200000994
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.17739749999998367
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.1933237500000189
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.1591280000000097
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.18274395899999263
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.16416325000000143
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.15840074999999842
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.14003612499999463
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.152508250000011
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.21606320800000844
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.18112400000001116
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.16729108300000917
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.19324554100001023
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.16204441700000416
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.15324354199998425
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.46778958299995566
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.17380533300001844
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.1657700830000408
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.16063095800001292
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.13671308300001783
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.24195412500000657
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.15444791600003782
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.19047954100000197
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.18190616699996554
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.14774504199999683
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.294963709000001
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.18295733299999029
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.26074699999998074
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.17855049999997163
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.22049004199999445
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.1410344999999893
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.3167772499999728
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.16704662499995493
+    },
+    {
+      "phase": 0.5,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.16033345800002508
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.16004341599995087
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.17019579200001544
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.15587024999996402
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.15575070800002777
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.15381504200001928
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.2202721249999513
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.2544731250000041
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.13304279099997984
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.16718891600004326
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.15658329199999343
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.23152616699996997
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.20610791600000766
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.5712059580000073
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.15183424999997897
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.15245629100002134
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.2539244580000286
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.1927461249999851
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.1549571250000099
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.170479916999966
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.17607237499998973
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.1736372089999918
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.15298258299998224
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.14038429199996472
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.14970633299998326
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.19961562500003538
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.14492683299999953
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.14589566699999068
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.17846708299998681
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.15704516700003524
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.1387476250000077
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.36948870800000577
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.14032587500003046
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.17280133299999534
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.1904220000000123
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.38014941599999474
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.16618229199997359
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.2097960829999579
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.15281887500003677
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.16064554199999748
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.17633083399999805
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.19929970799995544
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.22115291699998352
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.2394332499999905
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.21715862500002459
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.23454000000003816
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.26505504199997176
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.1539428750000411
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.1694925420000004
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.1936663750000207
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.22512679200002594
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.16326245900000913
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.15479624999994712
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.29614070899998524
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.15321454200000062
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.17441733399999748
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.45532050000002755
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.1391527920000044
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.1453175829999509
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.16245608299999503
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.14895933299999342
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.16796645799996668
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.14606049999997595
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.16603037499999118
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.1985137500000178
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.20226779099999703
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.16187745899998163
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.20169587499998443
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.16988249999997151
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.2060230419999698
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.17100983400001724
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.20142316599998367
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.14324812500001372
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.20401233299998012
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.1617207499999722
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.15274800000003097
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.1692308750000393
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.13742908299997225
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.17854025000002594
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.2613665839999726
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.19418966699998919
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.15050449999995408
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.1553444169999807
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.1565394169999763
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.15552433300001667
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.22363829100004295
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.19512929100000065
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.26537237500002675
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.2045555000000263
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.15825837500000262
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.1873814159999938
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.19767362499999308
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.24014849999997523
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.3726910419999854
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.17298720899998443
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.1760832079999659
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.18058720900000935
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.19693725000001905
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.1552868340000373
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.15637454099999104
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.2598459580000281
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "documents",
+      "status": 200,
+      "ok": true,
+      "items": 4,
+      "bytes": 3561,
+      "seconds": 0.18574170900001263
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.18574054100002968
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.3947747079999999
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.17932199999995646
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.14851824999999508
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "naryads",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 14,
+      "seconds": 0.17885879199997134
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.15456162499998527
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.1656597499999748
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.16452054100000169
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.1466939580000144
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "training/topics",
+      "status": 200,
+      "ok": true,
+      "items": 2,
+      "bytes": 2094,
+      "seconds": 0.15826779200000374
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.19121437500001548
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.44493987499998866
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.1605015829999843
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.20784512500000574
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "chats/sync",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 49,
+      "seconds": 0.1945135419999815
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.16859633300003907
+    },
+    {
+      "phase": 1.0,
+      "endpoint": "worktime/month",
+      "status": 200,
+      "ok": true,
+      "items": 0,
+      "bytes": 1039,
+      "seconds": 0.21446033300003364
+    }
+  ],
+  "max_inflight": 1,
+  "transport": "HTTPS keep-alive per account",
+  "result": "PASS",
+  "finished_utc": "2026-11-09T12:44:50.715119+00:00"
+}

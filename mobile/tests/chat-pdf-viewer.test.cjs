@@ -38,11 +38,11 @@ test('ChatPdfScreen fetches capability URL bytes and does not lock screenshots',
   assert.doesNotMatch(src, /Bearer/);
 });
 
-test('APK 1.1.2 uses versionCode 18, picker plugins, and no screen-capture plugin', () => {
+test('APK 1.1.4 uses versionCode 20, picker plugins, and no screen-capture plugin', () => {
   const config = fs.readFileSync(path.join(__dirname, '../app.config.js'), 'utf8');
   const api = fs.readFileSync(path.join(__dirname, '../src/api.js'), 'utf8');
-  assert.match(config, /version:\s*monitor \? '1\.0\.0' : '1\.1\.2'/);
-  assert.match(config, /versionCode:\s*monitor \? 1 : 18/);
+  assert.match(config, /version:\s*monitor \? '1\.0\.0' : '1\.1\.4'/);
+  assert.match(config, /versionCode:\s*monitor \? 1 : 20/);
   assert.match(config, /expo-image-picker/);
   const picker = config.slice(config.indexOf('expo-image-picker'), config.indexOf('expo-document-picker'));
   assert.match(picker, /cameraPermission:\s*false/);
@@ -55,5 +55,10 @@ test('APK 1.1.2 uses versionCode 18, picker plugins, and no screen-capture plugi
   assert.match(api, /timeout:\s*25000/);
   assert.match(api, /timeout:\s*CHAT_UPLOAD_TIMEOUT_MS/);
   assert.match(api, /CHAT_UPLOAD_TIMEOUT_MS = 30000/);
+  assert.match(api, /X-TCH15-Client/);
+  assert.match(api, /isPublicAuthRequest/);
   assert.doesNotMatch(api, /90000/);
+  const plugin = fs.readFileSync(path.join(__dirname, '../plugins/with-release-signing.cjs'), 'utf8');
+  assert.match(plugin, /reactNativeArchitectures/);
+  assert.match(plugin, /armeabi-v7a,arm64-v8a/);
 });
