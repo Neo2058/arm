@@ -178,6 +178,10 @@
 
     ];
 
+    if ($user && ($user->isDriver() || $user->isInstructor())) {
+        $trainingMenu[] = ['title' => 'Формуляр', 'route' => 'formular.index', 'icon' => 'results'];
+    }
+
     if ($canSeeRospisiStats) {
         $trainingMenu[] = [
             'title' => 'Статистика росписей',
@@ -311,6 +315,7 @@
         request()->routeIs('training.*') => $trainingMenu,
         request()->routeIs('rosisi') => $trainingMenu,
         request()->routeIs('rosisi.*') => $trainingMenu,
+        request()->routeIs('formular.*') => $trainingMenu,
         request()->routeIs('podstroiki') => $trainingMenu,
         request()->routeIs('podstroiki.*') => $trainingMenu,
         request()->routeIs('journal') => $journalMenu,

@@ -49,6 +49,7 @@
     <!-- Записи в формуляр -->
     <div>
         <h2 class="text-2xl font-semibold mb-4 text-orange-600">Записи в формуляр</h2>
+        @if(auth()->user()->isInstructor())<p class="mb-4"><a href="{{ route('formular.index', ['review' => 1]) }}">Проверка записей и статистика своей колонны →</a></p>@endif
 
         <div class="bg-white dark:bg-[#0b1018] border border-gray-200 dark:border-white/10 rounded-3xl shadow overflow-hidden">
             <div class="overflow-x-auto">

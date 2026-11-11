@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Mobile\ChatFileController;
 use App\Http\Controllers\Api\Mobile\DisciplineController;
 use App\Http\Controllers\Api\Mobile\DocumentController;
 use App\Http\Controllers\Api\Mobile\FileController;
+use App\Http\Controllers\Api\Mobile\FormularController;
 use App\Http\Controllers\Api\Mobile\JournalController;
 use App\Http\Controllers\Api\Mobile\NaryadController;
 use App\Http\Controllers\Api\Mobile\PhoneController;
@@ -38,6 +39,11 @@ Route::prefix('mobile')->group(function () {
         ->middleware('signed');
 
     Route::middleware(['auth:sanctum', EnsureActiveApiUser::class, RejectMonitorToken::class])->group(function () {
+        Route::get('/formular', [FormularController::class, 'index']);
+        Route::get('/formular/review', [FormularController::class, 'review']);
+        Route::post('/formular/tasks/{task}', [FormularController::class, 'submit'])->whereNumber('task')->middleware('throttle:20,1');
+        Route::post('/formular/logs/{log}/review', [FormularController::class, 'decide'])->whereNumber('log')->middleware('throttle:20,1');
+
         Route::get('/account/profile', [ProfileController::class, 'show']);
         Route::patch('/account/profile', [ProfileController::class, 'update'])->middleware('throttle:20,1');
         Route::get('/me', [AuthController::class, 'me']);

@@ -1,3 +1,5 @@
+import FormularScreen from './src/screens/FormularScreen';
+import { clearFormularData } from './src/formular/storage';
 import TrainingRequestsScreen from './src/screens/TrainingRequestsScreen';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -151,7 +153,8 @@ function DisciplineStack() {
 
 function ProfileStack({ user, onLogout, onReauthenticate, onProfileSaved }) {
   return <Stack.Navigator screenOptions={{ headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}>
-    <Stack.Screen name="ProfileHome" options={{ title: 'Профиль' }}>{({ navigation }) => <ProfileScreen user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} onProfileSaved={onProfileSaved} onOpenWorkTime={() => navigation.navigate('PersonalWorkTime')} onOpenPodstroiki={() => navigation.navigate('Podstroiki')} />}</Stack.Screen>
+    <Stack.Screen name="ProfileHome" options={{ title: 'Профиль' }}>{({ navigation }) => <ProfileScreen user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} onProfileSaved={onProfileSaved} onOpenFormular={() => navigation.navigate('Formular')} onOpenWorkTime={() => navigation.navigate('PersonalWorkTime')} onOpenPodstroiki={() => navigation.navigate('Podstroiki')} />}</Stack.Screen>
+    {['driver', 'instructor'].includes(user.role) && <Stack.Screen name="Formular" options={{ title: 'Формуляр' }}>{() => <FormularScreen user={user} />}</Stack.Screen>}
     <Stack.Screen name="PersonalWorkTime" options={{ title: 'Личный табель' }}>{() => <WorkTimeScreen userId={user.id} />}</Stack.Screen>
     {canSubmitPodstroiki(user) && <Stack.Screen name="Podstroiki" options={{ title: 'Подстройки' }}>{() => <PodstroikiScreen user={user} />}</Stack.Screen>}
   </Stack.Navigator>;
@@ -346,6 +349,7 @@ export default function App() {
           onReauthenticate={() => setReauth(true)}
           onLogout={async () => {
             try {
+              await clearFormularData(user.id);
               await clearWorkTimeData(user.id);
               await clearPodstroikiData(user.id);
               await clearDisciplineData();

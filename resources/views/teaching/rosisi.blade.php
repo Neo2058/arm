@@ -114,7 +114,7 @@
     <div>
         <div class="flex items-center gap-3 mb-4">
             <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center text-lg">📝</div>
-            <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Записи в формуляр</h2>
+            <h2 class="text-2xl font-semibold text-gray-900 dark:text-white"><a href="{{ route('formular.index') }}">Формуляр · записи и проверка →</a></h2>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -130,7 +130,7 @@
                     <div class="mt-4 pt-4 border-t border-gray-100 dark:border-white/10">
                         @if($task['completed'])
                             <div class="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-                                <span>✓ Выполнено {{ \Carbon\Carbon::parse($task['completed_at'])->format('d.m.Y') }}</span>
+                                <span>{{ ['pending' => 'На проверке', 'confirmed' => 'Подтверждено', 'returned' => 'Возвращено'][$task['status']] ?? 'На проверке' }} {{ \Carbon\Carbon::parse($task['completed_at'])->format('d.m.Y') }}</span>
                             </div>
                             @if($task['entry_text'])
                                 <div class="mt-2 text-xs bg-gray-50 dark:bg-white/5 p-3 rounded-xl text-gray-600 dark:text-gray-300">
@@ -140,6 +140,8 @@
                         @else
                             <form method="POST" action="{{ route('rosisi.log-formular', $task['id']) }}">
                                 @csrf
+                                <input type="hidden" name="operation_id" value="{{ \Illuminate\Support\Str::uuid() }}">
+                                <input type="hidden" name="version" value="{{ $task['version'] }}">
                                 <div class="space-y-2">
                                     <input type="text" name="entry_text" placeholder="Что вы записали в формуляр?" 
                                            class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-white/20 rounded-2xl bg-white dark:bg-black/20 focus:border-orange-400" required>

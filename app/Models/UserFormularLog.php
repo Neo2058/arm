@@ -17,6 +17,8 @@ class UserFormularLog extends Model
 
     protected $casts = [
         'completed_at' => 'datetime',
+        'reviewed_at' => 'datetime',
+        'version' => 'integer',
     ];
 
     public function user(): BelongsTo

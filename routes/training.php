@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\FormularController;
 use App\Http\Controllers\RospisiController;
 use App\Http\Controllers\TrainingController;
 use Illuminate\Support\Facades\Route;
@@ -38,3 +39,7 @@ Route::prefix('training')->group(function () {
     Route::post('/{material}/comment', [TrainingController::class, 'storeComment'])->name('training.comment.store');
     Route::post('/{material}/react', [TrainingController::class, 'storeReaction'])->name('training.reaction.store');
 });
+
+Route::get('/formular', [FormularController::class, 'index'])->name('formular.index');
+Route::post('/formular/tasks/{task}', [FormularController::class, 'submit'])->whereNumber('task')->middleware('throttle:20,1')->name('formular.submit');
+Route::post('/formular/logs/{log}/review', [FormularController::class, 'review'])->whereNumber('log')->middleware('throttle:20,1')->name('formular.review');

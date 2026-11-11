@@ -469,3 +469,9 @@ ATZ mobile API and Android 1.0.14/code15 were published on production on 31 Octo
 ## Закрытый мобильный мониторинг (06.11.2026)
 
 `/api/monitor` — отдельные Sanctum-токены `monitor` с `monitor:read` на 12 часов, только активный `super_admin`. `RejectMonitorToken` запрещает этим токенам обычный `/api/mobile`. Скачивание приватного APK требует обычный токен `mobile` и актуальную роль. APK не размещать в public; путь `/run/arm-installers/tch15-monitor.apk (root-owned host /var/lib/arm-monitoring/installers, readonly mount)`. Снимок фиксированных агрегатов читается из `/run/arm-metrics/arm.prom`, readonly mount через последний `docker-compose.monitor-mobile.yml`. Секреты Grafana/SSH и Docker socket в приложении не используются. План: `docs/roadmap/MONITOR_MOBILE_PLAN.md`.
+
+### Formular review (11 November 2026)
+- Shared `FormularService` backs `/formular` and Sanctum `/api/mobile/formular`. Active driver/instructor own submissions; instructor review only active drivers of their current nonempty column, never self.
+- States pending/confirmed/returned, version checks and actor-scoped UUID receipts in PostgreSQL. Returned records may resubmit; confirmed/pending records cannot be overwritten through the legacy web POST. Existing records migrate to pending. No claim of electronic signature.
+- Approved events: `formular.review_confirmed`, `formular.review_returned`; existing `formular_logged` reused. IDs only, no entry/comment text in ClickHouse; after commit, no duplicate on retry.
+- Manual retry and private device drafts in namespace formular, isolated by server/user, cleared on explicit logout. See docs/mobile/FORMULAR.md. MinIO is not involved.

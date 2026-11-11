@@ -9,6 +9,7 @@ use App\Models\UserFormularLog;
 use App\Models\UserInstructionSignature;
 use App\Services\ClickHouseService;
 use App\Services\FileProxyService;
+use App\Services\FormularService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -73,6 +74,7 @@ class RospisiController extends Controller
                     'completed' => (bool) $log,
                     'completed_at' => $log?->completed_at,
                     'entry_text' => $log?->entry_text,
+                    'status' => $log?->status, 'version' => $log?->version ?? 0,
                 ];
             });
 
@@ -114,26 +116,9 @@ class RospisiController extends Controller
 
     public function logFormular(Request $request, FormularTask $task)
     {
-        $user = Auth::user();
+        app(FormularService::class)->mutate($request->user(), 'submit', $task->id, $request->all());
 
-        UserFormularLog::updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'formular_task_id' => $task->id,
-            ],
-            [
-                'completed_at' => now(),
-                'entry_text' => $request->entry_text,
-                'notes' => $request->notes,
-            ]
-        );
-
-        ClickHouseService::log('formular_logged', $task->id, [
-            'user_id' => $user->id,
-            'task_title' => $task->title,
-        ]);
-
-        return back()->with('success', 'Запись в формуляр отмечена.');
+        return redirect()->route('formular.index')->with('success', 'Запись отправлена на проверку.');
     }
 
     public function statistics()
@@ -149,6 +134,8 @@ class RospisiController extends Controller
             ->paginate(15, ['*'], 'signatures_page');
 
         $logs = UserFormularLog::with(['user', 'task'])
+            ->when($user->isInstructor(), fn ($q) => $q->whereHas('user', fn ($u) => $u->where('is_active', true)->where('role', 'driver')->whereHas('profile', fn ($p) => $p->where('column', $user->profile?->column)))
+                ->when(! $user->profile?->column, fn ($q) => $q->whereRaw('1 = 0')))
             ->latest('completed_at')
             ->paginate(15, ['*'], 'logs_page');
 
