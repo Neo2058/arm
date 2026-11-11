@@ -14,36 +14,38 @@ use App\Services\InstructorNaryad\ShiftCatalog;
 use App\Services\InstructorNaryad\Text;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
 class NaryadIssuePublisher
 {
     /**
-     * Разбор TXT-нарядов и разбивки смен (ядро searching) → личный файл на каждого найденного пользователя.
-     * Безопасная публикация: сначала подготавливаются и проверяются новые файлы, затем атомарно
-     * обновляются записи в БД, и только после успешного коммита удаляются старые файлы.
+     * Prepare immutable personal files before switching database references.
+     * Existing objects are never overwritten or deleted, including on rollback.
      */
     public function publish(Naryad $naryad): int
     {
-        $docs = $this->loadNaryads($naryad);
-        if ($docs === []) {
-            return 0;
-        }
+        return DB::transaction(function () use ($naryad): int {
+            // Serialize publishers of one issue and use its current source metadata.
+            $current = Naryad::query()->lockForUpdate()->findOrFail($naryad->getKey());
+            $docs = $this->loadNaryads($current);
+            if ($docs === []) {
+                return 0;
+            }
 
-        $work = $this->loadShiftEntries($naryad->work_shifts_path, 'work');
-        $weekend = $this->loadShiftEntries($naryad->weekend_shifts_path, 'weekend');
+            $work = $this->loadShiftEntries($current->work_shifts_path, 'work');
+            $weekend = $this->loadShiftEntries($current->weekend_shifts_path, 'weekend');
+            $users = User::query()
+                ->where('is_active', true)
+                ->with(['personnel', 'profile'])
+                ->orderBy('id')
+                ->get();
 
-        $users = User::query()
-            ->where('is_active', true)
-            ->with(['personnel', 'profile'])
-            ->orderBy('id')
-            ->get();
+            $revision = (string) Str::uuid();
+            $disk = Storage::disk('s3');
+            $newRecords = [];
 
-        $newRecords = [];
-        $writtenPaths = [];
-
-        try {
             foreach ($users as $user) {
                 $query = $this->queryForUser($user);
                 if ($query === '') {
@@ -55,20 +57,21 @@ class NaryadIssuePublisher
                     continue;
                 }
                 $fio = FioParser::label(FioParser::parseQuery($query));
-                $fileName = $fio.'.txt';
-                $path = 'naryads/'.$naryad->id.'/people/'.$user->id.'.txt';
+                $path = 'naryads/'.$current->id.'/people/'.$revision.'/'.$user->id.'.txt';
 
-                $putOk = Storage::disk('s3')->put($path, $result['text']);
-                if ($putOk === false) {
-                    throw new RuntimeException("Не удалось сохранить персональный файл в S3: {$path}");
+                if ($disk->put($path, $result['text']) !== true) {
+                    throw new RuntimeException('Не удалось записать новую выдачу наряда. Предыдущая выдача сохранена.');
                 }
-                $writtenPaths[] = $path;
+                $stored = $disk->get($path);
+                if (! is_string($stored) || ! hash_equals(hash('sha256', $result['text']), hash('sha256', $stored))) {
+                    throw new RuntimeException('Проверка записанного файла наряда не пройдена. Предыдущая выдача сохранена.');
+                }
 
                 $newRecords[] = [
-                    'naryad_id' => $naryad->id,
+                    'naryad_id' => $current->id,
                     'user_id' => $user->id,
                     'fio' => $fio,
-                    'file_name' => $fileName,
+                    'file_name' => $fio.'.txt',
                     'file_path' => $path,
                     'hits_count' => $hits,
                     'created_at' => now(),
@@ -76,47 +79,29 @@ class NaryadIssuePublisher
                 ];
             }
 
-            // Получаем список старых записей до их замены
-            $oldFiles = $naryad->personFiles()->get();
-            $oldPaths = $oldFiles->pluck('file_path')->all();
+            // An empty parse/match is not permission to clear an existing issue.
+            if ($newRecords === []) {
+                return 0;
+            }
 
-            // Атомарное обновление записей в БД
-            DB::transaction(function () use ($naryad, $newRecords) {
-                $naryad->personFiles()->delete();
-                if ($newRecords !== []) {
-                    NaryadPersonFile::insert($newRecords);
+            $current->personFiles()->delete();
+            NaryadPersonFile::insert($newRecords);
+            $created = count($newRecords);
+
+            // Also respect any outer transaction (e.g. an administrative edit).
+            DB::afterCommit(function () use ($current, $docs, $created): void {
+                try {
+                    ClickHouseService::log('naryad_issue_published', $current->id, [
+                        'sources' => count($docs),
+                        'person_files' => $created,
+                    ]);
+                } catch (Throwable) {
                 }
             });
 
-            // Безопасная очистка старых файлов, которые больше не используются
-            $newPathsSet = array_flip($writtenPaths);
-            foreach ($oldPaths as $oldPath) {
-                if (!isset($newPathsSet[$oldPath])) {
-                    Storage::disk('s3')->delete($oldPath);
-                }
-            }
-        } catch (Throwable $e) {
-            // При ошибке во время записи очищаем новые частично созданные файлы
-            foreach ($writtenPaths as $p) {
-                try {
-                    Storage::disk('s3')->delete($p);
-                } catch (Throwable) {
-                }
-            }
-            throw $e;
-        }
-
-        $created = count($newRecords);
-
-        try {
-            ClickHouseService::log('naryad_issue_published', $naryad->id, [
-                'sources' => count($docs),
-                'person_files' => $created,
-            ]);
-        } catch (Throwable) {
-        }
-
-        return $created;
+            // Unreferenced revision files are retained: deletion needs its own policy.
+            return $created;
+        });
     }
 
     public function queryForUser(User $user): string
@@ -131,19 +116,16 @@ class NaryadIssuePublisher
     {
         $docs = [];
         foreach ($naryad->sourceFilesForParse() as $path) {
-            try {
-                if (! Storage::disk('s3')->exists($path)) {
-                    continue;
-                }
-                $bytes = Storage::disk('s3')->get($path);
-                if (! is_string($bytes) || $bytes === '') {
-                    continue;
-                }
-                $utf8 = NaryadDocumentLoader::utf8FromContents($bytes, $path);
-                $docs[] = NaryadDocumentLoader::parseUtf8($utf8, basename($path));
-            } catch (Throwable) {
-                continue;
+            $bytes = Storage::disk('s3')->get($path);
+            if (! is_string($bytes) || trim($bytes) === '') {
+                throw new RuntimeException('Не удалось прочитать один из исходников наряда. Предыдущая выдача сохранена.');
             }
+            $utf8 = NaryadDocumentLoader::utf8FromContents($bytes, $path);
+            $doc = NaryadDocumentLoader::parseUtf8($utf8, basename($path));
+            if ($doc['assignments'] === []) {
+                throw new RuntimeException('В одном из исходников не распознаны назначения. Предыдущая выдача сохранена.');
+            }
+            $docs[] = $doc;
         }
 
         return $docs;
@@ -183,13 +165,5 @@ class NaryadIssuePublisher
         }
 
         return ShiftCatalog::loadTable($utf8);
-    }
-
-    private function deletePersonFiles(Naryad $naryad): void
-    {
-        foreach ($naryad->personFiles()->get() as $file) {
-            Storage::disk('s3')->delete($file->file_path);
-            $file->delete();
-        }
     }
 }

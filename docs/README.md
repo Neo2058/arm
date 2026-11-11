@@ -118,6 +118,8 @@
 
 ## История выпусков
 
+Подготовка ближайшего обновления: [безопасная публикация нарядов и отключение удаления](releases/2026-11-11-naryad-publication-safety.md) — проверено локально, ещё не выложено.
+
 | Документ | Назначение | Тип |
 | --- | --- | --- |
 | [releases/2026-10-23-discipline.md](releases/2026-10-23-discipline.md) | Discipline module production deployment | Исторический отчёт |

@@ -4,134 +4,52 @@ namespace App\Console\Commands;
 
 use App\Models\Naryad;
 use App\Models\NaryadPersonFile;
-use App\Services\ClickHouseService;
-use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
-use Throwable;
 
 class CleanRetentionCommand extends Command
 {
     protected $signature = 'arm:clean-retention
-                            {--months=3 : Срок хранения нарядов на сервере в месяцах (по умолчанию 3)}
-                            {--days= : Срок хранения в днях (если задан, имеет приоритет)}
-                            {--dry-run : Тестовый прогон без реального удаления}';
+                            {--months=3 : Порог отчёта: количество периодов по 30 дней}
+                            {--days= : Порог отчёта в днях, имеет приоритет}
+                            {--dry-run : Только отчёт; обязательный режим, удаление отключено}';
 
-    protected $description = 'Очистка устаревших копий нарядов и данных на сервере старше 3 месяцев для предотвращения засорения сервера';
+    protected $description = 'Ручной отчёт о старых нарядах без изменения БД и файлов; удаление отключено';
 
     public function handle(): int
     {
-        $days = $this->option('days') !== null ? (int) $this->option('days') : ((int) $this->option('months') * 30);
-        if ($days <= 0) {
-            $days = 90;
+        if (! $this->option('dry-run')) {
+            $this->error('Удаление нарядов, назначений и файлов отключено. Для отчёта используйте --dry-run.');
+
+            return self::FAILURE;
         }
 
-        $cutoffDate = Carbon::now()->subDays($days)->startOfDay();
-        $cutoffDateStr = $cutoffDate->format('Y-m-d');
-        $isDryRun = (bool) $this->option('dry-run');
+        $value = $this->option('days') ?? $this->option('months');
+        if (! is_string($value) || ! ctype_digit($value) || (int) $value < 1 || (int) $value > 36500) {
+            $this->error('Порог должен быть положительным целым числом не более 36500.');
 
-        $this->info("Очистка серверных копий нарядов и данных старше {$days} дней (до {$cutoffDateStr})...");
-
-        // 1. Поиск устаревших опубликованных нарядов (модель Naryad)
-        $oldNaryads = Naryad::query()
-            ->whereDate('naryad_date', '<', $cutoffDateStr)
-            ->with('personFiles')
-            ->get();
-
-        $deletedNaryadsCount = 0;
-        $deletedPersonFilesCount = 0;
-        $deletedS3FilesCount = 0;
-
-        foreach ($oldNaryads as $naryad) {
-            $this->line("Устаревший наряд id={$naryad->id}, дата={$naryad->naryad_date?->format('Y-m-d')}: {$naryad->title}");
-
-            foreach ($naryad->personFiles as $pf) {
-                $deletedPersonFilesCount++;
-                if (! $isDryRun) {
-                    try {
-                        if (Storage::disk('s3')->exists($pf->file_path)) {
-                            Storage::disk('s3')->delete($pf->file_path);
-                            $deletedS3FilesCount++;
-                        }
-                    } catch (Throwable) {
-                    }
-                }
-            }
-
-            if (! $isDryRun) {
-                try {
-                    // Удаление основных файлов наряда из S3
-                    if ($naryad->file_path && Storage::disk('s3')->exists($naryad->file_path)) {
-                        Storage::disk('s3')->delete($naryad->file_path);
-                        $deletedS3FilesCount++;
-                    }
-                    if (is_array($naryad->source_files)) {
-                        foreach ($naryad->source_files as $sf) {
-                            if ($sf && Storage::disk('s3')->exists($sf)) {
-                                Storage::disk('s3')->delete($sf);
-                                $deletedS3FilesCount++;
-                            }
-                        }
-                    }
-                } catch (Throwable) {
-                }
-
-                $naryad->personFiles()->delete();
-                $naryad->delete();
-            }
-
-            $deletedNaryadsCount++;
+            return self::FAILURE;
         }
+        $days = (int) $value * ($this->option('days') === null ? 30 : 1);
+        if ($days > 36500) {
+            $this->error('Порог отчёта не должен превышать 36500 дней.');
 
-        // 2. Очистка устаревших копий из arm_published_naryads (если таблица существует)
-        $deletedPublishedRows = 0;
-        if (Schema::hasTable('arm_published_naryads')) {
-            $query = DB::table('arm_published_naryads')->whereDate('naryad_date', '<', $cutoffDateStr);
-            $deletedPublishedRows = $query->count();
-            if (! $isDryRun && $deletedPublishedRows > 0) {
-                $query->delete();
+            return self::FAILURE;
+        }
+        $cutoff = now()->subDays($days)->startOfDay()->toDateString();
+        $old = Naryad::query()->whereDate('naryad_date', '<', $cutoff);
+        $personal = NaryadPersonFile::query()->whereIn('naryad_id', (clone $old)->select('id'))->count();
+
+        $this->info("Отчёт без удаления: записи до {$cutoff} (старше {$days} дней).");
+        $this->line('Наряды: '.$old->count());
+        $this->line('Персональные записи: '.$personal);
+        foreach (['arm_published_naryads' => 'naryad_date', 'arm_naryad_assignments' => 'assignment_date', 'naryad_assignments' => 'plan_date'] as $table => $date) {
+            if (Schema::hasTable($table) && Schema::hasColumn($table, $date)) {
+                $this->line($table.': '.DB::table($table)->whereDate($date, '<', $cutoff)->count());
             }
         }
-
-        // 3. Очистка устаревших назначений на сервере (оставляем только последние 90 дней для учёта)
-        $deletedAssignments = 0;
-        if (Schema::hasTable('arm_naryad_assignments')) {
-            $q = DB::table('arm_naryad_assignments')->whereDate('assignment_date', '<', $cutoffDateStr);
-            $deletedAssignments = $q->count();
-            if (! $isDryRun && $deletedAssignments > 0) {
-                $q->delete();
-            }
-        }
-
-        if (Schema::hasTable('naryad_assignments')) {
-            $q = DB::table('naryad_assignments')->whereDate('assignment_date', '<', $cutoffDateStr);
-            $deletedAssignments += $q->count();
-            if (! $isDryRun && $q->count() > 0) {
-                $q->delete();
-            }
-        }
-
-        $modeStr = $isDryRun ? ' [ТЕСТОВЫЙ ПРОГОН - DRY RUN]' : '';
-        $this->info("Завершена очистка сервера{$modeStr}:");
-        $this->info(" - Нарядов удалено с сервера: {$deletedNaryadsCount}");
-        $this->info(" - Персональных файлов удалено: {$deletedPersonFilesCount}");
-        $this->info(" - Файлов S3/MinIO очищено: {$deletedS3FilesCount}");
-        $this->info(" - Записей arm_published_naryads удалено: {$deletedPublishedRows}");
-        $this->info(" - Устаревших назначений удалено: {$deletedAssignments}");
-
-        if (! $isDryRun && ($deletedNaryadsCount > 0 || $deletedPublishedRows > 0)) {
-            try {
-                ClickHouseService::log('server_retention_cleaned', 0, [
-                    'days' => $days,
-                    'cutoff_date' => $cutoffDateStr,
-                    'naryads' => $deletedNaryadsCount,
-                    's3_files' => $deletedS3FilesCount,
-                ]);
-            } catch (Throwable) {
-            }
-        }
+        $this->info('БД и MinIO не изменены. Файловое хранилище не опрашивалось.');
 
         return self::SUCCESS;
     }

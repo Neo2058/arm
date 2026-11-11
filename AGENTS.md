@@ -5,6 +5,11 @@
 - Owner selected manual archives only. Export with `/usr/local/sbin/arm-event-history --apply --export-only`; never assume an automatic archive before deletion. System logs retain their separate monthly TTL.
 - Historical failed_jobs 1–21 were backed up and removed once; recurring cleanup never deletes new failed jobs or retries notifications. See `docs/operations/EVENT_HISTORY_RUNBOOK.md`.
 
+### Publication and retention safety (11 November 2026)
+- NaryadIssuePublisher writes immutable UUID revision paths, verifies bytes and switches personal-file references transactionally under the parent row lock. Existing objects are never deleted; failed/old revisions remain until a separately approved storage policy.
+- `arm:clean-retention` is manual report-only and requires `--dry-run`. No automatic schedule, no MinIO access and no deletion of operational rows. Do not restore the destructive implementation or schedule from 685bf51.
+- No new ClickHouse events were approved for retention. Existing ClickHouse event-history maintenance remains independent. Release preparation: docs/releases/2026-11-11-naryad-publication-safety.md.
+
 ## Документация
 
 Единое оглавление — [docs/README.md](docs/README.md). Тематические документы находятся в `docs/`; правила ведения — [docs/DOCUMENTATION_GUIDE.md](docs/DOCUMENTATION_GUIDE.md). AGENTS.md и mobile/AGENTS.md остаются рядом с кодом. Старые пути перечислены в docs/DOCUMENT_MOVES.json.
