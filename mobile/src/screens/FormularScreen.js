@@ -8,6 +8,11 @@ import { createFormularMutations } from '../formular/mutations.cjs';
 
 const labels = { not_submitted: 'Не внесено', pending: 'На проверке', confirmed: 'Подтверждено', returned: 'Возвращено' };
 function Button({ children, onPress, disabled }) { return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={[s.button, disabled && { opacity: 0.4 }]}><Text style={s.text}>{children}</Text></Pressable>; }
+function DraftInput({ draft, disabled, onChange }) {
+  // FileSystem acknowledgements rerender the editor; keep native defaultValue stable.
+  const initial = useRef(draft.text);
+  return <TextInput defaultValue={initial.current} multiline maxLength={draft.action === 'submit' ? 10000 : 2000} editable={!disabled} style={s.input} accessibilityLabel="Текст записи или замечание" onChangeText={onChange} />;
+}
 export default function FormularScreen({ user }) {
   const [review, setReview] = useState(false), [data, setData] = useState(null), [error, setError] = useState('');
   const [filters, setFilters] = useState({}), [page, setPage] = useState(1), [editor, setEditor] = useState(null), [busy, setBusy] = useState(false);
@@ -74,7 +79,7 @@ export default function FormularScreen({ user }) {
     {!review && data?.tasks.length === 0 && <Text style={s.meta}>Активных заданий пока нет.</Text>}
     {editor?.draft && <View style={s.card}>
       <Text style={s.title}>{editor.draft.title}</Text><Text style={s.meta}>{editor.draft.action === 'submit' ? 'Текст записи' : editor.draft.action === 'returned' ? 'Замечание для исправления' : 'Подтверждение проверки'}</Text>
-      <TextInput key={`${editor.draft.action}-${editor.draft.id}`} defaultValue={editor.draft.text} multiline maxLength={editor.draft.action === 'submit' ? 10000 : 2000} editable={!busy && !editor.pending} style={s.input} accessibilityLabel="Текст записи или замечание" onChangeText={value => { const job = manager.current.edit(value); input.current = job; job.catch(() => { if (alive.current) setError('Не удалось сохранить текст на устройстве.'); }); }} />
+      <DraftInput key={`${editor.draft.action}-${editor.draft.id}`} draft={editor.draft} disabled={busy || !!editor.pending} onChange={value => { const job = manager.current.edit(value); input.current = job; job.catch(() => { if (alive.current) setError('Не удалось сохранить текст на устройстве.'); }); }} />
       {!!editor.error && <Text style={s.error}>{editor.error}</Text>}
       <Button disabled={busy} onPress={() => act(() => finish(!!editor.pending))}>{busy ? 'Сохраняем…' : editor.pending ? 'Повторить тот же запрос' : editor.draft.action === 'submit' ? 'Отправить на проверку' : editor.draft.action === 'returned' ? 'Вернуть с замечанием' : 'Подтвердить запись'}</Button>
       {!editor.pending && <Button disabled={busy} onPress={() => act(() => manager.current.close())}>Закрыть черновик</Button>}
