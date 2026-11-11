@@ -1,0 +1,24 @@
+{
+  "source": "ARM_overview_narrated.mp4",
+  "destination": "ARM_overview_narrated_voice_balanced.mp4",
+  "preset": "highpass=f=65,equalizer=f=250:t=q:w=0.9:g=-1.3,equalizer=f=2800:t=q:w=0.8:g=0.8,acompressor=threshold=0.10:ratio=1.8:attack=18:release=180:knee=4:makeup=1:detection=rms",
+  "target_lufs": -16,
+  "true_peak_limit_dbtp": -1.5,
+  "filters": "highpass=f=65,equalizer=f=250:t=q:w=0.9:g=-1.3,equalizer=f=2800:t=q:w=0.8:g=0.8,acompressor=threshold=0.10:ratio=1.8:attack=18:release=180:knee=4:makeup=1:detection=rms,loudnorm=I=-16:TP=-1.5:LRA=7:measured_I=-24.15:measured_TP=-6.01:measured_LRA=3.60:measured_thresh=-34.70:offset=0.08:linear=false:print_format=json,aresample=48000,apad",
+  "analysis_after_eq_compression": {
+    "input_i": "-24.15",
+    "input_tp": "-6.01",
+    "input_lra": "3.60",
+    "input_thresh": "-34.70",
+    "output_i": "-16.08",
+    "output_tp": "-1.50",
+    "output_lra": "3.50",
+    "output_thresh": "-26.62",
+    "normalization_type": "dynamic",
+    "target_offset": "0.08"
+  },
+  "duration_seconds": 616.466666667,
+  "video": "stream copy",
+  "speech_speed": "unchanged",
+  "pitch": "unchanged"
+}

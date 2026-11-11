@@ -1,0 +1,32 @@
+{
+  "status": "checked",
+  "concept_only": true,
+  "duration_seconds": 364,
+  "scenes": 16,
+  "checks": {
+    "decoded_points": 32,
+    "full_decode": "all video frames decoded without errors",
+    "mixer": [
+      "single narration mux and silence padding",
+      "16-scene concatenation and padding",
+      "overlong scene rejected",
+      "missing scene rejected"
+    ],
+    "layout_review": "separate visual review; synthetic diagrams and styled text, not a running model",
+    "editorial_revision": {
+      "scenes_rewritten": 16,
+      "voice_windows": "unchanged",
+      "decoded_points": 32,
+      "visible_prototype_labels": "removed",
+      "pilot_terminology": "replaced with project",
+      "full_decode": "passed without errors"
+    }
+  },
+  "width": 1920,
+  "height": 1080,
+  "fps": 30.0,
+  "audio_tracks": 0,
+  "codec": "h264",
+  "sha256": "b87d4eb0469d61f1823572ac242be4fda611903cb58ae6b09db687933c6478ed",
+  "bytes": 44800856
+}

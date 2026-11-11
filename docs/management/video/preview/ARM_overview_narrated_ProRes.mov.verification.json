@@ -1,0 +1,45 @@
+{
+  "file": "ARM_overview_narrated_ProRes.mov",
+  "duration_seconds": 616.466667,
+  "width": 1920,
+  "height": 1080,
+  "fps": 30.0,
+  "video_codec": "prores",
+  "audio_codec": "pcm_s16le",
+  "sample_rate": 48000,
+  "audio_channels": 1,
+  "decoded_scene_checks": 39,
+  "audio_matches_original": [
+    {
+      "second": 3,
+      "offset_ms": 0.0,
+      "correlation": 0.9996489497672175
+    },
+    {
+      "second": 100,
+      "offset_ms": 0.0,
+      "correlation": 0.9999536550400351
+    },
+    {
+      "second": 250,
+      "offset_ms": 0.0,
+      "correlation": 0.995949387050504
+    },
+    {
+      "second": 400,
+      "offset_ms": 0.0,
+      "correlation": 0.9913328773181478
+    },
+    {
+      "second": 600,
+      "offset_ms": 0.0,
+      "correlation": 0.9998886981460224
+    },
+    {
+      "second": 610,
+      "offset_ms": 0.0,
+      "correlation": 0.9997307921170001
+    }
+  ],
+  "sha256": "687b713adf2e88cb2a6372fd85c57b867900100009d50039e01125e1341ac5ae"
+}

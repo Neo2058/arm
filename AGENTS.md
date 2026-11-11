@@ -3,7 +3,11 @@
 ### Event history maintenance (9 November 2026)
 - `default.user_actions`: root-owned systemd job every 72h deletes events older than 72h at execution, without schema/TTL changes. Between runs rows may approach six days old.
 - Owner selected manual archives only. Export with `/usr/local/sbin/arm-event-history --apply --export-only`; never assume an automatic archive before deletion. System logs retain their separate monthly TTL.
-- Historical failed_jobs 1–21 were backed up and removed once; recurring cleanup never deletes new failed jobs or retries notifications. See `EVENT_HISTORY_RUNBOOK.md`.
+- Historical failed_jobs 1–21 were backed up and removed once; recurring cleanup never deletes new failed jobs or retries notifications. See `docs/operations/EVENT_HISTORY_RUNBOOK.md`.
+
+## Документация
+
+Единое оглавление — [docs/README.md](docs/README.md). Тематические документы находятся в `docs/`; правила ведения — [docs/DOCUMENTATION_GUIDE.md](docs/DOCUMENTATION_GUIDE.md). AGENTS.md и mobile/AGENTS.md остаются рядом с кодом. Старые пути перечислены в docs/DOCUMENT_MOVES.json.
 
 ## О проекте
 
@@ -45,7 +49,7 @@
 ## Архитектура
 
 ### Private operational monitoring (6 November 2026)
-- Standalone `arm-monitoring` Compose project, root-owned config `/etc/arm-monitoring`, collector `/usr/local/libexec/arm-monitoring/collector.py`. Sources: `ops/monitoring/`; see `MONITORING_RUNBOOK.md`.
+- Standalone `arm-monitoring` Compose project, root-owned config `/etc/arm-monitoring`, collector `/usr/local/libexec/arm-monitoring/collector.py`. Sources: `ops/monitoring/`; see `docs/operations/MONITORING_RUNBOOK.md`.
 - Grafana/Prometheus/metrics bind only 127.0.0.1:3000/9090/9108; owner access through SSH tunnel. Never publish these ports or mount Docker socket/service env in monitoring containers.
 - The systemd collector reads fixed aggregates, uses runtime DB permissions, emits no user identifiers, URLs or SQL text. No ClickHouse schema/events or financial calculations changed.
 - Nginx has an additional aggregate-only log stream. HTTP rates/latency exclude access_log-off locations. Queue metrics cover database jobs, not deferred analytics; FPM worker count is not worker occupancy. Server backup age is not proof of a fresh PC copy.
@@ -66,7 +70,7 @@
   Assets/symlink preparation occurs before cutover, not in the runtime entrypoint.
   Deploy updates by recreating app; do not run optimize:clear in the serving container.
 - Keep host-only service env snapshots synchronized on config changes.
-  See `SERVER_HARDENING_RUNBOOK.md`; secrets must never enter Git or tool output.
+  See `docs/operations/SERVER_HARDENING_RUNBOOK.md`; secrets must never enter Git or tool output.
 - System logs in ClickHouse retain one calendar month via read-only
   `docker/clickhouse/system-log-retention.xml`; `user_actions` is excluded.
   OpenTelemetry has an explicit engine: put its TTL inside engine, never alongside it.
@@ -83,7 +87,7 @@
   hashes without extracting plaintext. Incomplete `.partial` is not a valid backup.
 - No unattended root execution/NOPASSWD for deploy-writable scripts. Limited pull
   identity, root-owned installation, scheduling and complete app restore are separate
-  acceptance steps. See `PC_BACKUP_PLAN.md` and `FULL_BACKUP_2026-10-30.md`.
+  acceptance steps. See `docs/roadmap/PC_BACKUP_PLAN.md` and `docs/releases/FULL_BACKUP_2026-10-30.md`.
 
 ### Основные принципы
 1. **Filament-first** для административных CRUD и сложных форм (особенно конструктор квизов).
@@ -111,7 +115,7 @@
   новый пароль вводится на `/password/reset` (CSRF). `APP_URL` должен быть HTTPS. При сбросе удаляются
   Sanctum-токены, обновляется remember token; `AuthenticateSession` в web проверяет отпечаток пароля.
 - Бот ключей использует отдельные `TELEGRAM_KEY_*`, webhook `/telegram/webhook` защищён secret_token, выдаёт `/key` только привязанному активному пользователю в личке. Групповая публикация отключена.
-- `TelegramService` — административные уведомления отдельным ботом, текстовые jobs `SendTelegramNotification` в database/notifications (нужен worker). Инструкция/relay/команды — `TELEGRAM_SETUP.md`.
+- `TelegramService` — административные уведомления отдельным ботом, текстовые jobs `SendTelegramNotification` в database/notifications (нужен worker). Инструкция/relay/команды — `docs/operations/TELEGRAM_SETUP.md`.
 - `ClickHouseService::log($actionType, $resourceId, $details, $actor = null)` — фиксация действия в ClickHouse (очередь `analytics`). `$actor` — `User`, id или null (тогда `Auth::user()`, иначе `user_id=0` / `user_role=system`).
 - `ActionLog::log()` — операционный журнал в Postgres (Filament) **и** одна запись в ClickHouse. Не вызывай `ClickHouseService::log()` следом за тем же событием.
 - Клиентский `POST /api/actions/log` — только белый список `ActionLog::CLIENT_ACTIONS`, в БД уходит как `ui.{action}`. Серверные мутации сюда не писать.
@@ -144,8 +148,8 @@
 - Установщики (не браузер): `eas.json` профиль `preview` → APK/IPA с вшитым `EXPO_PUBLIC_API_URL`. Артефакты класть в `public/downloads/tch15-android.apk` и `tch15-ios.ipa`, страница `/install`.
 
 ### Клон АРМ-ЛБ
-Схемы таблиц и шаги переноса FoxPro — **`armd.md`**. Не заводить параллельные таблицы учёта в обход этой схемы.
-Что сделано и что делать дальше — **`armd-progress.md`**. Не начинать следующий шаг очереди, пока не закрыт текущий.
+Схемы таблиц и шаги переноса FoxPro — **`docs/architecture/armd.md`**. Не заводить параллельные таблицы учёта в обход этой схемы.
+Что сделано и что делать дальше — **`docs/roadmap/armd-progress.md`**. Не начинать следующий шаг очереди, пока не закрыт текущий.
 
 ### Планирование наряда
 Контроллеры в `App\Http\Controllers\Naryad\`:
@@ -183,7 +187,7 @@
 
 Просмотр выданных нарядов (`/naryady`) — React-остров `NaryadViewer`. Пользователь видит свой файл (имя = ФИО) и общий PDF без отбора. Сборку файлов делает админ (`NaryadIssuePublisher`, ядро как в C++ `searching`). Поиск ФИО для инструктора — `/journal/naryad-search`. PDF общего наряда — `GET /naryady/{id}/pdf` через `FileProxyService`.
 
-Стек фронта — JSX-острова без TypeScript. Не начинать массовый JS→TS до закрытия долга в `TECHNICAL_DEBT.md`: долг там PHP (CSRF, middleware, MinIO, Filament, два расчёта зарплаты).
+Стек фронта — JSX-острова без TypeScript. Не начинать массовый JS→TS до закрытия долга в `docs/roadmap/TECHNICAL_DEBT.md`: долг там PHP (CSRF, middleware, MinIO, Filament, два расчёта зарплаты).
 
 ## Правила разработки (обязательно соблюдать)
 
@@ -198,7 +202,7 @@
 ### Работа с квизами и документами
 - `QuizService` проверяет доступ при открытии и отправке, формирует данные игрока без `is_correct` и считает балл на сервере.
 - `/api/quiz-results` принимает `answers_log` (question ID → answer ID); клиентские `score`/`total_questions` игнорируются.
-- При правках квизов backend и frontend build выкладывать вместе; порядок — `SECURITY_ROADMAP.md`.
+- При правках квизов backend и frontend build выкладывать вместе; порядок — `docs/roadmap/SECURITY_ROADMAP.md`.
 - При изменении структуры квиза/вопросов/ответов/ссылок на инструкции обязательно поддерживай вложенные Repeater'ы в `QuizResource`.
 - `QuestionReference` — это связь "документ + страница + якорный текст". Не ломай эту механику.
 - При добавлении нового типа квиза используй существующий `GeneralQuizPlayer` / `QuizPlayer` как референс.
@@ -208,21 +212,21 @@
   PersonalWorkAbsenceCalculator; учёт включительных дат, без формул оплаты. payment_status=not_calculated,
   не выдавать нулевой subtotal за отсутствие права на оплату. Пересечения со сменами/периодами запрещены
   под блокировкой пользователя; absences в GET month отдельно от отработанных часов. См. MOBILE_FIXES_2026-10-27.md.
-- Личный табель API: `PERSONAL_WORKTIME_API.md`, `/api/worktime/v2` (web CSRF/device/barrier)
+- Личный табель API: `docs/modules/PERSONAL_WORKTIME_API.md`, `/api/worktime/v2` (web CSRF/device/barrier)
   и `/api/mobile/worktime` (Sanctum), общий PersonalWorkTimeController. Все данные только свои.
   Изменения через WorkTimeMutationService + PersonalWorkShiftService/PersonalWorkTimeSettingsEditor:
   блокировка User, expected_revision, UUID и неизменные операционные квитанции в Postgres.
   Обновление снимка ставки — только явный refresh_snapshot; ставки наследуются с месяца изменения.
   Согласован work_time.settings_saved: ID пользователя, месяц, имена полей, без значений; после COMMIT.
   Обе миграции версии/редакций применены в общем выпуске 27 октября 2026. Интерфейсы опубликованы:
-  `PERSONAL_WORKTIME_UI.md`, остров WorkTime со старым календарём отдельно и мобильный
+  `docs/modules/PERSONAL_WORKTIME_UI.md`, остров WorkTime со старым календарём отдельно и мобильный
   WorkTimeScreen из профиля. Общая клиентская модель model.mjs/controller.mjs; расчёты только на сервере.
   Не менять UUID/тело неподтверждённого запроса; конфликт требует сравнения текущей редакции.
-- Месячный личный отчёт v2: `PersonalWorkTimeMonth`, `PERSONAL_WORKTIME_MONTH.md`.
+- Месячный личный отчёт v2: `PersonalWorkTimeMonth`, `docs/modules/PERSONAL_WORKTIME_MONTH.md`.
   Производный пересчёт ночь–с ночи не пишет поверх сохранённых результатов; контекст соседних
   месяцев не включается в итоги дважды. Пустые дни не считаются выходными без подтверждения
   rest_dates. v1 явно исключаются из новых денежных сумм; полный прогноз всё ещё incomplete.
-- Личный табель v2: `PERSONAL_WORKTIME_BACKEND.md`. `PersonalWorkShiftService` — preview/create,
+- Личный табель v2: `docs/modules/PERSONAL_WORKTIME_BACKEND.md`. `PersonalWorkShiftService` — preview/create,
   UUID, блокировка пользователя и проверка пересечений; `WorkShift::saving` вызывает общий
   `PersonalWorkTimeCalculator`, снимок ставок сохраняется. Все перерывы v2 оплачиваются.
   Старые записи — v1, текущий календарный API изолирован на v1 до подключения новых форм.
@@ -260,7 +264,7 @@
 
 ### Docker и окружение
 - При обновлении PHP-зависимостей сохраняй `composer.config.platform.php = 8.2.0`; проверяй реальный PHP контейнера через `composer check-platform-reqs --no-dev`.
-- Обновление зависимостей безопасности и открытые mobile advisories — `SECURITY_DEPENDENCIES.md`; production устанавливает зависимости по lock-файлам.
+- Обновление зависимостей безопасности и открытые mobile advisories — `docs/security/SECURITY_DEPENDENCIES.md`; production устанавливает зависимости по lock-файлам.
 - Основной способ запуска — `docker compose up`.
 - Production + дисциплина + чат: действующий COMPOSE_FILE (security/readonly/monitor-mobile), chat overlay после security. Локально: `docker compose -f docker-compose.prod.yml -f docker-compose.discipline.yml -f docker-compose.chat.yml`.
 - Redis — только кеш/сессии. `QUEUE_CONNECTION=deferred` на `arm-app`. `QUEUE_CONNECTION=database` **только** на `arm-chat-worker`. Не `docker exec arm-app queue:work --queue=chat`.
@@ -274,7 +278,7 @@
 - Исключения `CheckDeviceBinding` / `CheckDynamicBarrier` — только `AccessBarrierExemptions` (Livewire/Filament lifecycle и `admin/serve-*` не снимать).
 - Mobile API: после `auth:sanctum` обязателен `EnsureActiveApiUser`. Деактивация через модель отзывает токены;
   массовый query-builder/SQL update не запускает этот отзыв (проверка активности всё равно блокирует запросы).
-- План усиления безопасности и ручная выкладка без CI/CD — `SECURITY_ROADMAP.md`.
+- План усиления безопасности и ручная выкладка без CI/CD — `docs/roadmap/SECURITY_ROADMAP.md`.
 - Роли — `App\Enums\UserRole`. Канонический нарядчик: `dispatcher`. Строка `naryadchik` только как алиас в `UserRole::safeFrom()` (старые JSON `allowed_roles`).
 - Проверки в PHP: `User::isAdmin()`, `isSuperAdmin()`, `isInstructor()`, `isDispatcher()`, `isDriver()`, `isStudent()`, `canBypassAccessBarriers()`, `canViewRospisiStatistics()`, `canAccessByRoles()`.
 - Filament (`canAccessPanel`): основная панель `admin` — только `SUPER_ADMIN` и `ADMIN`. Отдельная панель `discipline` — активные `TORMOZNIK` / `NACHALNIK`, без discovery общих ресурсов и виджетов.
@@ -334,7 +338,7 @@ php artisan optimize:clear
 
 ## Исполнительская дисциплина (23 октября 2026)
 
-- Документация и выкладка: `DISCIPLINE.md`.
+- Документация и выкладка: `docs/modules/DISCIPLINE.md`.
 - Роли `tormoznik` / `nachalnik` не являются администраторами и не обходят барьеры. Только собственная панель `/discipline-admin/discipline-monitor`.
 - Тормозник управляет своими карточками; начальник — всеми карточками модуля этого экземпляра ARM; инструктор — только своим исполнением. Междеповского разграничения пока нет.
 - `DisciplineCard` → `DisciplineAssignment` (отдельно на инструктора) → `DisciplineReport` → `DisciplineFile`. Не переиспользовать `JournalTask::completeTodo` для сдачи отчётов.
@@ -351,7 +355,7 @@ php artisan optimize:clear
 - `/api/mobile/discipline`: список/карточка/история/прочтение/сдача; файлы через `/discipline/files/{file}` с токеном и новой проверкой доступа, без публичных MinIO/signed URL.
 - Сдача только через общий DisciplineService, те же версии, UUID операций, лимиты и антивирус. Новых таблиц и отдельного обхода проверки нет.
 - Мобильные экраны: DisciplineListScreen / DisciplineDetailScreen / DisciplineAttachmentScreen. Долговременные черновики и офлайн-очередь: mobile/src/discipline/queue.cjs + storage.js, приватное хранилище по API/user id; запись до отправки, тот же UUID после перезапуска. Повторы только в активном приложении. Повторный вход сохраняет очередь, выход удаляет текущий scope.
-- Документация: `mobile/DISCIPLINE.md`; тесты `MobileDisciplineTest`, `mobile/tests/discipline.test.cjs`.
+- Документация: `docs/mobile/DISCIPLINE.md`; тесты `MobileDisciplineTest`, `mobile/tests/discipline.test.cjs`.
 
 
 ## Мобильный просмотр журнала (25 октября 2026)
@@ -360,7 +364,7 @@ php artisan optimize:clear
 - Api/Mobile/JournalController: GET /journal, /journal/tasks, /journal/crew, Sanctum + активность + свежая роль instructor. Чужую колонну и владельца клиент не выбирает.
 - GET crew не создаёт нормативы/настройки, выдаёт только записи своего instructor_id. Нормативные даты берутся из БД без повторного расчёта.
 - Экраны JournalScreen / JournalTasksScreen / JournalCrewScreen открываются из раздела поручений. Это просмотр без долговременного кеша; мутации журнала пока только в вебе.
-- Документация mobile/JOURNAL.md, тесты MobileJournalTest.
+- Документация docs/mobile/JOURNAL.md, тесты MobileJournalTest.
 
 
 ## Общая картотека — 26 октября 2026
@@ -397,7 +401,7 @@ php artisan optimize:clear
 - Fresh role/activity, owner/column and version checked under locks. Persist receipt and mutation atomically; mismatched UUID body is 409, stale version is 412.
 - Mobile journal-tasks storage keeps the exact pending request across restarts. Manual retry only; logout clears it. Stable initial TextInput defaults prevent asynchronous save from replacing typed text.
 - Web forms carry UUID/version; legacy POSTs remain compatible. Existing analytics events only, after COMMIT, without duplicate replay logging.
-- Published on production with Android 1.0.12 (13). See RELEASE_2026-10-27.md, mobile/JOURNAL_TASKS.md, JournalTaskMutationsTest and journal-mutations.test.cjs.
+- Published on production with Android 1.0.12 (13). See docs/releases/RELEASE_2026-10-27.md, docs/mobile/JOURNAL_TASKS.md, JournalTaskMutationsTest and journal-mutations.test.cjs.
 
 
 ## Instructor ATZ requests — 31 October 2026
@@ -405,19 +409,19 @@ php artisan optimize:clear
 - `/journal/training-requests`: web instructor-only planning cards, separate InstructorTrainingRequests service; see INSTRUCTOR_ATZ.md. Keep this separate from individual Podstroika and normative completion.
 - Explicit participant count must equal distinct active drivers of current instructor column. Check fresh role/activity, owner/column and membership under locks. Lock instructor User to enforce 10 cards per planning month across columns; UUID receipts and mutations commit together.
 - Migration 2026_10_31_100000 was deployed on 31 October 2026 together with stage 2 and Android 1.0.14/code15. Stage 1 alone did not add normative dates, mobile API or arm-nrd delivery. No new analytics events.
-- Tests: InstructorTrainingRequestsTest and isolated tests/Support/training-concurrency.php; read INSTRUCTOR_ATZ.md for scope and deployment constraints.
+- Tests: InstructorTrainingRequestsTest and isolated tests/Support/training-concurrency.php; read docs/modules/INSTRUCTOR_ATZ.md for scope and deployment constraints.
 
 
 ## Instructor ATZ accounting — 31 October 2026
 
-- Stage 2 was deployed on 31 October 2026. Migration 2026_10_31_110000 followed stage 1. See INSTRUCTOR_ATZ.md and ATZ_RELEASE_2026-10-31.md.
+- Stage 2 was deployed on 31 October 2026. Migration 2026_10_31_110000 followed stage 1. See docs/modules/INSTRUCTOR_ATZ.md and ATZ_RELEASE_2026-10-31.md.
 - InstructorTrainingAccounting records actual attendance and updates existing atz/atz_line normatives atomically with UUID receipts; planning alone never completes a normative. Freeze confirmed cards; preserve immutable session/participant snapshots.
 - Separate 1–24 month settings reuse JournalNormativeSetting; both settings forms recalculate current owned normative due dates. ATZ calendar uses addMonthsNoOverflow. Do not change KIP calendar as a side effect.
 - Serialize owner operations; only current active drivers in card and column can attend. Existing (user_id,type) normative ownership conflicts must fail atomically, never reassign another instructor silently.
 - tests/Support/training-accounting-concurrency.php requires an isolated temporary PostgreSQL database/socket; never run against production. No new analytics event names or mobile endpoints introduced.
 
 
-ATZ mobile API and Android 1.0.14/code15 were published on production on 31 October 2026. Sanctum routes reuse InstructorTrainingRequests/InstructorTrainingAccounting. Exact requests persist in scoped mobile training storage; logout clears it. See ATZ_RELEASE_2026-10-31.md and PRODUCTION_DEPLOYMENT.md. Full-suite legacy accounting failures reproduce on base HEAD; targeted ATZ checks are separate. Physical-phone instructor acceptance is still pending.
+ATZ mobile API and Android 1.0.14/code15 were published on production on 31 October 2026. Sanctum routes reuse InstructorTrainingRequests/InstructorTrainingAccounting. Exact requests persist in scoped mobile training storage; logout clears it. See docs/releases/ATZ_RELEASE_2026-10-31.md and PRODUCTION_DEPLOYMENT.md. Full-suite legacy accounting failures reproduce on base HEAD; targeted ATZ checks are separate. Physical-phone instructor acceptance is still pending.
 
 
 ## Чат (пилот депо)
@@ -459,4 +463,4 @@ ATZ mobile API and Android 1.0.14/code15 were published on production on 31 Octo
 
 ## Закрытый мобильный мониторинг (06.11.2026)
 
-`/api/monitor` — отдельные Sanctum-токены `monitor` с `monitor:read` на 12 часов, только активный `super_admin`. `RejectMonitorToken` запрещает этим токенам обычный `/api/mobile`. Скачивание приватного APK требует обычный токен `mobile` и актуальную роль. APK не размещать в public; путь `/run/arm-installers/tch15-monitor.apk (root-owned host /var/lib/arm-monitoring/installers, readonly mount)`. Снимок фиксированных агрегатов читается из `/run/arm-metrics/arm.prom`, readonly mount через последний `docker-compose.monitor-mobile.yml`. Секреты Grafana/SSH и Docker socket в приложении не используются. План: `MONITOR_MOBILE_PLAN.md`.
+`/api/monitor` — отдельные Sanctum-токены `monitor` с `monitor:read` на 12 часов, только активный `super_admin`. `RejectMonitorToken` запрещает этим токенам обычный `/api/mobile`. Скачивание приватного APK требует обычный токен `mobile` и актуальную роль. APK не размещать в public; путь `/run/arm-installers/tch15-monitor.apk (root-owned host /var/lib/arm-monitoring/installers, readonly mount)`. Снимок фиксированных агрегатов читается из `/run/arm-metrics/arm.prom`, readonly mount через последний `docker-compose.monitor-mobile.yml`. Секреты Grafana/SSH и Docker socket в приложении не используются. План: `docs/roadmap/MONITOR_MOBILE_PLAN.md`.

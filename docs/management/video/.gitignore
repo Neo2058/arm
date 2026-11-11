@@ -5,3 +5,7 @@
 /recordings/
 /preview/overview-*.png
 /preview/chapters/
+
+/preview/narrated/
+
+/preview/*_voice_balanced.wav

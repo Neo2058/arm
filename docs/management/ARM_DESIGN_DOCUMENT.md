@@ -3,7 +3,7 @@
 **Дизайн-документ для руководства и подготовки презентации**  
 Версия 0.1 · 02 ноября 2026 года · Авторская рабочая редакция для согласования
 
-**Эксплуатационное дополнение 06.11.2026:** закрытый дашборд технического мониторинга установлен на production отдельно от приложения; 28 блоков Grafana, Prometheus, агрегаты ресурсов/HTTP/БД/очереди и уведомления. Проверены SSH-доступ, данные и тестовая доставка. Основание: [регламент мониторинга](../../MONITORING_RUNBOOK.md). Оставшиеся утверждения о незавершённом мониторинге ниже относятся к состоянию исходной редакции; независимое обнаружение полной остановки хоста остаётся открытым. Презентации от 02.11 этой работой не пересобирались.
+**Эксплуатационное дополнение 06.11.2026:** закрытый дашборд технического мониторинга установлен на production отдельно от приложения; 28 блоков Grafana, Prometheus, агрегаты ресурсов/HTTP/БД/очереди и уведомления. Проверены SSH-доступ, данные и тестовая доставка. Основание: [регламент мониторинга](../operations/MONITORING_RUNBOOK.md). Оставшиеся утверждения о незавершённом мониторинге ниже относятся к состоянию исходной редакции; независимое обнаружение полной остановки хоста остаётся открытым. Презентации от 02.11 этой работой не пересобирались.
 
 Документ объединяет функциональное описание, архитектуру, меры защиты, открытые долги и развитие проекта. Он подготовлен по репозиторию и сохранённым отчётам; новая проверка production в рамках этой работы не выполнялась. Перед внешним представлением необходимо подтвердить бизнес-формулировки, актуальность эксплуатационных сведений и демонстрационные материалы.
 
@@ -38,7 +38,7 @@ ARM создаётся как общая рабочая среда подраз�
 
 **Граница готовности:** наличие этих функций в репозитории подтверждено маршрутами и сервисами, но дорожная карта сохраняет незавершённую сверку эталонного месяца. Полный паритет с FoxPro и приёмка выгрузки принимающей бухгалтерской системой не подтверждены. Их нельзя представлять как завершённые. Эксплуатационный статус каждого экрана нарядчика требует отдельной приёмки, не выводится из публикации Android.
 
-Источники: [дорожная карта АРМ-ЛБ](../../armd-progress.md), [схемы и перенос](../../armd.md), `routes/naryad.php`, `routes/uchet.php`, сервисы Arm.
+Источники: [дорожная карта АРМ-ЛБ](../roadmap/armd-progress.md), [схемы и перенос](../architecture/armd.md), `routes/naryad.php`, `routes/uchet.php`, сервисы Arm.
 
 ### 2.2. Общая картотека и взаимодействие сотрудников
 
@@ -46,7 +46,7 @@ ARM создаётся как общая рабочая среда подраз�
 
 Опубликован общий справочник телефонов для веба и Android. Нормализация номера и уникальность на уровне БД запрещают повторное внесение одного телефона под разными именами. В текущем выпуске пользовательское редактирование и удаление общего справочника не представлены как готовые возможности.
 
-Источники: [картотека](../../PERSONNEL_IMPORT_2026-10-26.md), [профиль](../../ACCOUNTS_PROFILE_2026-10-26.md), [выпуск справочника](../../deployments/shared-phones-1.0.10.md).
+Источники: [картотека](../releases/PERSONNEL_IMPORT_2026-10-26.md), [профиль](../releases/ACCOUNTS_PROFILE_2026-10-26.md), [выпуск справочника](../releases/shared-phones-1.0.10.md).
 
 ### 2.3. Журнал инструктора, контроль и АТЗ
 
@@ -56,7 +56,7 @@ ARM создаётся как общая рабочая среда подраз�
 
 Ручная приёмка АТЗ реальным инструктором на физическом смартфоне в отчёте ещё не закрыта. Опубликованный функционал не обозначается полностью принятым только по результату автоматических тестов.
 
-Источники: [АТЗ](../../INSTRUCTOR_ATZ.md), [отчёт выпуска](../../ATZ_RELEASE_2026-10-31.md), [мобильный журнал](../../mobile/JOURNAL.md), [личные задачи](../../mobile/JOURNAL_TASKS.md).
+Источники: [АТЗ](../modules/INSTRUCTOR_ATZ.md), [отчёт выпуска](../releases/ATZ_RELEASE_2026-10-31.md), [мобильный журнал](../mobile/JOURNAL.md), [личные задачи](../mobile/JOURNAL_TASKS.md).
 
 ### 2.4. Исполнительская дисциплина
 
@@ -66,7 +66,7 @@ ARM создаётся как общая рабочая среда подраз�
 
 Граница текущей модели — один экземпляр для подразделения: руководитель имеет предусмотренный доступ в пределах этого экземпляра, отдельная междеповская изоляция не реализована. Наличие истории не означает её защиты от администратора БД или криптографической неизменности.
 
-Источник: [исполнительская дисциплина](../../DISCIPLINE.md), [мобильный клиент](../../mobile/DISCIPLINE.md).
+Источник: [исполнительская дисциплина](../modules/DISCIPLINE.md), [мобильный клиент](../mobile/DISCIPLINE.md).
 
 ### 2.5. Документы, обучение и проверка знаний
 
@@ -74,7 +74,7 @@ ARM создаётся как общая рабочая среда подраз�
 
 Предусмотрены веб- и мобильные маршруты, однако полное совпадение всех экранов и сценариев двух платформ не заявляется. Защита просмотра и фиксация нарушений уменьшают риск неконтролируемого распространения, но не гарантируют невозможность копирования информации с экрана.
 
-Источники: [архитектура](../../ARCHITECTURE.md), [мобильный клиент](../../mobile/README.md), `routes/documents.php`, `routes/training.php`, `routes/api.php`. Ранние архитектурные описания применяются с учётом поздних исправлений доступа и файловой выдачи.
+Источники: [архитектура](../architecture/ARCHITECTURE.md), [мобильный клиент](../mobile/README.md), `routes/documents.php`, `routes/training.php`, `routes/api.php`. Ранние архитектурные описания применяются с учётом поздних исправлений доступа и файловой выдачи.
 
 ### 2.6. Личный учёт времени и предварительные начисления
 
@@ -82,7 +82,7 @@ ARM создаётся как общая рабочая среда подраз�
 
 Денежный результат — частичный ориентир, не окончательная зарплата к выплате. Он не заменяет официальный учёт и лицевые счета. Неподтверждённые начисления и удержания нельзя достраивать предположениями. Финансовые правила меняются только после согласования и проверки эталонных примеров.
 
-Источники: [правила](../../WORK_TIME_RULES_PLAN.md), [серверная основа](../../PERSONAL_WORKTIME_BACKEND.md), [месячный расчёт](../../PERSONAL_WORKTIME_MONTH.md), [API](../../PERSONAL_WORKTIME_API.md), [интерфейс](../../PERSONAL_WORKTIME_UI.md), [опубликованные исправления](../../MOBILE_FIXES_2026-10-27.md).
+Источники: [правила](../roadmap/WORK_TIME_RULES_PLAN.md), [серверная основа](../modules/PERSONAL_WORKTIME_BACKEND.md), [месячный расчёт](../modules/PERSONAL_WORKTIME_MONTH.md), [API](../modules/PERSONAL_WORKTIME_API.md), [интерфейс](../modules/PERSONAL_WORKTIME_UI.md), [опубликованные исправления](../releases/MOBILE_FIXES_2026-10-27.md).
 
 ### 2.7. Сквозной цикл и оставшиеся интеграции
 
@@ -98,7 +98,7 @@ flowchart LR
     E -. Сверка результатов .-> F
 ```
 
-Схема показывает организационный цикл и объединяемые контуры, а не подтверждение автоматического обмена на каждой стрелке. Прямой приём заявок на подстройки из внешнего приложения описан в TwoSideApi.md как требование развития. Доставка групповых заявок в arm-nrd также не подтверждена завершённой интеграцией. Этот разрыв включён в дорожную карту.
+Схема показывает организационный цикл и объединяемые контуры, а не подтверждение автоматического обмена на каждой стрелке. Прямой приём заявок на подстройки из внешнего приложения описан в docs/architecture/TwoSideApi.md как требование развития. Доставка групповых заявок в arm-nrd также не подтверждена завершённой интеграцией. Этот разрыв включён в дорожную карту.
 
 ### 2.8. Возможности машиниста и отбор нарядов для инструктора
 
@@ -112,7 +112,7 @@ flowchart LR
 
 Целевой чат хранит сообщения и вложения в собственном контуре, проверяет доступ к диалогам и работает без обязательного участия Telegram, внешней почты или облачного push. На Android локальная сеть либо согласованный защищённый канал должны обеспечивать доступ к серверу. Отключение интернета не должно останавливать внутренний обмен; потеря связи с самим сервером должна отображаться явно.
 
-Подтверждение серверного сохранения, доставки устройству и прочтения — разные состояния. Для устойчивости нужны повтор отправки без дублей, восстановление пропущенной истории, резервирование и испытания отказов. Показатели доступности и восстановления согласуются до обещаний надёжности. Источник: [план внутреннего чата](../../INTERNAL_CHAT_PLAN.md).
+Подтверждение серверного сохранения, доставки устройству и прочтения — разные состояния. Для устойчивости нужны повтор отправки без дублей, восстановление пропущенной истории, резервирование и испытания отказов. Показатели доступности и восстановления согласуются до обещаний надёжности. Источник: [план внутреннего чата](../roadmap/INTERNAL_CHAT_PLAN.md).
 
 ## 4. Архитектура и сетевая граница
 
@@ -128,7 +128,7 @@ flowchart LR
 
 Файервол является самостоятельным слоем защиты. Он не заменяет авторизацию и шифрование, а закрытый периметр не устраняет внутреннего нарушителя или уязвимость разрешённого сервиса. Изменения границы применять с независимым резервным доступом, проверкой IPv4/IPv6 и возможностью отката.
 
-Источник: [сетевой аудит](../../SERVER_NETWORK_AUDIT_2026-10-29.md). Новое сканирование и изменение настроек не входили в подготовку этого документа.
+Источник: [сетевой аудит](../security/SERVER_NETWORK_AUDIT_2026-10-29.md). Новое сканирование и изменение настроек не входили в подготовку этого документа.
 
 ## 5. Защита ресурса и восстановление
 
@@ -142,7 +142,7 @@ flowchart LR
 | Аудит | Прикладные события и история действий | Не равнозначен независимому защищённому журналу инцидентов |
 | Копии | Зашифрованный recovery-набор на компьютере владельца, проверка целостности, тест восстановления PostgreSQL | Автоматическое получение и полное восстановление приложения ещё не приняты |
 
-Источники: [эксплуатационный регламент](../../SERVER_HARDENING_RUNBOOK.md), [отчёт укрепления](../../SERVER_HARDENING_PROGRESS_2026-10-28.md), [набор восстановления](../../FULL_BACKUP_2026-10-30.md), [план копий на ПК](../../PC_BACKUP_PLAN.md).
+Источники: [эксплуатационный регламент](../operations/SERVER_HARDENING_RUNBOOK.md), [отчёт укрепления](../security/SERVER_HARDENING_PROGRESS_2026-10-28.md), [набор восстановления](../releases/FULL_BACKUP_2026-10-30.md), [план копий на ПК](../roadmap/PC_BACKUP_PLAN.md).
 
 Копирование на компьютер — доступный сейчас независимый носитель за пределами production. Закрытый ключ расшифровки набора не передавался production. Это уже выполненная мера, но она не делает компьютер неизменяемым архивом и не гарантирует свежесть копии при выключенном ПК. Единственного носителя недостаточно для долгосрочной устойчивости; второй носитель остаётся потребностью при появлении ресурсов.
 
@@ -175,11 +175,13 @@ flowchart LR
 
 Пароли продолжают храниться стойкими хешами. TLS защищает передачу, шифрование backup — архив, шифрование полей — содержимое выбранных рабочих данных. Это разные меры. Табельный номер, email, расписание и связи между записями также могут идентифицировать человека; оставшиеся данные нельзя автоматически объявлять обезличенными.
 
-Критерий приёмки: выбранные данные и учтённые копии не читаются из похищенного дампа без независимого доступа к ключам; поиск, роли, отчёты и восстановление продолжают работать. Источник: [план шифрования](../../PERSONAL_DATA_ENCRYPTION_PLAN.md).
+Критерий приёмки: выбранные данные и учтённые копии не читаются из похищенного дампа без независимого доступа к ключам; поиск, роли, отчёты и восстановление продолжают работать. Источник: [план шифрования](../roadmap/PERSONAL_DATA_ENCRYPTION_PLAN.md).
 
 ## 7. Локальный интеллектуальный помощник
 
 **Статус: проектное предложение.** Помощник должен работать на локальной машине внутри разрешённого контура, без передачи документов, запросов и ответов внешней модели. Модель, индекс, журналы и интерфейс размещаются под контролем организации. На первом этапе помощник отвечает по утверждённым инструкциям и показывает документ, редакцию и страницу-основание.
+
+Демонстрационные материалы от 10.11.2026: [анимированная презентация локального ИИ](video/local-ai/README.md), [ресурсы и этапы прототипов](video/local-ai/IMPLEMENTATION.md). Они описывают будущую реализацию и не меняют статус внедрения.
 
 ### Границы первого этапа
 
@@ -240,7 +242,7 @@ flowchart LR
 
 Массовая смена технологий и переписывание канонической карусели не являются необходимыми условиями этих этапов. Расчёты, доступ и аналитика изменяются отдельными проверяемыми пакетами с требуемым согласованием.
 
-CI/CD внедряется последовательно: автоматические тесты и сборки без производственных секретов → проверяемые артефакты → публикация после подтверждения. Runner на production, произвольный sudo и изменяемые из репозитория root-скрипты не допускаются проектным планом. Источник: [CI/CD](../../CI_CD_PLAN.md).
+CI/CD внедряется последовательно: автоматические тесты и сборки без производственных секретов → проверяемые артефакты → публикация после подтверждения. Runner на production, произвольный sudo и изменяемые из репозитория root-скрипты не допускаются проектным планом. Источник: [CI/CD](../roadmap/CI_CD_PLAN.md).
 
 ## 10. Решения руководства и оценка результата
 
@@ -304,78 +306,78 @@ CI/CD внедряется последовательно: автоматиче�
 
 ### Архитектура и функциональные планы — разделы 1–3, 7–10
 
-- [ACCOUNTS_PROFILE_2026-10-26.md](../../ACCOUNTS_PROFILE_2026-10-26.md)
+- [ACCOUNTS_PROFILE_2026-10-26.md](../releases/ACCOUNTS_PROFILE_2026-10-26.md)
 - [AGENTS.md](../../AGENTS.md)
-- [ARCHITECTURE.md](../../ARCHITECTURE.md)
-- [DISCIPLINE.md](../../DISCIPLINE.md)
-- [INTERNAL_CHAT_PLAN.md](../../INTERNAL_CHAT_PLAN.md)
-- [MOBILE_FIXES_2026-10-27.md](../../MOBILE_FIXES_2026-10-27.md)
-- [MOBILE_WEB_PARITY_PLAN.md](../../MOBILE_WEB_PARITY_PLAN.md)
-- [PAYMENT_OPTIONS.md](../../PAYMENT_OPTIONS.md)
-- [PHONE_DIRECTORY_PLAN.md](../../PHONE_DIRECTORY_PLAN.md)
-- [PROFILE_RECOVERY_PLAN.md](../../PROFILE_RECOVERY_PLAN.md)
+- [ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
+- [DISCIPLINE.md](../modules/DISCIPLINE.md)
+- [INTERNAL_CHAT_PLAN.md](../roadmap/INTERNAL_CHAT_PLAN.md)
+- [MOBILE_FIXES_2026-10-27.md](../releases/MOBILE_FIXES_2026-10-27.md)
+- [MOBILE_WEB_PARITY_PLAN.md](../roadmap/MOBILE_WEB_PARITY_PLAN.md)
+- [PAYMENT_OPTIONS.md](../roadmap/PAYMENT_OPTIONS.md)
+- [PHONE_DIRECTORY_PLAN.md](../roadmap/PHONE_DIRECTORY_PLAN.md)
+- [PROFILE_RECOVERY_PLAN.md](../roadmap/PROFILE_RECOVERY_PLAN.md)
 - [README.md](../../README.md)
-- [TECHNICAL_DEBT.md](../../TECHNICAL_DEBT.md)
-- [TELEGRAM_SETUP.md](../../TELEGRAM_SETUP.md)
+- [TECHNICAL_DEBT.md](../roadmap/TECHNICAL_DEBT.md)
+- [TELEGRAM_SETUP.md](../operations/TELEGRAM_SETUP.md)
 
 ### Защита и восстановление — разделы 4–6, 9
 
-- [APK_SECURITY_AUDIT_2026-10-24.md](../../APK_SECURITY_AUDIT_2026-10-24.md)
-- [BACKUP_AUDIT_2026-10-30.md](../../BACKUP_AUDIT_2026-10-30.md)
-- [BACKUP_STORAGE_OPTIONS.md](../../BACKUP_STORAGE_OPTIONS.md)
-- [CLICKHOUSE_STORAGE_AUDIT_2026-10-28.md](../../CLICKHOUSE_STORAGE_AUDIT_2026-10-28.md)
-- [FULL_BACKUP_2026-10-30.md](../../FULL_BACKUP_2026-10-30.md)
-- [PC_BACKUP_PLAN.md](../../PC_BACKUP_PLAN.md)
-- [PERSONAL_DATA_ENCRYPTION_PLAN.md](../../PERSONAL_DATA_ENCRYPTION_PLAN.md)
-- [SECURITY_CHECKPOINT_2026-10-28.md](../../SECURITY_CHECKPOINT_2026-10-28.md)
-- [SECURITY_DEPENDENCIES.md](../../SECURITY_DEPENDENCIES.md)
-- [SECURITY_ROADMAP.md](../../SECURITY_ROADMAP.md)
-- [SERVER_HARDENING_PROGRESS_2026-10-28.md](../../SERVER_HARDENING_PROGRESS_2026-10-28.md)
-- [SERVER_HARDENING_RUNBOOK.md](../../SERVER_HARDENING_RUNBOOK.md)
-- [SERVER_NETWORK_AUDIT_2026-10-29.md](../../SERVER_NETWORK_AUDIT_2026-10-29.md)
-- [SERVER_SECURITY_AUDIT_2026-10-28.md](../../SERVER_SECURITY_AUDIT_2026-10-28.md)
+- [APK_SECURITY_AUDIT_2026-10-24.md](../security/APK_SECURITY_AUDIT_2026-10-24.md)
+- [BACKUP_AUDIT_2026-10-30.md](../security/BACKUP_AUDIT_2026-10-30.md)
+- [BACKUP_STORAGE_OPTIONS.md](../roadmap/BACKUP_STORAGE_OPTIONS.md)
+- [CLICKHOUSE_STORAGE_AUDIT_2026-10-28.md](../security/CLICKHOUSE_STORAGE_AUDIT_2026-10-28.md)
+- [FULL_BACKUP_2026-10-30.md](../releases/FULL_BACKUP_2026-10-30.md)
+- [PC_BACKUP_PLAN.md](../roadmap/PC_BACKUP_PLAN.md)
+- [PERSONAL_DATA_ENCRYPTION_PLAN.md](../roadmap/PERSONAL_DATA_ENCRYPTION_PLAN.md)
+- [SECURITY_CHECKPOINT_2026-10-28.md](../security/SECURITY_CHECKPOINT_2026-10-28.md)
+- [SECURITY_DEPENDENCIES.md](../security/SECURITY_DEPENDENCIES.md)
+- [SECURITY_ROADMAP.md](../roadmap/SECURITY_ROADMAP.md)
+- [SERVER_HARDENING_PROGRESS_2026-10-28.md](../security/SERVER_HARDENING_PROGRESS_2026-10-28.md)
+- [SERVER_HARDENING_RUNBOOK.md](../operations/SERVER_HARDENING_RUNBOOK.md)
+- [SERVER_NETWORK_AUDIT_2026-10-29.md](../security/SERVER_NETWORK_AUDIT_2026-10-29.md)
+- [SERVER_SECURITY_AUDIT_2026-10-28.md](../security/SERVER_SECURITY_AUDIT_2026-10-28.md)
 
 ### Выпуски и эксплуатация — разделы 5, 8–9
 
-- [ATZ_RELEASE_2026-10-31.md](../../ATZ_RELEASE_2026-10-31.md)
-- [CI_CD_PLAN.md](../../CI_CD_PLAN.md)
-- [DEPLOYMENT.md](../../DEPLOYMENT.md)
-- [DEPLOY_SUMMARY.md](../../DEPLOY_SUMMARY.md)
-- [PRODUCTION_DEPLOYMENT.md](../../PRODUCTION_DEPLOYMENT.md)
-- [RELEASE_2026-10-27.md](../../RELEASE_2026-10-27.md)
-- [RELEASE_RECOVERY_2026-10-24.md](../../RELEASE_RECOVERY_2026-10-24.md)
-- [deployments/2026-10-23-discipline.md](../../deployments/2026-10-23-discipline.md)
-- [deployments/2026-10-24-mobile-discipline.md](../../deployments/2026-10-24-mobile-discipline.md)
-- [deployments/2026-10-25-mobile-journal.md](../../deployments/2026-10-25-mobile-journal.md)
-- [deployments/mobile-profile-icons-1.0.9.md](../../deployments/mobile-profile-icons-1.0.9.md)
-- [deployments/shared-phones-1.0.10.md](../../deployments/shared-phones-1.0.10.md)
+- [ATZ_RELEASE_2026-10-31.md](../releases/ATZ_RELEASE_2026-10-31.md)
+- [CI_CD_PLAN.md](../roadmap/CI_CD_PLAN.md)
+- [DEPLOYMENT.md](../operations/DEPLOYMENT.md)
+- [DEPLOY_SUMMARY.md](../releases/DEPLOY_SUMMARY.md)
+- [PRODUCTION_DEPLOYMENT.md](../operations/PRODUCTION_DEPLOYMENT.md)
+- [RELEASE_2026-10-27.md](../releases/RELEASE_2026-10-27.md)
+- [RELEASE_RECOVERY_2026-10-24.md](../releases/RELEASE_RECOVERY_2026-10-24.md)
+- [deployments/2026-10-23-discipline.md](../releases/2026-10-23-discipline.md)
+- [deployments/2026-10-24-mobile-discipline.md](../releases/2026-10-24-mobile-discipline.md)
+- [deployments/2026-10-25-mobile-journal.md](../releases/2026-10-25-mobile-journal.md)
+- [deployments/mobile-profile-icons-1.0.9.md](../releases/mobile-profile-icons-1.0.9.md)
+- [deployments/shared-phones-1.0.10.md](../releases/shared-phones-1.0.10.md)
 
 ### Планирование, картотека и АТЗ — разделы 2.1–2.3, 2.7
 
-- [INSTRUCTOR_ATZ.md](../../INSTRUCTOR_ATZ.md)
-- [PERSONNEL_IMPORT_2026-10-26.md](../../PERSONNEL_IMPORT_2026-10-26.md)
-- [TwoSideApi.md](../../TwoSideApi.md)
-- [armd-progress.md](../../armd-progress.md)
-- [armd.md](../../armd.md)
+- [INSTRUCTOR_ATZ.md](../modules/INSTRUCTOR_ATZ.md)
+- [PERSONNEL_IMPORT_2026-10-26.md](../releases/PERSONNEL_IMPORT_2026-10-26.md)
+- [TwoSideApi.md](../architecture/TwoSideApi.md)
+- [armd-progress.md](../roadmap/armd-progress.md)
+- [armd.md](../architecture/armd.md)
 
 ### Рабочее время и расчёты — разделы 2.6, 8–9
 
-- [PERSONAL_WORKTIME_API.md](../../PERSONAL_WORKTIME_API.md)
-- [PERSONAL_WORKTIME_BACKEND.md](../../PERSONAL_WORKTIME_BACKEND.md)
-- [PERSONAL_WORKTIME_MONTH.md](../../PERSONAL_WORKTIME_MONTH.md)
-- [PERSONAL_WORKTIME_UI.md](../../PERSONAL_WORKTIME_UI.md)
-- [WORK_TIME_RULES_COMPARISON.md](../../WORK_TIME_RULES_COMPARISON.md)
-- [WORK_TIME_RULES_PLAN.md](../../WORK_TIME_RULES_PLAN.md)
-- [timemanagment.md](../../timemanagment.md)
+- [PERSONAL_WORKTIME_API.md](../modules/PERSONAL_WORKTIME_API.md)
+- [PERSONAL_WORKTIME_BACKEND.md](../modules/PERSONAL_WORKTIME_BACKEND.md)
+- [PERSONAL_WORKTIME_MONTH.md](../modules/PERSONAL_WORKTIME_MONTH.md)
+- [PERSONAL_WORKTIME_UI.md](../modules/PERSONAL_WORKTIME_UI.md)
+- [WORK_TIME_RULES_COMPARISON.md](../modules/WORK_TIME_RULES_COMPARISON.md)
+- [WORK_TIME_RULES_PLAN.md](../roadmap/WORK_TIME_RULES_PLAN.md)
+- [timemanagment.md](../roadmap/timemanagment.md)
 
 ### Мобильное приложение — разделы 2, 8, 11
 
 - [mobile/AGENTS.md](../../mobile/AGENTS.md)
-- [mobile/ANDROID_CRASH_FIX.md](../../mobile/ANDROID_CRASH_FIX.md)
+- [mobile/ANDROID_CRASH_FIX.md](../mobile/ANDROID_CRASH_FIX.md)
 - [mobile/CLAUDE.md](../../mobile/CLAUDE.md)
-- [mobile/DISCIPLINE.md](../../mobile/DISCIPLINE.md)
-- [mobile/ICONS.md](../../mobile/ICONS.md)
-- [mobile/JOURNAL.md](../../mobile/JOURNAL.md)
-- [mobile/JOURNAL_TASKS.md](../../mobile/JOURNAL_TASKS.md)
-- [mobile/LOGIN_FIX.md](../../mobile/LOGIN_FIX.md)
-- [mobile/README.md](../../mobile/README.md)
+- [mobile/DISCIPLINE.md](../mobile/DISCIPLINE.md)
+- [mobile/ICONS.md](../mobile/ICONS.md)
+- [mobile/JOURNAL.md](../mobile/JOURNAL.md)
+- [mobile/JOURNAL_TASKS.md](../mobile/JOURNAL_TASKS.md)
+- [mobile/LOGIN_FIX.md](../mobile/LOGIN_FIX.md)
+- [mobile/README.md](../mobile/README.md)

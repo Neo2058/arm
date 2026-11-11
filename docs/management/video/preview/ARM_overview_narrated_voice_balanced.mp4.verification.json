@@ -1,0 +1,38 @@
+{
+  "duration_seconds": 616.466667,
+  "video_packets_unchanged": true,
+  "video_packets": 18494,
+  "measured_output": {
+    "input_i": "-16.02",
+    "input_tp": "-1.43",
+    "input_lra": "3.50",
+    "input_thresh": "-26.56"
+  },
+  "audio_sync_checks": [
+    {
+      "second": 3,
+      "offset_ms": -0.0625
+    },
+    {
+      "second": 100,
+      "offset_ms": 0.0
+    },
+    {
+      "second": 250,
+      "offset_ms": -0.25
+    },
+    {
+      "second": 400,
+      "offset_ms": -0.3125
+    },
+    {
+      "second": 600,
+      "offset_ms": -0.3125
+    },
+    {
+      "second": 610,
+      "offset_ms": -0.25
+    }
+  ],
+  "full_decode": "passed"
+}

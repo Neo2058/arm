@@ -1,0 +1,46 @@
+{
+  "file": "ARM_overview_narrated.mp4",
+  "duration_seconds": 616.466667,
+  "width": 1920,
+  "height": 1080,
+  "fps": 30.0,
+  "video_codec": "h264",
+  "audio_codec": "aac",
+  "sample_rate": 48000,
+  "audio_channels": 1,
+  "decoded_scene_checks": 39,
+  "audio_matches_original": [
+    {
+      "second": 3,
+      "offset_ms": 0.0,
+      "correlation": 0.9996460220762129
+    },
+    {
+      "second": 100,
+      "offset_ms": 0.0,
+      "correlation": 0.9999492486251622
+    },
+    {
+      "second": 250,
+      "offset_ms": 0.0,
+      "correlation": 0.9959433453180125
+    },
+    {
+      "second": 400,
+      "offset_ms": 0.0,
+      "correlation": 0.991320875051759
+    },
+    {
+      "second": 600,
+      "offset_ms": 0.0,
+      "correlation": 0.9998827176463446
+    },
+    {
+      "second": 610,
+      "offset_ms": 0.0,
+      "correlation": 0.9997245000519591
+    }
+  ],
+  "sha256": "cc425da2202eae4859bdcafe41a7499275032acb55fe22fa70b6621c45052121",
+  "full_decode": "All video and audio frames decoded without FFmpeg errors"
+}
