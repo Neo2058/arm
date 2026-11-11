@@ -13,7 +13,7 @@
 | Обновить production | [Штатная выкладка](operations/PRODUCTION_DEPLOYMENT.md), [защищённый runtime](operations/SERVER_HARDENING_RUNBOOK.md) |
 | Проверить состояние переноса учёта | [Схема АРМ-ЛБ](architecture/armd.md), [очередь работ](roadmap/armd-progress.md) |
 | Найти долг и планы | [Технический долг](roadmap/TECHNICAL_DEBT.md), [планы безопасности](roadmap/SECURITY_ROADMAP.md) |
-| Собрать Android | [Мобильное приложение](mobile/README.md), [последний описанный выпуск 1.1.4](releases/mobile-1.1.4.md) |
+| Собрать Android | [Мобильное приложение](mobile/README.md), [последний описанный выпуск 1.1.5](releases/formular-mobile-1.1.5.md) |
 | Проверить нагрузочную готовность | [Отчёт о 500 одновременных пользователях](operations/capacity/2026-11-09/READINESS_500.md) |
 | Найти мониторинг и резервирование | [Мониторинг](operations/MONITORING_RUNBOOK.md), [копии на ПК](roadmap/PC_BACKUP_PLAN.md) |
 | Подготовить представление проекта | [Дизайн-документ](management/ARM_DESIGN_DOCUMENT.md), [презентация](management/presentation/README.md), [видео](management/video/README.md) |
