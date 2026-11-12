@@ -15,6 +15,7 @@ class QuizService
         abort_unless($quiz->is_active, 404);
         $quiz->loadMissing('document');
         abort_if($quiz->document_id && ! $quiz->document, 404);
+        abort_if($quiz->document && ! $quiz->document->isActiveEdition(), 404);
         abort_if($quiz->document && ! $user->canAccessByRoles($quiz->document->allowed_roles), 403);
     }
 
@@ -37,7 +38,7 @@ class QuizService
                     'answer_text' => $answer->answer_text,
                 ])->values()->all(),
                 'references' => $question->references
-                    ->filter(fn ($reference) => $reference->document && $user->canAccessByRoles($reference->document->allowed_roles))
+                    ->filter(fn ($reference) => $reference->document && $reference->document->isActiveEdition() && $user->canAccessByRoles($reference->document->allowed_roles))
                     ->map(fn ($reference) => [
                         'anchor_text' => $reference->anchor_text,
                         'page' => $reference->page_number,

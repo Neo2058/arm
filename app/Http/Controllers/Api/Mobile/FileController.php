@@ -19,6 +19,7 @@ class FileController extends Controller
 
     public function document(Document $document): StreamedResponse
     {
+        abort_unless($document->isActiveEdition(), 404);
         $path = $document->file_path;
         if (! $this->files->exists($path)) {
             abort(404, 'Файл не найден');

@@ -28,7 +28,7 @@ class QuizController extends Controller
                     return false;
                 }
 
-                return ! $quiz->document || $user->canAccessByRoles($quiz->document->allowed_roles);
+                return ! $quiz->document || ($quiz->document->isActiveEdition() && $user->canAccessByRoles($quiz->document->allowed_roles));
             })
             ->values();
 

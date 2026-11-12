@@ -1,6 +1,6 @@
 export function matchesDocument(document, search) {
   const value = search.trim().toLocaleLowerCase('ru-RU');
-  const text = [document.title, document.document_number, document.publication_year,
+  const text = [document.title, document.document_number, document.publication_year, document.revision_label,
     ...(document.folder_path || []).map((folder) => folder.name)]
     .filter((part) => part != null).join(' ').toLocaleLowerCase('ru-RU');
   return !value || value.split(/\s+/u).every((word) => text.includes(word));

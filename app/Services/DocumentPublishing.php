@@ -56,6 +56,9 @@ class DocumentPublishing
             }
             if ($document) {
                 $document = Document::whereKey($document->id)->lockForUpdate()->firstOrFail();
+                if ($document->withdrawn_at) {
+                    throw ValidationException::withMessages(['title' => 'Архивная редакция неизменяема.']);
+                }
                 if (($data['file_path'] ?? $document->file_path) !== $document->file_path) {
                     throw ValidationException::withMessages(['file_path' => 'Замена файла требует новой редакции. Сохраните текущий оригинал и историю ознакомления.']);
                 }

@@ -50,6 +50,7 @@ export default function InstructionsScreen({ user, navigation }) {
     </View>}
     {categories?.map(category => <View key={category.id} style={{ gap:12 }}><Text style={s.title}>{category.name}</Text>
       {category.documents.map(doc => <View key={doc.id} style={s.card}><Text style={s.title}>{doc.title}</Text>
+        {!!doc.revision_label && <Text style={s.meta}>Редакция {doc.revision_label}</Text>}
         <Text style={s.meta}>{doc.signed ? `Ознакомление подтверждено · ${new Date(doc.signed_at).toLocaleString('ru-RU')}` : 'Требуется ознакомление'}</Text>
         <Button disabled={!doc.has_file} onPress={() => navigation.navigate('DocumentView',{ id:doc.id,title:doc.title })}>Открыть документ</Button>
         {doc.quiz_id && <Button onPress={() => navigation.navigate('InstructionQuiz',{ id:doc.quiz_id,title:doc.title })}>Пройти тест</Button>}

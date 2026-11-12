@@ -30,7 +30,7 @@ class DocumentController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = $user->constrainByAllowedRoles(Document::with('folder.parent.parent.parent.parent.parent'));
+        $query = $user->constrainByAllowedRoles(Document::active()->with('folder.parent.parent.parent.parent.parent'));
 
         $categories = $query->orderBy('title')->get()->map(function (Document $document) {
             $rawCategory = $document->category ?: 'other';
@@ -38,6 +38,8 @@ class DocumentController extends Controller
             return [
                 'id' => $document->id,
                 'title' => $document->title,
+                'revision_label' => $document->revision_label,
+                'effective_on' => $document->effective_on?->toDateString(),
                 'folder_path' => $document->folder?->path() ?? [],
                 'document_number' => $document->document_number,
                 'publication_year' => $document->publication_year,
@@ -59,6 +61,7 @@ class DocumentController extends Controller
 
     public function show(Request $request, Document $document): JsonResponse
     {
+        abort_unless($document->isActiveEdition(), 404);
         if (! $request->user()->canAccessByRoles($document->allowed_roles)) {
             ActionLog::violation('violation_document_access', [
                 'document_id' => $document->id,

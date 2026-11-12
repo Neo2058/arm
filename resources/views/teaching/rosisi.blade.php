@@ -72,6 +72,7 @@
                         <div class="group bg-white dark:bg-[#0b1018] border border-gray-200 dark:border-white/10 rounded-2xl p-5 flex flex-col hover:shadow-md transition-all duration-200">
                             <div class="flex-1">
                                 <div class="font-semibold text-gray-900 dark:text-white mb-1 group-hover:text-orange-600 transition">{{ $doc['title'] }}</div>
+                                @if(!empty($doc['revision_label']))<div class="text-sm text-gray-500">Редакция {{ $doc['revision_label'] }}</div>@endif
                                 <div class="text-xs text-gray-500 dark:text-gray-400 mb-3">Папка: {{ $cat['name'] }}</div>
 
                                 @if($doc['has_quiz'])

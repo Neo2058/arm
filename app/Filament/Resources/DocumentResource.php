@@ -8,9 +8,12 @@ use App\Models\Document;
 use App\Models\DocumentFolder;
 use App\Services\DocumentPublishing;
 use Filament\Forms\Components\BaseFileUpload;
+use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
@@ -39,6 +42,7 @@ class DocumentResource extends Resource
     public static function form(Form $form): Form
     {
         return $form
+            ->disabled(fn (?Document $record) => (bool) $record?->withdrawn_at)
             ->schema([
                 TextInput::make('title')
                     ->label('Название документа')
@@ -55,6 +59,16 @@ class DocumentResource extends Resource
                         ->mapWithKeys(fn ($folder) => [$folder->id => implode(' / ', array_column($folder->path(), 'name'))])->all()),
                 TextInput::make('document_number')->label('Номер документа')->maxLength(255)->live(onBlur: true),
                 TextInput::make('publication_year')->label('Год издания')->integer()->minValue(1900)->maxValue(2200),
+                TextInput::make('revision_label')->label('Редакция')->default('1')->required()->maxLength(255),
+                DatePicker::make('effective_on')->label('Дата введения')->maxDate(today()),
+                Textarea::make('replacement_reason')->label('Основание замены предыдущей редакции')->maxLength(2000)
+                    ->visible(fn ($livewire) => $livewire instanceof Pages\CreateDocument && $livewire->sourceDocumentId !== null)->required(),
+                Checkbox::make('replacement_confirmed')->label('Вывести предыдущую редакцию из действия; сохранить её оригинал и росписи.')
+                    ->visible(fn ($livewire) => $livewire instanceof Pages\CreateDocument && $livewire->sourceDocumentId !== null)->accepted()->required(),
+                Checkbox::make('references_reviewed')->label('Тесты и ссылки на страницы требуют отдельной проверки; автоматически не переносятся.')
+                    ->visible(fn ($livewire) => $livewire instanceof Pages\CreateDocument && $livewire->sourceDocumentId !== null)->accepted()->required(),
+                Placeholder::make('archive_status')->label('Состояние')
+                    ->content(fn (?Document $record) => $record?->withdrawn_at ? 'Выведен '.$record->withdrawn_at->format('d.m.Y H:i').' — '.$record->withdrawal_reason : 'Действующая редакция'),
 
                 Placeholder::make('possible_duplicates')->label('Похожие документы')
                     ->content(function (Get $get, ?Document $record) {
@@ -101,7 +115,7 @@ class DocumentResource extends Resource
                             }
                         }
                     }])
-                    ->helperText('Идентичные файлы проверяются по SHA-256. Существующий оригинал не заменяется до внедрения редакций.')
+                    ->helperText('Идентичные файлы проверяются по SHA-256. Для замены оригинала используйте «Новая редакция».')
                     ->maxSize(20240) // Ограничение 10МБ
                     // Provide browser-fetchable preview URL via our signed admin proxy (prevents direct MinIO fetch errors / 419 related UI issues)
                     ->getUploadedFileUsing(function (BaseFileUpload $component, $file, string|array|null $storedFileNames): ?array {
@@ -172,10 +186,27 @@ class DocumentResource extends Resource
                             return 'N/A';
                         }
                     }),
+                Tables\Columns\TextColumn::make('revision_label')->label('Редакция'),
+                Tables\Columns\TextColumn::make('withdrawn_at')->label('Выведен')->dateTime(),
+                Tables\Columns\TextColumn::make('withdrawn_by')->label('ID автора вывода')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')->label('Загружен')->dateTime(),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('family')->label('Семейство документа')->searchable()
+                    ->options(fn () => Document::whereNull('root_document_id')->orderBy('title')->get()->mapWithKeys(fn ($doc) => [$doc->id => '№'.$doc->id.' '.$doc->title])->all())
+                    ->query(function ($query, array $data) {
+                        $id = (int) ($data['value'] ?? 0);
+
+                        return $id ? $query->where(fn ($q) => $q->whereKey($id)->orWhere('root_document_id', $id)) : $query;
+                    }),
+                Tables\Filters\SelectFilter::make('edition_status')->label('Состояние')->options(['active' => 'Действующие', 'archive' => 'Архив', 'all' => 'Все'])
+                    ->default('active')->query(function ($query, array $data) {
+                        return match ($data['value'] ?? 'active') {
+                            'all' => $query,
+                            'archive' => $query->whereNotNull('withdrawn_at'),
+                            default => $query->active(),
+                        };
+                    }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -191,6 +222,21 @@ class DocumentResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    public static function canViewAny(): bool
+    {
+        return (bool) (auth()->user()?->is_active && auth()->user()?->isAdmin());
+    }
+
+    public static function canCreate(): bool
+    {
+        return static::canViewAny();
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return static::canViewAny();
     }
 
     public static function canDelete(Model $record): bool

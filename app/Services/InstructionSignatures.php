@@ -19,13 +19,13 @@ class InstructionSignatures
 
         return InstructionCategory::where('is_active', true)->orderBy('sort_order')->orderBy('id')
             ->with(['documents' => function ($query) use ($actor) {
-                $actor->constrainByAllowedRoles($query)->with('quiz')->orderBy('title')->orderBy('id');
+                $actor->constrainByAllowedRoles($query)->active()->with('quiz')->orderBy('title')->orderBy('id');
             }])->get()->map(function ($category) use ($signatures) {
                 return ['id' => $category->id, 'name' => $category->name, 'documents' => $category->documents->map(function ($doc) use ($signatures) {
                     $signature = $signatures->get($doc->id);
                     $quiz = $doc->quiz;
 
-                    return ['id' => $doc->id, 'title' => $doc->title, 'signed' => (bool) $signature?->signed_at,
+                    return ['id' => $doc->id, 'title' => $doc->title, 'revision_label' => $doc->revision_label, 'signed' => (bool) $signature?->signed_at,
                         'signed_at' => $signature?->signed_at?->toIso8601String(),
                         'has_file' => filled($doc->file_path), 'quiz_id' => $quiz?->is_active ? $quiz->id : null];
                 })->all()];
@@ -39,7 +39,7 @@ class InstructionSignatures
         return DB::transaction(function () use ($actor, $id, $input) {
             $actor = User::whereKey($actor->id)->lock(DB::getDriverName() === 'pgsql' ? 'for no key update' : true)->firstOrFail();
             abort_unless($actor->is_active, 403);
-            $document = Document::whereHas('instructionCategory', fn ($q) => $q->where('is_active', true))->sharedLock()->findOrFail($id);
+            $document = Document::active()->whereHas('instructionCategory', fn ($q) => $q->where('is_active', true))->sharedLock()->findOrFail($id);
             abort_unless($actor->canAccessByRoles($document->allowed_roles), 403);
             $signature = UserInstructionSignature::where('user_id', $actor->id)->where('document_id', $id)->lockForUpdate()->first();
             if ($signature?->signed_at) {

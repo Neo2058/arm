@@ -32,7 +32,7 @@ class DocumentController extends Controller
         ];
 
         // Получаем документы
-        $query = Document::with('quiz.questions', 'folder.parent.parent.parent.parent.parent');
+        $query = Document::active()->with('quiz.questions', 'folder.parent.parent.parent.parent.parent');
 
         // КРИТИЧЕСКИ ВАЖНО: Если это не админ, фильтруем документы по его роли
         $query = $user->constrainByAllowedRoles($query);
@@ -46,6 +46,8 @@ class DocumentController extends Controller
             return [
                 'id' => $document->id,
                 'title' => $document->title,
+                'revision_label' => $document->revision_label,
+                'effective_on' => $document->effective_on?->toDateString(),
                 'folder_path' => $document->folder?->path() ?? [],
                 'document_number' => $document->document_number,
                 'publication_year' => $document->publication_year,
@@ -96,6 +98,7 @@ class DocumentController extends Controller
 
     public function show(Document $document)
     {
+        abort_unless($document->isActiveEdition() || auth()->user()?->isAdmin(), 404);
         $user = auth()->user();
 
         // Защита прямой ссылки: если документ ограничен и роль пользователя не совпадает
@@ -188,6 +191,7 @@ class DocumentController extends Controller
      */
     public function serveFile(Document $document)
     {
+        abort_unless($document->isActiveEdition() || auth()->user()?->isAdmin(), 404);
         $user = auth()->user();
 
         // Permission check
@@ -222,6 +226,7 @@ class DocumentController extends Controller
      */
     public function downloadFile(Document $document)
     {
+        abort_unless($document->isActiveEdition() || auth()->user()?->isAdmin(), 404);
         $user = auth()->user();
         $isAdmin = $user->isAdmin();
         $userRole = $user->roleValue();

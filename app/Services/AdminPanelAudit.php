@@ -75,6 +75,10 @@ class AdminPanelAudit
 
     public static function record(Model $record, string $verb): void
     {
+        // DocumentCatalogAudit owns the approved, minimal after-commit event.
+        if ($record instanceof Document) {
+            return;
+        }
         if (! self::isAdminPanelRequest()) {
             return;
         }

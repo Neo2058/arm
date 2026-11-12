@@ -151,6 +151,8 @@ Role checks in PHP go through `User` helpers (`isAdmin()`, `isInstructor()`, `is
 
 Filament admin CRUD is `ActionLog` via `AdminPanelAudit` (`admin.{model}.{created|updated|deleted}`), gated by `Filament::isServing()` + `canAccessPanel`. Query-builder updates do not fire it.
 
+Document is an exception in the unpublished catalog/revisions implementation: its approved `document.catalog_saved` event is emitted once by `DocumentCatalogAudit` after commit, with resource ID and field names only. DocumentFolder uses `document_folder.saved`. `admin.document.*` is skipped to avoid duplication and title values. See [document revisions](../modules/DOCUMENT_REVISIONS.md).
+
 Client `POST /api/actions/log` accepts only `ActionLog::CLIENT_ACTIONS`; stored as `ui.{action}` with scalar details.
 
 PDF naryad stream logs `view_naryad_pdf` only on the initial request (`Range` empty or `bytes=0-`).

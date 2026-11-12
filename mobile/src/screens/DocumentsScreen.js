@@ -27,7 +27,7 @@ function TreeNode({ node, navigation, searching }) {
   return <>
     {node.items.map((doc) => <Pressable key={`doc-${doc.id}`} style={styles.row} onPress={() => navigation.navigate('DocumentView', { id: doc.id, title: doc.title })}>
       <IconHeading name="documents" textStyle={styles.doc}>{doc.title}</IconHeading>
-      <Text style={styles.date}>{[doc.document_number, doc.publication_year, doc.updated_at].filter(Boolean).join(' · ')}</Text>
+      <Text style={styles.date}>{[doc.revision_label ? `Редакция ${doc.revision_label}` : null, doc.document_number, doc.publication_year, doc.updated_at].filter(Boolean).join(' · ')}</Text>
     </Pressable>)}
     {node.children.map((child) => <FolderNode key={child.id} node={child} navigation={navigation} searching={searching} />)}
   </>;

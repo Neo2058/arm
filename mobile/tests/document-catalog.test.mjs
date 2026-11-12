@@ -15,8 +15,8 @@ test('old flat response and authorized nested items share one tree without copie
 });
 
 test('search matches title, number, publication year and folder without mutating input', () => {
-  const document = { id: 1, title: 'Электробезопасность', document_number: 'И-123', publication_year: 2026, folder_path: [{ id: 10, name: 'Обучение' }] };
-  for (const query of ['электро', 'и-123', '2026', 'ОБУЧЕНИЕ', '2026 и-123', 'электро 2026', '  ']) assert.equal(matchesDocument(document, query), true);
+  const document = { id: 1, title: 'Электробезопасность', document_number: 'И-123', publication_year: 2026, revision_label: 'Изм-2', folder_path: [{ id: 10, name: 'Обучение' }] };
+  for (const query of ['электро', 'и-123', '2026', 'ОБУЧЕНИЕ', '2026 и-123', 'электро 2026', 'изм-2', '  ']) assert.equal(matchesDocument(document, query), true);
   assert.equal(matchesDocument(document, '2025'), false);
   assert.equal(documentTree([document]).children[0].name, 'Обучение');
   assert.equal(document.folder_path.length, 1);
