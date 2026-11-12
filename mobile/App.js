@@ -27,6 +27,7 @@ import TopicsScreen from './src/screens/TopicsScreen';
 import MaterialsScreen from './src/screens/MaterialsScreen';
 import MaterialScreen from './src/screens/MaterialScreen';
 import QuizzesScreen from './src/screens/QuizzesScreen';
+import QuizHistoryScreen from './src/screens/QuizHistoryScreen';
 import QuizPlayScreen from './src/screens/QuizPlayScreen';
 import NaryadsScreen from './src/screens/NaryadsScreen';
 import NaryadViewScreen from './src/screens/NaryadViewScreen';
@@ -105,7 +106,8 @@ function TrainingStack() {
 function QuizzesStack() {
   return (
     <Stack.Navigator screenOptions={{ headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}>
-      <Stack.Screen name="QuizzesList" component={QuizzesScreen} options={{ title: 'Тесты' }} />
+      <Stack.Screen name="QuizzesList" component={QuizzesScreen} options={({ navigation }) => ({ title: 'Тесты', headerRight: () => <Pressable accessibilityRole="button" onPress={() => navigation.navigate('QuizHistory')}><Text style={{ color: '#fb923c', padding: 8 }}>История</Text></Pressable> })} />
+      <Stack.Screen name="QuizHistory" component={QuizHistoryScreen} options={{ title: 'Мои результаты' }} />
       <Stack.Screen name="QuizPlay" component={QuizPlayScreen} options={({ route }) => ({ title: route.params?.title || 'Тест' })} />
     </Stack.Navigator>
   );

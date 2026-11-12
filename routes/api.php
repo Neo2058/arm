@@ -71,6 +71,7 @@ Route::prefix('mobile')->group(function () {
         Route::post('/training/materials/{material}/comments', [TrainingController::class, 'storeComment']);
 
         Route::get('/quizzes', [QuizController::class, 'index']);
+        Route::get('/quizzes/history', [QuizController::class, 'history']);
         Route::get('/quizzes/{quiz}', [QuizController::class, 'show']);
         Route::post('/quizzes/{quiz}/results', [QuizController::class, 'submit']);
 

@@ -54,6 +54,32 @@ class QuizController extends Controller
         ]);
     }
 
+    public function history(Request $request): JsonResponse
+    {
+        $request->validate(['page' => 'sometimes|integer|min:1|max:100000']);
+        $user = $request->user();
+        $results = QuizResult::query()->where('user_id', $user->id)
+            ->whereHas('quiz', function ($query) use ($user) {
+                $query->where('is_active', true)->where(function ($query) use ($user) {
+                    $query->whereNull('document_id')->orWhereHas('document', fn ($documents) => $user->constrainByAllowedRoles($documents));
+                });
+            })
+            ->with('quiz:id,title')->orderByDesc('id')->simplePaginate(20);
+
+        return response()->json([
+            'results' => collect($results->items())->map(fn (QuizResult $result) => [
+                'id' => $result->id,
+                'quiz_id' => $result->quiz_id,
+                'title' => $result->quiz->title,
+                'score' => (int) $result->score,
+                'total_questions' => (int) $result->total_questions,
+                'time_spent' => (int) $result->time_spent,
+                'completed_at' => $result->created_at?->toIso8601String(),
+            ]),
+            'has_more' => $results->hasMorePages(),
+        ])->header('Cache-Control', 'private, no-store');
+    }
+
     public function show(Request $request, Quiz $quiz): JsonResponse
     {
         $player = $this->quizzes->playerData($quiz, $request->user(), 'mobile.files.documents');
