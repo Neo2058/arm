@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use Illuminate\Support\Facades\File;
+use Tests\TestCase;
 
 class InstallPageTest extends TestCase
 {
@@ -40,6 +40,7 @@ class InstallPageTest extends TestCase
     public function test_missing_binaries_return_404(): void
     {
         $this->get('/install/android')->assertNotFound();
+        $this->get('/install/android.json')->assertNotFound();
         $this->get('/install/ios')->assertNotFound();
         $this->get('/install/ios.plist')->assertNotFound();
         $this->get('/install/ios.ipa')->assertNotFound();
@@ -58,8 +59,26 @@ class InstallPageTest extends TestCase
             $this->get('/install/android')
                 ->assertOk()
                 ->assertHeader('content-type', 'application/vnd.android.package-archive');
+            $this->getJson('/install/android.json')->assertNotFound();
+            file_put_contents($dir.'/android-latest.json', json_encode([
+                'package' => 'ru.tch15.arm',
+                'version' => '1.1.6',
+                'version_code' => 22,
+                'sha256' => 'abc',
+                'size' => 1,
+                'url' => '/install/android',
+                'publisher_git_commit' => 'should-not-leak',
+            ]));
+            $this->getJson('/install/android.json')
+                ->assertOk()
+                ->assertHeader('Cache-Control', 'no-store, private')
+                ->assertJsonPath('package', 'ru.tch15.arm')
+                ->assertJsonPath('version_code', 22)
+                ->assertJsonPath('size', strlen('apk-bytes'))
+                ->assertJsonMissingPath('publisher_git_commit');
         } finally {
             @unlink($path);
+            @unlink($dir.'/android-latest.json');
         }
     }
 }

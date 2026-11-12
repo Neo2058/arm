@@ -71,6 +71,9 @@ class PersonalWorkTimeSettingsEditor
             $row = $this->row($user, $month);
             abort_unless(($row?->revision ?? 0) === $expectedRevision, 409, 'Настройки уже изменены. Загрузите актуальную редакцию.');
             $old = $row?->settings ?? [];
+            if (isset($settings['rest_dates'])) {
+                app(PersonalWorkShiftService::class)->assertRestDatesFree($user, array_values(array_diff($settings['rest_dates'], $old['rest_dates'] ?? [])));
+            }
             $changed = array_keys(array_filter($settings, fn ($value, $key) => ! array_key_exists($key, $old) || $old[$key] !== $value, ARRAY_FILTER_USE_BOTH));
             if ($changed) {
                 $row ??= new WorkTimeMonthSettings(['user_id' => $user->id, 'month' => $month.'-01']);

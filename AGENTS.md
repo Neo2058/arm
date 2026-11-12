@@ -151,6 +151,7 @@
 - Клиент: каталог `mobile/` (Expo). Не путать с web-группой (CSRF / device / barrier).
 - Привязка устройства на мобильном прототипе **не** включена.
 - Установщики (не браузер): `eas.json` профиль `preview` → APK/IPA с вшитым `EXPO_PUBLIC_API_URL`. Артефакты класть в `public/downloads/tch15-android.apk` и `tch15-ios.ipa`, страница `/install`.
+  С 1.1.6 основной APK после входа читает публичный `/install/android.json` и при большем versionCode предлагает установить `/install/android`. Подтверждение Android обязательно. Уже установленные сборки до 1.1.6 этот запрос не делают.
 
 ### Клон АРМ-ЛБ
 Схемы таблиц и шаги переноса FoxPro — **`docs/architecture/armd.md`**. Не заводить параллельные таблицы учёта в обход этой схемы.
@@ -221,6 +222,9 @@
   и `/api/mobile/worktime` (Sanctum), общий PersonalWorkTimeController. Все данные только свои.
   Изменения через WorkTimeMutationService + PersonalWorkShiftService/PersonalWorkTimeSettingsEditor:
   блокировка User, expected_revision, UUID и неизменные операционные квитанции в Postgres.
+  DELETE `/shifts/{id}` удаляет свою запись v2 (смена или отсутствие) с тем же UUID/revision;
+  повтор квитанции, ClickHouse `work_shift.saved` с `deleted`. День взаимно исключает
+  смену, выходной и отсутствие; несколько рабочих смен в один день остаются допустимы.
   Обновление снимка ставки — только явный refresh_snapshot; ставки наследуются с месяца изменения.
   Согласован work_time.settings_saved: ID пользователя, месяц, имена полей, без значений; после COMMIT.
   Обе миграции версии/редакций применены в общем выпуске 27 октября 2026. Интерфейсы опубликованы:

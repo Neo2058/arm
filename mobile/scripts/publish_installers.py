@@ -93,6 +93,32 @@ def stage(source, directory):
         raise
 
 
+def write_latest(destination, metadata, suffix):
+    if suffix != ".apk":
+        return
+    payload = {
+        "package": metadata["package"],
+        "version": metadata["version"],
+        "version_code": metadata["version_code"],
+        "sha256": metadata["sha256"],
+        "size": int(metadata["size"]),
+        "url": "/install/android",
+        "published_at": metadata.get("published_at"),
+    }
+    descriptor, name = tempfile.mkstemp(prefix=".android-latest-", dir=destination)
+    staged = Path(name)
+    try:
+        with os.fdopen(descriptor, "w") as output:
+            json.dump(payload, output, ensure_ascii=False, indent=2)
+            output.write("\n")
+            output.flush()
+            os.fsync(output.fileno())
+        staged.chmod(0o644)
+        os.replace(staged, destination / "android-latest.json")
+    finally:
+        staged.unlink(missing_ok=True)
+
+
 def publish(source, destination):
     suffix = source.suffix.lower()
     if suffix not in (".apk", ".ipa") or not source.is_file():
@@ -116,6 +142,7 @@ def publish(source, destination):
             if suffix == ".apk":
                 check_upgrade(metadata, previous)
             if metadata["sha256"] == previous["sha256"]:
+                write_latest(destination, {**previous, "size": target.stat().st_size, "published_at": previous.get("published_at") or datetime.now(timezone.utc).isoformat()}, suffix)
                 print("Already published: " + target.name)
                 return
             backups = destination.parent.parent / "installer-backups"
@@ -133,6 +160,7 @@ def publish(source, destination):
                     output.flush()
                     os.fsync(output.fileno())
         metadata["published_at"] = datetime.now(timezone.utc).isoformat()
+        metadata["size"] = staged.stat().st_size
         # Identifies the publisher checkout, not proof of the APK's build provenance.
         metadata["publisher_git_commit"] = run("git", "-C", ROOT, "rev-parse", "HEAD").strip()
         record = destination / ("release-" + metadata["sha256"] + ".json")
@@ -152,6 +180,7 @@ def publish(source, destination):
         os.replace(staged, target)
         if digest(target) != metadata["sha256"]:
             raise ValueError("Post-publication hash mismatch")
+        write_latest(destination, metadata, suffix)
         print("Published: " + target.name + " SHA256=" + metadata["sha256"])
         if suffix == ".ipa":
             print("IPA structure checked; Apple signature NOT verified")

@@ -61,6 +61,20 @@ export function settingsDraft(data) {
     ['rest_dates', [...data.settings.rest_dates]],
   ]) };
 }
+export function dateOccupied(summary, date) {
+  if (!summary) return false;
+  if ((summary.absences || []).some(a => a.shift_date <= date && a.absence_end >= date)) return true;
+  return (summary.shifts || []).some(s => {
+    const start = (s.started_at || s.shift_date || '').slice(0, 10);
+    const ended = (s.ended_at || '').replace('T', ' ');
+    return start <= date && ended > `${date} 00:00`;
+  });
+}
+export function deleteRequest(draft) {
+  if (draft.kind === 'settings' || !draft.target?.id) throw new Error('Удалять можно только сохранённую смену или отсутствие.');
+  const month = draft.kind === 'absence' ? draft.values.shift_date.slice(0, 7) : String(draft.target.shift_date || draft.values.started_at).slice(0, 7);
+  return { method: 'delete', url: `/shifts/${draft.target.id}`, month, data: { expected_revision: draft.target.revision } };
+}
 export function requestFor(draft) {
   const v = draft.values;
   if (draft.kind === 'absence') {
@@ -123,6 +137,10 @@ export function createEditor({ storage, send, uuid }) {
     close() { return change(s => { if (s.pending) throw new Error('Сначала подтвердите результат отправки.'); s.draft = null; s.result = null; s.error = ''; }); },
     async submit() {
       await change(s => { if (!s.pending) { const request = requestFor(s.draft); request.data.operation_id = uuid(); s.pending = request; s.result = null; s.current = null; s.status = null; s.error = ''; } });
+      return this.retry();
+    },
+    async destroy() {
+      await change(s => { if (!s.pending) { const request = deleteRequest(s.draft); request.data.operation_id = uuid(); s.pending = request; s.result = null; s.current = null; s.status = null; s.error = ''; } });
       return this.retry();
     },
     async retry() {

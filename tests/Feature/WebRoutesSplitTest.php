@@ -14,6 +14,7 @@ class WebRoutesSplitTest extends TestCase
             'about.request',
             'install',
             'install.android',
+            'install.android.manifest',
             'install.ios',
             'login',
             'login.post',

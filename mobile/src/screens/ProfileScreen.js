@@ -97,7 +97,8 @@ export default function ProfileScreen({ user, onLogout, onReauthenticate, onProf
     <Pressable style={s.secondary} onPress={onReauthenticate}><IconLabel name="refresh">Войти заново без удаления черновиков</IconLabel></Pressable>
     <Text style={s.meta}>При выходе черновики и очередь этого пользователя удаляются с устройства.</Text>
     <Pressable style={s.secondary} onPress={onLogout}><IconLabel name="logout">Выйти</IconLabel></Pressable>
-    <Text style={s.version}>ТЧ-15 · Версия {Constants.expoConfig?.version || '—'}</Text>
+    <Text style={s.version}>ТЧ-15 · Версия {Constants.nativeAppVersion || Constants.expoConfig?.version || '—'} ({Constants.nativeBuildVersion || Constants.expoConfig?.android?.versionCode || '—'})</Text>
+    <Text style={s.meta}>Если на сервере появится более новая сборка, приложение предложит установить её поверх текущей. Android запросит подтверждение.</Text>
   </ScrollView>;
 }
 

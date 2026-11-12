@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -27,6 +28,28 @@ class InstallController extends Controller
         return response()->download($path, 'tch15.apk', [
             'Content-Type' => 'application/vnd.android.package-archive',
         ]);
+    }
+
+    public function androidManifest(): JsonResponse
+    {
+        $path = $this->androidPath();
+        $meta = public_path('downloads/android-latest.json');
+        abort_unless(is_file($path) && is_file($meta), 404, 'Сборка Android ещё не выложена.');
+        $data = json_decode((string) file_get_contents($meta), true);
+        abort_unless(is_array($data) && ($data['package'] ?? '') === 'ru.tch15.arm' && (int) ($data['version_code'] ?? 0) >= 1, 404);
+        $payload = [
+            'package' => 'ru.tch15.arm',
+            'version' => (string) ($data['version'] ?? ''),
+            'version_code' => (int) $data['version_code'],
+            'sha256' => (string) ($data['sha256'] ?? ''),
+            'size' => filesize($path),
+            'url' => '/install/android',
+        ];
+        if (! empty($data['published_at'])) {
+            $payload['published_at'] = $data['published_at'];
+        }
+
+        return response()->json($payload)->header('Cache-Control', 'no-store');
     }
 
     public function ios()

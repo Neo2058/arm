@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { absenceDraft, createEditor, requestFor, settingsDraft, shiftDraft, monthDays, moveMonth } from '../src/worktime/model.mjs';
+import { absenceDraft, createEditor, dateOccupied, deleteRequest, requestFor, settingsDraft, shiftDraft, monthDays, moveMonth } from '../src/worktime/model.mjs';
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const config = (revision = 0) => ({ month: '2026-10', revision, settings: { line_rate_kopecks: 57348, reserve_rate_kopecks: 55300, surface_rate_kopecks: 51204, evening_percent: 20, night_percent: 40, rest_dates: [] } });
@@ -117,4 +117,33 @@ test('absence draft sends inclusive dates without inventing hours or charges and
   assert.deepEqual(f.requests, [frozen, frozen]);
   const edit = shiftDraft({ id: 12, revision: 2, type: 'deviation', absence_kind: 'leave', shift_date: '2026-10-30', absence_end: '2026-11-02' });
   assert.equal(edit.kind, 'absence'); assert.equal(requestFor(edit).data.expected_revision, 2);
+});
+test('delete freezes UUID and revision then clears the card after acknowledgement', async () => {
+  let offline = true;
+  const f = fixture(async () => { if (offline) throw new Error('timeout'); return { shift: { id: 19, deleted: true } }; });
+  const first = f.editor(); await first.load();
+  await first.open(shiftDraft({ id: 19, revision: 3, shift_date: '2026-10-27', started_at: '2026-10-27 08:00', ended_at: '2026-10-27 16:00' }));
+  await first.destroy();
+  const frozen = first.snapshot().pending;
+  assert.deepEqual({ method: frozen.method, url: frozen.url, data: frozen.data }, { method: 'delete', url: '/shifts/19', data: { expected_revision: 3, operation_id: 'uuid-1' } });
+  await first.stop();
+  const second = f.editor(); await second.load(); offline = false; await second.retry();
+  assert.deepEqual(f.requests, [frozen, frozen]);
+  assert.equal(second.snapshot().result.shift.deleted, true);
+  assert.equal(second.snapshot().draft, null);
+});
+test('dateOccupied covers overnight work and absences, not a midnight ending', () => {
+  const summary = {
+    month: '2026-10',
+    shifts: [{ shift_date: '2026-10-31', started_at: '2026-10-31 22:00', ended_at: '2026-11-01 06:00' }, { shift_date: '2026-10-27', started_at: '2026-10-27 16:00', ended_at: '2026-10-28 00:00' }],
+    absences: [{ shift_date: '2026-10-20', absence_end: '2026-10-22' }],
+  };
+  assert.equal(dateOccupied(summary, '2026-10-31'), true);
+  assert.equal(dateOccupied(summary, '2026-11-01'), true);
+  assert.equal(dateOccupied(summary, '2026-10-27'), true);
+  assert.equal(dateOccupied(summary, '2026-10-28'), false);
+  assert.equal(dateOccupied(summary, '2026-10-21'), true);
+  assert.equal(dateOccupied(summary, '2026-10-23'), false);
+  const draft = shiftDraft({ id: 4, revision: 1, started_at: '2026-10-27 08:00', ended_at: '2026-10-27 16:00' });
+  assert.deepEqual(deleteRequest(draft).data, { expected_revision: 1 });
 });

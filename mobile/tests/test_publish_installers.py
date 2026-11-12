@@ -95,6 +95,12 @@ class PublisherTest(unittest.TestCase):
         self.assertEqual(backups[0].read_bytes(), b"old")
         records = list(self.destination.glob("release-*.json"))
         self.assertEqual(json.loads(records[0].read_text())["sha256"], publisher.digest(self.target))
+        latest = json.loads((self.destination / "android-latest.json").read_text())
+        self.assertEqual(latest["package"], publisher.PACKAGE)
+        self.assertEqual(latest["version_code"], 2)
+        self.assertEqual(latest["url"], "/install/android")
+        self.assertEqual(latest["size"], len(b"new"))
+        self.assertNotIn("publisher_git_commit", latest)
         self.assertFalse((self.destination / ".publish-installers.lock").exists())
 
 

@@ -54,6 +54,7 @@ export function createUseWorkTime({ useEffect, useRef, useState }) {
       edit: patch => { setPreview(null); return editor.edit(patch).catch(() => setError('Не удалось сохранить ввод на устройстве. Повторите изменение перед отправкой.')); },
       close: () => run(async () => { await editor.close(); setPreview(null); }),
       submit: values => run(async () => { await editor.edit(values); await editor.submit(); if (editor.snapshot().result) await reload(); }),
+      destroy: () => run(async () => { await editor.destroy(); if (editor.snapshot().result) await reload(); }),
       retry: () => run(async () => { await editor.retry(); if (editor.snapshot().result) await reload(); }),
       unlock: () => run(async () => { await editor.unlock(); setPreview(null); }),
       previewShift: values => run(async () => {

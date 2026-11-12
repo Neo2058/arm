@@ -21,6 +21,7 @@ Route::get('/', function () {
 
 Route::get('/install', [InstallController::class, 'show'])->name('install');
 Route::get('/install/android', [InstallController::class, 'android'])->name('install.android');
+Route::get('/install/android.json', [InstallController::class, 'androidManifest'])->name('install.android.manifest')->middleware('throttle:60,1');
 Route::get('/install/ios', [InstallController::class, 'ios'])->name('install.ios');
 Route::get('/install/ios.plist', [InstallController::class, 'iosPlist'])->name('install.ios.plist');
 Route::get('/install/ios.ipa', [InstallController::class, 'iosIpa'])->name('install.ios.ipa');

@@ -129,4 +129,22 @@ class PersonalWorkAbsenceTest extends TestCase
         Auth::forgetGuards();
         $this->withHeader('Authorization', '')->actingAs($user, 'web')->postJson('/api/work-shifts', $this->work('2026-10-31') + ['type' => 'work'])->assertConflict();
     }
+
+    public function test_absence_cannot_share_a_day_with_rest_and_can_be_deleted(): void
+    {
+        $this->actor();
+        $this->patchJson('/api/mobile/worktime/settings/2026-10', ['operation_id' => (string) Str::uuid(), 'expected_revision' => 0, 'settings' => ['rest_dates' => ['2026-10-31']]])->assertOk();
+        $this->postJson('/api/mobile/worktime/shifts', $this->period('2026-10-30', '2026-11-02'))->assertUnprocessable()->assertJsonValidationErrors('shift_date');
+        $this->patchJson('/api/mobile/worktime/settings/2026-10', ['operation_id' => (string) Str::uuid(), 'expected_revision' => 1, 'settings' => ['rest_dates' => []]])->assertOk();
+        $created = $this->postJson('/api/mobile/worktime/shifts', $this->period('2026-10-30', '2026-11-02'))->assertCreated()->json('shift');
+        $this->patchJson('/api/mobile/worktime/settings/2026-10', ['operation_id' => (string) Str::uuid(), 'expected_revision' => 2, 'settings' => ['rest_dates' => ['2026-10-31']]])->assertUnprocessable();
+        $this->patchJson('/api/mobile/worktime/settings/2026-11', ['operation_id' => (string) Str::uuid(), 'expected_revision' => 0, 'settings' => ['rest_dates' => ['2026-11-02']]])->assertUnprocessable();
+        $uuid = (string) Str::uuid();
+        $deleted = $this->deleteJson('/api/mobile/worktime/shifts/'.$created['id'], ['operation_id' => $uuid, 'expected_revision' => 1])
+            ->assertOk()->assertJsonPath('shift.deleted', true)->assertJsonPath('shift.type', 'deviation')->json();
+        $this->deleteJson('/api/mobile/worktime/shifts/'.$created['id'], ['operation_id' => $uuid, 'expected_revision' => 1])->assertExactJson($deleted);
+        $this->assertDatabaseCount('work_shifts', 0);
+        $this->getJson('/api/mobile/worktime/month?month=2026-10')->assertJsonCount(0, 'absences');
+        $this->patchJson('/api/mobile/worktime/settings/2026-10', ['operation_id' => (string) Str::uuid(), 'expected_revision' => 2, 'settings' => ['rest_dates' => ['2026-10-31']]])->assertOk();
+    }
 }

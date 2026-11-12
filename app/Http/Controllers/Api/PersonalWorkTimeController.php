@@ -58,6 +58,15 @@ class PersonalWorkTimeController extends Controller
             fn ($user) => ['shift' => $this->view($this->shifts->update($user, $shift, $input, $payload['expected_revision'], $payload['refresh_snapshot']))]));
     }
 
+    public function destroy(Request $request, int $shift): JsonResponse
+    {
+        $control = $request->validate(['operation_id' => 'required|uuid', 'expected_revision' => 'required|integer|min:1']);
+        $payload = ['id' => $shift, 'expected_revision' => (int) $control['expected_revision']];
+
+        return $this->json($this->mutations->run($request->user(), $control['operation_id'], 'shift.delete', $payload,
+            fn ($user) => ['shift' => $this->shifts->delete($user, $shift, $payload['expected_revision'])]));
+    }
+
     public function settings(Request $request): JsonResponse
     {
         $data = $request->validate(['month' => 'required|date_format:Y-m']);

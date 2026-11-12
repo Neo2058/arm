@@ -14,4 +14,5 @@ Route::middleware([EnsureActiveApiUser::class, 'throttle:60,1'])->group(function
     Route::get('/shifts/{shift}', [PersonalWorkTimeController::class, 'show'])->whereNumber('shift');
     Route::post('/shifts/{shift}/preview', [PersonalWorkTimeController::class, 'previewUpdate'])->whereNumber('shift');
     Route::put('/shifts/{shift}', [PersonalWorkTimeController::class, 'update'])->whereNumber('shift')->middleware('throttle:20,1');
+    Route::delete('/shifts/{shift}', [PersonalWorkTimeController::class, 'destroy'])->whereNumber('shift')->middleware('throttle:20,1');
 });

@@ -9,7 +9,7 @@ export default {
   expo: {
     name: monitor ? 'ТЧ-15 · Мониторинг' : 'ТЧ-15',
     slug: monitor ? 'arm-monitor' : 'arm-mobile',
-    version: monitor ? '1.0.0' : '1.1.5',
+    version: monitor ? '1.0.0' : '1.1.6',
     orientation: 'portrait',
     icon: monitor ? './assets/monitor/icon.png' : './assets/icon.png',
     userInterfaceStyle: 'automatic',
@@ -22,7 +22,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'ru.tch15.arm',
-      buildNumber: '21',
+      buildNumber: '22',
       infoPlist: {
         NSAppTransportSecurity: isHttp
           ? { NSAllowsLocalNetworking: true, NSAllowsArbitraryLoads: true }
@@ -33,7 +33,7 @@ export default {
     android: {
       package: monitor ? 'ru.tch15.arm.monitor' : 'ru.tch15.arm',
       allowBackup: false,
-      versionCode: monitor ? 1 : 21,
+      versionCode: monitor ? 1 : 22,
       permissions: monitor ? [] : ['android.permission.REQUEST_INSTALL_PACKAGES'],
       blockedPermissions: monitor ? ['android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE', 'android.permission.READ_MEDIA_IMAGES', 'android.permission.READ_MEDIA_VIDEO', 'android.permission.SYSTEM_ALERT_WINDOW', 'android.permission.REQUEST_INSTALL_PACKAGES'] : [],
       usesCleartextTraffic: isHttp,

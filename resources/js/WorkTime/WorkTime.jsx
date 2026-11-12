@@ -3,7 +3,7 @@ import axios from 'axios';
 import { CalendarDays, Clock3, ChevronLeft, ChevronRight, Plus, Settings2 } from 'lucide-react';
 import LegacyCalendar from '../WorkCalendar/WorkCalendar';
 import { createUseWorkTime } from '../../../mobile/src/worktime/controller.mjs';
-import { ABSENCES, KINDS, RATE_FIELDS, WARNINGS, PARTIAL, localTime, minutes, money, monthDays, moveMonth } from '../../../mobile/src/worktime/model.mjs';
+import { ABSENCES, KINDS, RATE_FIELDS, WARNINGS, PARTIAL, dateOccupied, localTime, minutes, money, monthDays, moveMonth } from '../../../mobile/src/worktime/model.mjs';
 import { browserStorage } from './storage';
 import './worktime.css';
 
@@ -29,8 +29,8 @@ function Editor({ ctl }) {
         </> : draft.kind === 'settings' ? <>
             <p>Ставки действуют с выбранного месяца до следующего изменения. Сохранённые смены сохраняют свои ставки.</p>
             <div className="wt-fields">{RATE_FIELDS.map(([key, label]) => <React.Fragment key={key}>{field(key, label, 'text', { inputMode: 'decimal' })}</React.Fragment>)}</div>
-            <h3>Подтверждённые выходные</h3><p>Отметьте только фактические выходные. День без записи смены сам по себе выходным не считается.</p>
-            <div className="wt-days">{monthDays(draft.target.month).map(date => <button type="button" disabled={disabled} key={date} aria-label={`Выходной ${date}`} aria-pressed={values.rest_dates.includes(date)} onClick={() => edit({ rest_dates: values.rest_dates.includes(date) ? values.rest_dates.filter(d => d !== date) : [...values.rest_dates, date] })}>{Number(date.slice(-2))}</button>)}</div>
+            <h3>Подтверждённые выходные</h3><p>На день может быть либо смена, либо выходной, либо больничный/отпуск/учёба. День без записи сам по себе выходным не считается.</p>
+            <div className="wt-days">{monthDays(draft.target.month).map(date => { const selected = values.rest_dates.includes(date), blocked = dateOccupied(ctl.summary, date) && !selected; return <button type="button" disabled={disabled || blocked} key={date} aria-label={`Выходной ${date}`} aria-pressed={selected} onClick={() => edit({ rest_dates: selected ? values.rest_dates.filter(d => d !== date) : [...values.rest_dates, date] })}>{Number(date.slice(-2))}</button>; })}</div>
         </> : <>
             <p>Время московское. Для окончания после полуночи укажите следующую дату. Все перерывы оплачиваются.</p>
             <div className="wt-fields">
@@ -54,6 +54,7 @@ function Editor({ ctl }) {
             {!entry.pending ? <>
                 {draft.kind === 'shift' && <button disabled={busy} onClick={() => ctl.previewShift(values)}>Проверить расчёт</button>}
                 <button className="wt-primary" disabled={busy} onClick={() => ctl.submit(values)}>Сохранить на сервере</button>
+                {!!draft.target?.id && draft.kind !== 'settings' && <button className="wt-danger" disabled={busy} onClick={ctl.destroy}>Удалить запись</button>}
                 <button disabled={busy} onClick={ctl.close}>Закрыть карточку</button>
             </> : <>
                 <p>Запрос сохранён в этой вкладке. До подтверждения его нельзя заменить новым.</p>
@@ -81,8 +82,8 @@ function Tabular({ ctl }) {
             {s.warnings.map(code => <p className="wt-note" key={code}>{WARNINGS[code] || 'Требуется проверка данных месяца.'}</p>)}
             {!!s.excluded_deviations_count && <p className="wt-note">Отклонения старого календаря ({s.excluded_deviations_count}) в новый итог не включены.</p>}
             <div className="wt-calendar">{['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(d => <span key={d}>{d}</span>)}{Array.from({ length: first }, (_, i) => <span key={`gap${i}`} />)}{days.map(date => {
-                const shifts = s.shifts.filter(v => v.shift_date === date), absence = (s.absences || []).find(a => a.shift_date <= date && a.absence_end >= date), rest = !absence && ctl.settings?.settings.rest_dates.includes(date);
-                return <div className={`wt-day${rest ? ' wt-rest' : ''}`} key={date}><button disabled={disabled} aria-label={`Добавить смену ${date}`} onClick={() => ctl.openDate(date)}>{Number(date.slice(-2))}{rest ? ' · В' : ''}</button>{!!absence && <button className="wt-shift" disabled={disabled} onClick={() => ctl.openShift(absence.id)}>{absence.label}</button>}{shifts.map(shift => <button className="wt-shift" key={shift.id} disabled={disabled} onClick={() => ctl.openShift(shift.id)}>{localTime(shift.started_at).slice(11)}–{localTime(shift.ended_at).slice(11)}<small>{minutes(shift.result.paid_minutes)}</small></button>)}</div>;
+                const shifts = s.shifts.filter(v => v.shift_date === date), absence = (s.absences || []).find(a => a.shift_date <= date && a.absence_end >= date), rest = !absence && !shifts.length && ctl.settings?.settings.rest_dates.includes(date);
+                return <div className={`wt-day${rest ? ' wt-rest' : ''}`} key={date}><button disabled={disabled || !!absence} aria-label={rest ? `Выходной ${date}` : `Добавить смену ${date}`} onClick={() => rest ? ctl.openSettings() : ctl.openDate(date)}>{Number(date.slice(-2))}{rest ? ' · В' : ''}</button>{!!absence && <button className="wt-shift" disabled={disabled} onClick={() => ctl.openShift(absence.id)}>{absence.label}</button>}{shifts.map(shift => <button className="wt-shift" key={shift.id} disabled={disabled} onClick={() => ctl.openShift(shift.id)}>{localTime(shift.started_at).slice(11)}–{localTime(shift.ended_at).slice(11)}<small>{minutes(shift.result.paid_minutes)}</small></button>)}</div>;
             })}</div>
             <section className="wt-card"><h3>Больничные, отпуск и учёба</h3>{!(s.absences || []).length && <p>Периодов в этом месяце нет.</p>}{(s.absences || []).map(a => <button className="wt-shift-row" disabled={disabled} key={a.id} onClick={() => ctl.openShift(a.id)}><span>{a.label}: {a.shift_date} — {a.absence_end} включительно</span><strong>{a.days_in_month} дн. в месяце · оплата не рассчитана</strong></button>)}</section>
             <section className="wt-card"><h3>Смены месяца</h3>{!s.shifts.length && <p>Новых записей за этот месяц пока нет.</p>}{s.shifts.map(shift => <button className="wt-shift-row" disabled={disabled} key={shift.id} onClick={() => ctl.openShift(shift.id)}><span>{localTime(shift.started_at)} — {localTime(shift.ended_at)}{shift.shift_code ? ` · ${shift.shift_code}` : ''}</span><strong>{minutes(shift.result.paid_minutes)} · {money(shift.result.subtotal_kopecks)}</strong></button>)}</section>

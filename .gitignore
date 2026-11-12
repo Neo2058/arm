@@ -29,3 +29,4 @@ Thumbs.db
 /docker-compose.discipline.runtime.yml
 /installer-backups/
 /public/downloads/release-*.json
+/public/downloads/android-latest.json

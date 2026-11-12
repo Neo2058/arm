@@ -18,6 +18,7 @@ import { clearWorkTimeData } from './src/worktime/storage';
 import { clearPodstroikiData } from './src/podstroiki/storage';
 import { canSubmitPodstroiki } from './src/podstroiki/mutations.cjs';
 import { withTimeout } from './src/auth-storage.cjs';
+import AppUpdate from './src/AppUpdate';
 import DocumentsScreen from './src/screens/DocumentsScreen';
 import DocumentViewScreen from './src/screens/DocumentViewScreen';
 import TopicsScreen from './src/screens/TopicsScreen';
@@ -339,6 +340,7 @@ export default function App() {
     <NavigationContainer theme={navTheme}>
       <StatusBar style="light" />
       {user && !reauth ? (
+        <View style={{ flex: 1 }}>
         <DisciplineProvider key={String(user.id)} user={user}><MainTabs
           key={String(user.id)}
           user={user}
@@ -360,6 +362,8 @@ export default function App() {
             } catch { Alert.alert('Выход', 'Не удалось очистить локальные черновики. Повторите выход.'); }
           }}
         /></DisciplineProvider>
+        <AppUpdate />
+        </View>
       ) : (
         <LoginScreen onLoggedIn={async fresh => {
           await rememberIdentity(fresh);

@@ -47,6 +47,7 @@ class PersonalWorkTimeApiTest extends TestCase
             $this->getJson($url)->assertUnauthorized();
         }
         $this->postJson($this->api.'/shifts', [])->assertUnauthorized();
+        $this->deleteJson($this->api.'/shifts/1', ['operation_id' => (string) Str::uuid(), 'expected_revision' => 1])->assertUnauthorized();
         $user = User::factory()->create(['is_active' => false]);
         $this->asUser($user);
         $this->getJson($this->api.'/month?month=2026-10')->assertForbidden();
@@ -182,5 +183,72 @@ class PersonalWorkTimeApiTest extends TestCase
         $this->assertSame(1, WorkShift::find($other['id'])->revision);
         $this->assertFalse(WorkTimeMutation::where('operation_id', $uuid)->exists());
         $this->assertSame(1, WorkShift::find($first['id'])->revision);
+    }
+
+    public function test_own_shift_can_be_deleted_and_replayed(): void
+    {
+        $user = User::factory()->create();
+        $this->asUser($user);
+        $shift = $this->createShift();
+        $uuid = (string) Str::uuid();
+        $body = ['operation_id' => $uuid, 'expected_revision' => 1];
+        $deleted = $this->deleteJson($this->api.'/shifts/'.$shift['id'], $body)
+            ->assertOk()->assertJsonPath('shift.id', $shift['id'])->assertJsonPath('shift.deleted', true)->json();
+        $this->assertSame($deleted, $this->deleteJson($this->api.'/shifts/'.$shift['id'], $body)->assertOk()->json());
+        $this->assertDatabaseCount('work_shifts', 0);
+        $this->assertDatabaseCount('work_time_mutations', 2);
+        $this->getJson($this->api.'/shifts/'.$shift['id'])->assertNotFound();
+        $this->getJson($this->api.'/month?month=2026-10')->assertJsonCount(0, 'shifts');
+        $events = array_values(array_filter(ClickHouseService::recorded(), fn ($r) => $r['action_type'] === 'work_shift.saved'));
+        $this->assertCount(2, $events);
+        $details = is_string($events[1]['details']) ? json_decode($events[1]['details'], true) : $events[1]['details'];
+        $this->assertTrue($details['deleted']);
+        $this->assertSame($shift['id'], $events[1]['resource_id']);
+    }
+
+    public function test_delete_rejects_foreign_stale_and_legacy_rows(): void
+    {
+        $owner = User::factory()->create();
+        $this->asUser($owner);
+        $shift = $this->createShift();
+        $this->putJson($this->api.'/shifts/'.$shift['id'], $this->input('10:00', '18:00') + ['operation_id' => (string) Str::uuid(), 'expected_revision' => 1])->assertOk();
+        $this->deleteJson($this->api.'/shifts/'.$shift['id'], ['operation_id' => (string) Str::uuid(), 'expected_revision' => 1])->assertConflict();
+        $this->assertDatabaseCount('work_shifts', 1);
+        $this->asUser(User::factory()->create());
+        $this->deleteJson($this->api.'/shifts/'.$shift['id'], ['operation_id' => (string) Str::uuid(), 'expected_revision' => 2])->assertNotFound();
+        $legacy = WorkShift::create(['user_id' => $owner->id, 'type' => 'work', 'shift_date' => '2026-10-26', 'started_at' => '2026-10-26 09:00', 'ended_at' => '2026-10-26 17:00', 'break_duration' => 0]);
+        $this->asUser($owner);
+        $this->deleteJson($this->api.'/shifts/'.$legacy->id, ['operation_id' => (string) Str::uuid(), 'expected_revision' => 1])->assertNotFound();
+        $this->assertTrue(WorkShift::whereKey($legacy->id)->exists());
+    }
+
+    public function test_day_cannot_hold_both_shift_and_rest(): void
+    {
+        $user = User::factory()->create();
+        $this->asUser($user);
+        $rest = ['operation_id' => (string) Str::uuid(), 'expected_revision' => 0, 'settings' => ['rest_dates' => ['2026-10-27']]];
+        $this->patchJson($this->api.'/settings/2026-10', $rest)->assertOk();
+        $this->postJson($this->api.'/shifts/preview', $this->input())->assertUnprocessable()->assertJsonValidationErrors('shift_date');
+        $this->postJson($this->api.'/shifts', $this->input() + ['operation_id' => (string) Str::uuid()])->assertUnprocessable();
+        $this->assertDatabaseCount('work_shifts', 0);
+        $this->patchJson($this->api.'/settings/2026-10', array_replace($rest, ['operation_id' => (string) Str::uuid(), 'expected_revision' => 1, 'settings' => ['rest_dates' => []]]))->assertOk();
+        $shift = $this->createShift();
+        $this->patchJson($this->api.'/settings/2026-10', ['operation_id' => (string) Str::uuid(), 'expected_revision' => 2, 'settings' => ['rest_dates' => ['2026-10-27']]])
+            ->assertUnprocessable()->assertJsonValidationErrors('settings.rest_dates');
+        $this->deleteJson($this->api.'/shifts/'.$shift['id'], ['operation_id' => (string) Str::uuid(), 'expected_revision' => 1])->assertOk();
+        $this->patchJson($this->api.'/settings/2026-10', ['operation_id' => (string) Str::uuid(), 'expected_revision' => 2, 'settings' => ['rest_dates' => ['2026-10-27']]])->assertOk();
+    }
+
+    public function test_overnight_shift_blocks_rest_on_both_calendar_days(): void
+    {
+        $user = User::factory()->create();
+        $this->asUser($user);
+        $overnight = ['shift_date' => '2026-10-31', 'started_at' => '2026-10-31 22:00', 'ended_at' => '2026-11-01 06:00'];
+        $this->postJson($this->api.'/shifts', $overnight + ['operation_id' => (string) Str::uuid()])->assertCreated();
+        $this->patchJson($this->api.'/settings/2026-11', ['operation_id' => (string) Str::uuid(), 'expected_revision' => 0, 'settings' => ['rest_dates' => ['2026-11-01']]])
+            ->assertUnprocessable()->assertJsonValidationErrors('settings.rest_dates');
+        $this->patchJson($this->api.'/settings/2026-10', ['operation_id' => (string) Str::uuid(), 'expected_revision' => 0, 'settings' => ['rest_dates' => ['2026-10-31']]])
+            ->assertUnprocessable();
+        $this->patchJson($this->api.'/settings/2026-11', ['operation_id' => (string) Str::uuid(), 'expected_revision' => 0, 'settings' => ['rest_dates' => ['2026-11-02']]])->assertOk();
     }
 }
