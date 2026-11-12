@@ -44,7 +44,7 @@ export default function FormularScreen({ user }) {
   const finish = async retry => { const ok = await (retry ? manager.current.retry() : manager.current.submit()); if (ok) await load(); };
   return <ScrollView ref={scroll} style={s.screen} keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, gap: 12 }}>
     <Text style={s.title}>Формуляр</Text><Text style={s.meta}>Запись по заданию передаётся инструктору на проверку.</Text>
-    {user.role === 'instructor' && <View style={s.row}><Button onPress={() => { setData(null); setReview(false); }}>Мои записи</Button><Button onPress={() => { setData(null); setReview(true); }}>Проверка колонны</Button></View>}
+    {['instructor', 'super_admin'].includes(user.role) && <View style={s.row}><Button onPress={() => { setData(null); setReview(false); }}>Мои записи</Button><Button onPress={() => { setData(null); setReview(true); }}>{user.role === 'super_admin' ? 'Все колонны' : 'Проверка колонны'}</Button></View>}
     <Button onPress={load}>Обновить</Button>
     {editor?.draft && <Button onPress={() => scroll.current?.scrollToEnd({ animated: true })}>Открыть сохранённый черновик</Button>}
     {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
@@ -65,7 +65,7 @@ export default function FormularScreen({ user }) {
         <Text style={s.title}>{r.name}</Text><Text style={s.text}>{r.title}</Text><Text style={s.meta}>{labels[r.status || 'not_submitted']} {r.completed_at || ''}</Text>
         {!!r.entry_text && <Text selectable style={s.text}>{r.entry_text}</Text>}
         {!!r.review_comment && <Text style={s.warning}>Замечание: {r.review_comment}</Text>}
-        {r.status === 'pending' && <View style={s.row}><Button disabled={!editor || busy || !!editor?.draft} onPress={() => open({ action: 'confirmed', id: r.id, version: r.version, title: `${r.name} · ${r.title}`, text: '' })}>Подтвердить</Button><Button disabled={!editor || busy || !!editor?.draft} onPress={() => open({ action: 'returned', id: r.id, version: r.version, title: `${r.name} · ${r.title}`, text: '' })}>Вернуть с замечанием</Button></View>}
+        {r.status === 'pending' && Number(r.user_id) !== Number(user.id) && <View style={s.row}><Button disabled={!editor || busy || !!editor?.draft} onPress={() => open({ action: 'confirmed', id: r.id, version: r.version, title: `${r.name} · ${r.title}`, text: '' })}>Подтвердить</Button><Button disabled={!editor || busy || !!editor?.draft} onPress={() => open({ action: 'returned', id: r.id, version: r.version, title: `${r.name} · ${r.title}`, text: '' })}>Вернуть с замечанием</Button></View>}
       </View>)}
       {!data.records.length && <Text style={s.meta}>По выбранным условиям записей нет.</Text>}
       <View style={s.row}>{page > 1 && <Button onPress={() => setPage(p => p - 1)}>Назад</Button>}{data.pagination.next_page && <Button onPress={() => setPage(data.pagination.next_page)}>Далее</Button>}</View>

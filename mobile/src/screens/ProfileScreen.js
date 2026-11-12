@@ -74,7 +74,7 @@ export default function ProfileScreen({ user, onLogout, onReauthenticate, onProf
   return <ScrollView style={s.page} contentContainerStyle={s.content}>
     <View style={s.avatar}><AppIcon name="profile" size={36} /></View>
     <Text style={s.name}>{user.name}</Text><Text style={s.meta}>{user.email}</Text><Text style={s.meta}>Роль: {user.role}</Text>
-    {['driver', 'instructor'].includes(user.role) && <Pressable style={s.button} onPress={onOpenFormular}><IconLabel name="tasks">Формуляр · записи и проверка</IconLabel></Pressable>}
+    {['driver', 'instructor', 'super_admin'].includes(user.role) && <Pressable style={s.button} onPress={onOpenFormular}><IconLabel name="tasks">Формуляр · записи и проверка</IconLabel></Pressable>}
     <Pressable style={s.button} onPress={onOpenWorkTime}><IconLabel name="tasks">Личный табель · смены и параметры</IconLabel></Pressable>
     {canSubmitPodstroiki(user) && onOpenPodstroiki && (
       <Pressable style={s.button} onPress={onOpenPodstroiki}><IconLabel name="send">Подстройки смен</IconLabel></Pressable>

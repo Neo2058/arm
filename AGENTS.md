@@ -479,3 +479,7 @@ ATZ mobile API and Android 1.0.14/code15 were published on production on 31 Octo
 - States pending/confirmed/returned, version checks and actor-scoped UUID receipts in PostgreSQL. Returned records may resubmit; confirmed/pending records cannot be overwritten through the legacy web POST. Existing records migrate to pending. No claim of electronic signature.
 - Approved events: `formular.review_confirmed`, `formular.review_returned`; existing `formular_logged` reused. IDs only, no entry/comment text in ClickHouse; after commit, no duplicate on retry.
 - Manual retry and private device drafts in namespace formular, isolated by server/user, cleared on explicit logout. See docs/mobile/FORMULAR.md. MinIO is not involved.
+
+### Owner testing access (12 November 2026)
+- Owner explicitly requested super_admin access to new user-facing features for testing. Include that role explicitly per feature and add tests; do not introduce a universal authorization bypass or remove workflow/data-isolation checks.
+- Formular: super_admin can submit own entries, view eligible active users across all columns and review others; a profile/column is not required. Self-review remains forbidden. Instructor access stays column-scoped. Monitor tokens remain excluded. Instruction signatures must include super_admin when implemented.

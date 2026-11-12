@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\FormularTask;
 use App\Models\User;
 use App\Models\UserFormularLog;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -15,7 +16,7 @@ class FormularService
     public function member(User $actor): User
     {
         $actor = $actor->fresh();
-        abort_unless($actor && $actor->is_active && ($actor->isDriver() || $actor->isInstructor()), 403);
+        abort_unless($actor && $actor->is_active && ($actor->isDriver() || $actor->isInstructor() || $actor->isSuperAdmin()), 403);
 
         return $actor;
     }
@@ -23,10 +24,20 @@ class FormularService
     public function instructor(User $actor): User
     {
         $actor = $this->member($actor);
-        abort_unless($actor->isInstructor(), 403);
-        abort_if(trim((string) $actor->profile?->column) === '', 422, 'В профиле не указана колонна. Обратитесь к администратору.');
+        abort_unless($actor->isInstructor() || $actor->isSuperAdmin(), 403);
+        abort_if(! $actor->isSuperAdmin() && trim((string) $actor->profile?->column) === '', 422, 'В профиле не указана колонна. Обратитесь к администратору.');
 
         return $actor;
+    }
+
+    private function reviewableUsers(User $actor): Builder
+    {
+        $query = User::where('is_active', true);
+        if ($actor->isSuperAdmin()) {
+            return $query->whereIn('role', [UserRole::DRIVER, UserRole::INSTRUCTOR, UserRole::SUPER_ADMIN]);
+        }
+
+        return $query->where('role', UserRole::DRIVER)->whereHas('profile', fn ($q) => $q->where('column', $actor->profile->column));
     }
 
     public function own(User $actor): array
@@ -48,13 +59,12 @@ class FormularService
             'status' => ['nullable', Rule::in(['not_submitted', 'pending', 'confirmed', 'returned'])],
             'page' => 'sometimes|integer|min:1',
         ])->validate();
-        $column = $actor->profile->column;
+        $column = $actor->isSuperAdmin() ? 'Все колонны' : $actor->profile->column;
         // A bounded matrix also includes employees who have not submitted a record.
-        $query = DB::table('users as u')->join('user_profiles as p', 'p.user_id', '=', 'u.id')
+        $query = DB::table('users as u')->leftJoin('user_profiles as p', 'p.user_id', '=', 'u.id')
             ->crossJoin('formular_tasks as t')
             ->leftJoin('user_formular_logs as l', fn ($join) => $join->on('l.user_id', '=', 'u.id')->on('l.formular_task_id', '=', 't.id'))
-            ->where('u.role', UserRole::DRIVER->value)->where('u.is_active', true)
-            ->where('p.column', $column)->where('t.is_active', true);
+            ->whereIn('u.id', $this->reviewableUsers($actor)->select('users.id'))->where('t.is_active', true);
         if ($data['user_id'] ?? null) {
             $query->where('u.id', $data['user_id']);
         }
@@ -70,12 +80,12 @@ class FormularService
         } elseif ($data['status'] ?? null) {
             $query->where('l.status', $data['status']);
         }
-        $page = $query->select(['u.id as user_id', 'u.name', 't.id as task_id', 't.title', 'l.id', 'l.entry_text', 'l.status', 'l.version', 'l.completed_at', 'l.reviewed_at', 'l.reviewed_by', 'l.review_comment'])
+        $page = $query->select(['u.id as user_id', 'u.name', 'p.column as user_column', 't.id as task_id', 't.title', 'l.id', 'l.entry_text', 'l.status', 'l.version', 'l.completed_at', 'l.reviewed_at', 'l.reviewed_by', 'l.review_comment'])
             ->orderBy('u.name')->orderBy('u.id')->orderBy('t.sort_order')->orderBy('t.id')->paginate(25);
 
         return ['column' => $column, 'stats' => $stats, 'records' => $page->items(),
             'pagination' => ['page' => $page->currentPage(), 'next_page' => $page->hasMorePages() ? $page->currentPage() + 1 : null, 'total' => $page->total()],
-            'crew' => User::where('role', UserRole::DRIVER)->where('is_active', true)->whereHas('profile', fn ($q) => $q->where('column', $column))->orderBy('name')->get(['id', 'name'])->all(),
+            'crew' => $this->reviewableUsers($actor)->orderBy('name')->get(['id', 'name'])->all(),
             'tasks' => FormularTask::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(['id', 'title'])->all()];
     }
 
@@ -103,7 +113,7 @@ class FormularService
                 FormularTask::where('is_active', true)->findOrFail($id);
                 $log = UserFormularLog::where('user_id', $user->id)->where('formular_task_id', $id)->lockForUpdate()->first();
             } else {
-                $log = UserFormularLog::whereHas('user', fn ($q) => $q->where('is_active', true)->where('role', UserRole::DRIVER)->whereHas('profile', fn ($p) => $p->where('column', $user->profile->column)))
+                $log = UserFormularLog::whereIn('user_id', $this->reviewableUsers($user)->select('users.id'))
                     ->whereHas('task', fn ($q) => $q->where('is_active', true))->lockForUpdate()->findOrFail($id);
                 abort_if($log->user_id === $user->id, 403);
             }

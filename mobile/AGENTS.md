@@ -56,3 +56,5 @@ Monitor APK: same Expo project, `EXPO_PUBLIC_MONITOR_APP=1` for BOTH prebuild an
 Documentation index: [../docs/README.md](../docs/README.md). Mobile build and feature documentation: [../docs/mobile/README.md](../docs/mobile/README.md). Commands still run from the mobile source directory, not docs/mobile.
 
 Formular: Profile → FormularScreen, driver/instructor only. Own submissions and instructor review of own column share FormularService with web. Persist draft and exact UUID/version/body in private namespace formular before sending; manual retries only, preserve on reauthentication, clear epoch on explicit logout. Never auto-rebase a 409. See ../docs/mobile/FORMULAR.md. Android 1.1.5/code21.
+
+Owner testing access: explicitly expose new user-facing features to active super_admin with corresponding server authorization and tests. Formular now supports own submissions/global review for super_admin without a column; self-review remains blocked. Do not simulate another user's identity or bypass version/idempotency rules.

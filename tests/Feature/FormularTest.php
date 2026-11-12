@@ -179,4 +179,36 @@ class FormularTest extends TestCase
         UserFormularLog::create(['user_id' => $driver->id, 'formular_task_id' => $task->id, 'completed_at' => now(), 'entry_text' => 'PRIVATE_OTHER_COLUMN']);
         $this->actingAs($this->person('instructor'))->get('/rosisi/statistics')->assertOk()->assertDontSee('PRIVATE_OTHER_COLUMN');
     }
+
+    public function test_super_admin_without_profile_can_submit_and_review_all_columns_but_not_self(): void
+    {
+        $super = User::factory()->create(['role' => 'super_admin']);
+        $task = $this->task();
+        $driver = $this->person('driver', '15');
+        $other = $this->person('driver', '16');
+        $instructor = User::factory()->create(['role' => 'instructor']);
+        $id = $this->api($other)->postJson('/api/mobile/formular/tasks/'.$task->id, $this->body())->assertOk()->json('log.id');
+        $own = $this->api($super)->postJson('/api/mobile/formular/tasks/'.$task->id, $this->body())->assertOk()->json('log.id');
+        $this->getJson('/api/mobile/formular/review')->assertOk()->assertJsonPath('column', 'Все колонны')->assertJsonPath('stats.total', 4)->assertJsonPath('stats.pending', 2);
+        $this->postJson('/api/mobile/formular/logs/'.$id.'/review', ['operation_id' => (string) Str::uuid(), 'version' => 1, 'decision' => 'confirmed'])->assertOk()->assertJsonPath('log.reviewed_by', $super->id);
+        $this->postJson('/api/mobile/formular/logs/'.$own.'/review', ['operation_id' => (string) Str::uuid(), 'version' => 1, 'decision' => 'confirmed'])->assertForbidden();
+        $this->api($driver)->getJson('/api/mobile/formular/review')->assertForbidden();
+        $this->api($this->person('instructor', '15'))->getJson('/api/mobile/formular/review')->assertOk()->assertJsonPath('stats.total', 1);
+        $this->withoutMiddleware([CheckDeviceBinding::class, CheckDynamicBarrier::class]);
+        $this->actingAs($super, 'web')->get('/formular?review=1')->assertOk()->assertSee('Все колонны');
+        $this->actingAs($super, 'web')->get('/formular')->assertOk()->assertSee('Мои записи');
+    }
+
+    public function test_super_admin_is_rechecked_after_deactivation_and_monitor_token_stays_blocked(): void
+    {
+        $super = User::factory()->create(['role' => 'super_admin']);
+        $this->api($super)->getJson('/api/mobile/formular/review')->assertOk();
+        $super->update(['role' => 'admin']);
+        $this->getJson('/api/mobile/formular/review')->assertForbidden();
+        $super->update(['role' => 'super_admin', 'is_active' => false]);
+        $this->getJson('/api/mobile/formular')->assertForbidden();
+        $super->update(['is_active' => true]);
+        $this->app['auth']->forgetGuards();
+        $this->withToken($super->createToken('monitor', ['monitor:read'])->plainTextToken)->getJson('/api/mobile/formular/review')->assertForbidden();
+    }
 }

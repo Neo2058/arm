@@ -178,7 +178,7 @@
 
     ];
 
-    if ($user && ($user->isDriver() || $user->isInstructor())) {
+    if ($user && ($user->isDriver() || $user->isInstructor() || $user->isSuperAdmin())) {
         $trainingMenu[] = ['title' => 'Формуляр', 'route' => 'formular.index', 'icon' => 'results'];
     }
 

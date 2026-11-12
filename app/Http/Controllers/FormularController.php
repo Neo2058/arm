@@ -11,7 +11,7 @@ class FormularController extends Controller
     {
         $actor = $service->member($request->user());
         $review = $request->boolean('review');
-        abort_if($review && ! $actor->isInstructor(), 403);
+        abort_if($review && ! ($actor->isInstructor() || $actor->isSuperAdmin()), 403);
         $data = $review ? $service->review($actor, $request->all()) : $service->own($actor);
 
         return response()->view('teaching.formular', compact('data', 'review', 'actor'))->header('Cache-Control', 'private, no-store');

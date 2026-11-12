@@ -5,7 +5,7 @@
 <h1 class="text-2xl font-bold">Формуляр</h1>
 <p>Внесите запись по заданию. Инструктор проверит её и при необходимости оставит замечание.</p>
 <div class="flex gap-4"><a href="{{ route('formular.index') }}">Мои записи</a>
-@if($actor->isInstructor())<a href="{{ route('formular.index', ['review' => 1]) }}">Проверка колонны</a>@endif</div>
+@if(($actor->isInstructor() || $actor->isSuperAdmin()))<a href="{{ route('formular.index', ['review' => 1]) }}">Проверка колонны</a>@endif</div>
 @if(session('success'))<p role="status">{{ session('success') }}</p>@endif
 @if($errors->any())<div role="alert">{{ $errors->first() }} Введённый текст сохранён ниже.</div>@endif
 @if($review)
@@ -22,7 +22,7 @@
 <p>{{ $labels[$record->status ?? 'not_submitted'] }} · {{ $record->completed_at }}</p>
 <p class="whitespace-pre-wrap">{{ $record->entry_text }}</p>
 @if($record->review_comment)<p>Замечание: {{ $record->review_comment }}</p>@endif
-@if($record->status === 'pending')
+@if($record->status === 'pending' && (int) $record->user_id !== (int) $actor->id)
 <form method="POST" action="{{ route('formular.review', $record->id) }}" class="space-y-3">@csrf
 <input type="hidden" name="operation_id" value="{{ \Illuminate\Support\Str::uuid() }}"><input type="hidden" name="version" value="{{ $record->version }}">
 <textarea name="review_comment" maxlength="2000" aria-label="Замечание" placeholder="Для возврата укажите замечание" class="block w-full text-black">{{ old('review_comment') }}</textarea>
