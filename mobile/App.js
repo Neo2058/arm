@@ -158,7 +158,7 @@ function DisciplineStack() {
 
 function ProfileStack({ user, onLogout, onReauthenticate, onProfileSaved }) {
   return <Stack.Navigator screenOptions={{ headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}>
-    <Stack.Screen name="ProfileHome" options={{ title: 'Профиль' }}>{({ navigation }) => <ProfileScreen user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} onProfileSaved={onProfileSaved} onOpenInstructions={() => navigation.getParent()?.navigate('DocsTab', { screen: 'InstructionSignatures' })} onOpenFormular={() => navigation.navigate('Formular')} onOpenWorkTime={() => navigation.navigate('PersonalWorkTime')} onOpenPodstroiki={() => navigation.navigate('Podstroiki')} />}</Stack.Screen>
+    <Stack.Screen name="ProfileHome" options={{ title: 'Профиль' }}>{({ navigation }) => <ProfileScreen user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} onProfileSaved={onProfileSaved} onOpenInstructions={() => navigation.getParent()?.navigate('DocsTab', { screen: 'InstructionSignatures', initial: false })} onOpenFormular={() => navigation.navigate('Formular')} onOpenWorkTime={() => navigation.navigate('PersonalWorkTime')} onOpenPodstroiki={() => navigation.navigate('Podstroiki')} />}</Stack.Screen>
     {['driver', 'instructor', 'super_admin'].includes(user.role) && <Stack.Screen name="Formular" options={{ title: 'Формуляр' }}>{() => <FormularScreen user={user} />}</Stack.Screen>}
     <Stack.Screen name="PersonalWorkTime" options={{ title: 'Личный табель' }}>{() => <WorkTimeScreen userId={user.id} />}</Stack.Screen>
     {canSubmitPodstroiki(user) && <Stack.Screen name="Podstroiki" options={{ title: 'Подстройки' }}>{() => <PodstroikiScreen user={user} />}</Stack.Screen>}
