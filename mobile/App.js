@@ -1,3 +1,5 @@
+import InstructionsScreen from './src/screens/InstructionsScreen';
+import { clearInstructionsData } from './src/instructions/storage';
 import FormularScreen from './src/screens/FormularScreen';
 import { clearFormularData } from './src/formular/storage';
 import TrainingRequestsScreen from './src/screens/TrainingRequestsScreen';
@@ -79,10 +81,12 @@ const navTheme = {
   },
 };
 
-function DocumentsStack() {
+function DocumentsStack({ user }) {
   return (
     <Stack.Navigator screenOptions={{ headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}>
-      <Stack.Screen name="DocumentsList" component={DocumentsScreen} options={{ title: 'Документы' }} />
+      <Stack.Screen name="DocumentsList" component={DocumentsScreen} options={({ navigation }) => ({ title: 'Документы', headerRight: () => <Pressable accessibilityRole="button" onPress={() => navigation.navigate('InstructionSignatures')} style={{ padding: 10 }}><Text style={{ color: '#fb923c' }}>Росписи</Text></Pressable> })} />
+      <Stack.Screen name="InstructionSignatures" options={{ title: 'Росписи по инструктажам' }}>{props => <InstructionsScreen {...props} user={user} />}</Stack.Screen>
+      <Stack.Screen name="InstructionQuiz" component={QuizPlayScreen} options={{ title: 'Тест по инструктажу' }} />
       <Stack.Screen name="DocumentView" component={DocumentViewScreen} options={({ route }) => ({ title: route.params?.title || 'Документ' })} />
     </Stack.Navigator>
   );
@@ -154,7 +158,7 @@ function DisciplineStack() {
 
 function ProfileStack({ user, onLogout, onReauthenticate, onProfileSaved }) {
   return <Stack.Navigator screenOptions={{ headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}>
-    <Stack.Screen name="ProfileHome" options={{ title: 'Профиль' }}>{({ navigation }) => <ProfileScreen user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} onProfileSaved={onProfileSaved} onOpenFormular={() => navigation.navigate('Formular')} onOpenWorkTime={() => navigation.navigate('PersonalWorkTime')} onOpenPodstroiki={() => navigation.navigate('Podstroiki')} />}</Stack.Screen>
+    <Stack.Screen name="ProfileHome" options={{ title: 'Профиль' }}>{({ navigation }) => <ProfileScreen user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} onProfileSaved={onProfileSaved} onOpenInstructions={() => navigation.getParent()?.navigate('DocsTab', { screen: 'InstructionSignatures' })} onOpenFormular={() => navigation.navigate('Formular')} onOpenWorkTime={() => navigation.navigate('PersonalWorkTime')} onOpenPodstroiki={() => navigation.navigate('Podstroiki')} />}</Stack.Screen>
     {['driver', 'instructor', 'super_admin'].includes(user.role) && <Stack.Screen name="Formular" options={{ title: 'Формуляр' }}>{() => <FormularScreen user={user} />}</Stack.Screen>}
     <Stack.Screen name="PersonalWorkTime" options={{ title: 'Личный табель' }}>{() => <WorkTimeScreen userId={user.id} />}</Stack.Screen>
     {canSubmitPodstroiki(user) && <Stack.Screen name="Podstroiki" options={{ title: 'Подстройки' }}>{() => <PodstroikiScreen user={user} />}</Stack.Screen>}
@@ -277,7 +281,7 @@ function MainTabs({ user, onLogout, onReauthenticate, onProfileSaved }) {
         />
       )}
       {user.role === 'instructor' && <Tab.Screen name="DisciplineTab" component={DisciplineStack} options={{ title: 'Поручения' }} />}
-      <Tab.Screen name="DocsTab" component={DocumentsStack} options={{ title: 'Документы' }} />
+      <Tab.Screen name="DocsTab" options={{ title: 'Документы' }}>{() => <DocumentsStack user={user} />}</Tab.Screen>
       <Tab.Screen name="QuizTab" component={QuizzesStack} options={{ title: 'Тесты' }} />
       <Tab.Screen name="NaryadTab" options={{ title: 'Наряды' }}>{() => <NaryadsStack user={user} />}</Tab.Screen>
       <Tab.Screen name="TrainTab" component={TrainingStack} options={{ title: 'Обучение' }} />
@@ -351,6 +355,7 @@ export default function App() {
           onReauthenticate={() => setReauth(true)}
           onLogout={async () => {
             try {
+              await clearInstructionsData(user.id);
               await clearFormularData(user.id);
               await clearWorkTimeData(user.id);
               await clearPodstroikiData(user.id);

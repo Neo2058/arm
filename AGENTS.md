@@ -483,3 +483,8 @@ ATZ mobile API and Android 1.0.14/code15 were published on production on 31 Octo
 ### Owner testing access (12 November 2026)
 - Owner explicitly requested super_admin access to new user-facing features for testing. Include that role explicitly per feature and add tests; do not introduce a universal authorization bypass or remove workflow/data-isolation checks.
 - Formular: super_admin can submit own entries, view eligible active users across all columns and review others; a profile/column is not required. Self-review remains forbidden. Instructor access stays column-scoped. Monitor tokens remain excluded. Instruction signatures must include super_admin when implemented.
+
+### Instruction signatures mobile (12 November 2026)
+- Shared InstructionSignatures service for web /rosisi and Sanctum /api/mobile/instructions. Active categories and Document allowed_roles apply, including existing super_admin access. Explicit confirmed is required. Quiz remains recommended, not a server prerequisite.
+- One signature per user/document; retries preserve the first signed_at and emit instruction_signed once, after commit, IDs only. No new events/schema. For a new document edition needing a new acknowledgement create a new document ID; this is not versioned signature history.
+- Mobile pending confirmation stored before send in private instruction-signatures scope; manual retry, preserve on reauth, clear/epoch-block on logout. Reuse protected DocumentView/QuizPlay, no MinIO URL. See docs/mobile/INSTRUCTION_SIGNATURES.md.

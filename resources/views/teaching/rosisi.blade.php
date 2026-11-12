@@ -204,9 +204,9 @@
                     @csrf
                     <input type="hidden" id="modal-doc-id" name="document_id">
                     <div class="flex items-start gap-3">
-                        <input type="checkbox" id="modal-confirm" required class="mt-1 h-4 w-4 accent-green-600">
+                        <input type="checkbox" id="modal-confirm" name="confirmed" value="1" required class="mt-1 h-4 w-4 accent-green-600">
                         <label for="modal-confirm" class="text-sm text-gray-700 dark:text-gray-300 leading-tight">
-                            Я ознакомился с документом{{ ' и прошёл тест' }} и подтверждаю роспись.
+                            Я ознакомился с документом и подтверждаю это.
                         </label>
                     </div>
                     <button type="submit" 
