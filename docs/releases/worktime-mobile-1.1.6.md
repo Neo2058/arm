@@ -1,6 +1,6 @@
 # Личный табель и автообновление — Android 1.1.6 / code 22
 
-Статус: исходники и signed APK готовы локально. Выкладка PHP и `/install` — по поручению владельца 12.11.2026.
+Статус: серверная часть и APK выложены 12.11.2026. Runtime-коммит `ec4d182`. Физическая установка 1.1.6 на телефоны ещё нужна один раз со страницы `/install`.
 
 ## Изменения
 
@@ -25,3 +25,18 @@
 - Локальный `assembleRelease`; в бандле есть `/install/android.json`, `tch15-update.apk`, «Удалить запись».
 
 Приватный monitor APK, Telegram-конфигурация, MinIO и схема PostgreSQL не меняются.
+
+## Выкладка
+
+- [x] Коммит `ec4d182` в `origin/main`; video/desktop-план не входили.
+- [x] Fast-forward production `44b958a` → `ec4d182` без reset/clean. Прежний APK сохранён в `/home/deploy/releases/worktime-20261112-ec4d182/`.
+- [x] Веб-ресурсы доставлены, `manifest.json` заменён атомарно; `arm-app` healthy. Новых миграций нет.
+- [x] APK и `android-latest.json` опубликованы атомарно после готовности API.
+- [ ] Установка 1.1.6 с `/install` на физических телефонах и проверка удаления смены / баннера обновления на следующей сборке.
+
+## Фактические результаты
+
+- `/up` `/login` `/admin/login` `/install` — 200. Гостевой `GET /api/mobile/worktime/month` и `DELETE /api/mobile/worktime/shifts/1` — 401. Веб `DELETE /api/worktime/v2/shifts/1` — 419 CSRF.
+- `GET /install/android.json` — 200, `Cache-Control: no-store, private`, `version_code` 22, размер 49045410, без `publisher_git_commit`.
+- `/install/android`: Content-Type `application/vnd.android.package-archive`, Range 206, ZIP magic, полное скачивание SHA-256 `13a0953d16028b6fb32423c76f0ba4e934d7575b915190426c5cee6f0751ae9b`.
+- `arm-chat-worker` работает, `QUEUE_CONNECTION=database`. На `arm-app` по-прежнему `deferred`. Monitor APK от 06.11.2026 не менялся.
