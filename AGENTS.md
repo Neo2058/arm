@@ -489,7 +489,7 @@ ATZ mobile API and Android 1.0.14/code15 were published on production on 31 Octo
 - One signature per user/document; retries preserve the first signed_at and emit instruction_signed once, after commit, IDs only. No new events/schema. For a new document edition needing a new acknowledgement create a new document ID; this is not versioned signature history.
 - Mobile pending confirmation stored before send in private instruction-signatures scope; manual retry, preserve on reauth, clear/epoch-block on logout. Reuse protected DocumentView/QuizPlay, no MinIO URL. See docs/mobile/INSTRUCTION_SIGNATURES.md.
 
-## Каталог документов — этап подпапок (12.11.2026, ещё не опубликован)
+## Каталог документов — этап подпапок (12.11.2026, опубликован в 1.1.10)
 
 `document_folders` — подпапки существующей `Document.category`, до 6 уровней. Родитель/категория папки после создания фиксированы, документы можно перемещать между папками своей категории. Доступ по-прежнему только по `allowed_roles`; путь выдаётся лишь вместе с разрешённым документом. Каталог API сохраняет плоский `categories[].items` для старых APK; `folder_path` — добавочное поле, а не новый источник прав.
 
@@ -497,7 +497,7 @@ ATZ mobile API and Android 1.0.14/code15 were published on production on 31 Octo
 
 Владелец согласовал `document_folder.saved` и `document.catalog_saved`: ID ресурса и имена изменённых полей, без значений/названий/путей. События через `DocumentCatalogAudit` после commit. План: `docs/roadmap/DOCUMENT_CATALOG_PLAN.md`.
 
-### Редакции документов (локальная реализация, 12.11.2026)
+### Редакции документов (опубликовано в 1.1.10, 12.11.2026)
 
 `DocumentRevisions` публикует отдельный document_id и явно выводит прежнюю редакцию с основанием/автором/датой в одной транзакции. Цепочка root_document_id/replaces_document_id, уникальный partial index одной невыведенной редакции на семейство. Никакого физического удаления MinIO. Публичные каталоги/росписи/плееры используют active(), мобильный signed stream повторно проверяет статус; административный веб-архив доступен с сессией. История росписей/результатов сохраняется, Quiz/QuestionReference не переносятся автоматически. Физическая очистка — отдельный следующий этап.
 
