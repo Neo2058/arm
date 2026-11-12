@@ -30,7 +30,7 @@ class DocumentController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = $user->constrainByAllowedRoles(Document::query());
+        $query = $user->constrainByAllowedRoles(Document::with('folder.parent.parent.parent.parent.parent'));
 
         $categories = $query->orderBy('title')->get()->map(function (Document $document) {
             $rawCategory = $document->category ?: 'other';
@@ -38,6 +38,9 @@ class DocumentController extends Controller
             return [
                 'id' => $document->id,
                 'title' => $document->title,
+                'folder_path' => $document->folder?->path() ?? [],
+                'document_number' => $document->document_number,
+                'publication_year' => $document->publication_year,
                 'category_key' => $rawCategory,
                 'category_name' => self::CATEGORY_LABELS[$rawCategory] ?? $rawCategory,
                 'updated_at' => $document->updated_at?->format('d.m.Y'),

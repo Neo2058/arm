@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -6,16 +6,39 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { client } from '../api';
+import { documentTree, matchesDocument } from '../documents/catalog.mjs';
 import { IconHeading } from '../components/AppIcon';
+
+function FolderNode({ node, navigation, searching }) {
+  const [open, setOpen] = useState(false);
+  return <View style={{ marginLeft: 12 }}>
+    <Pressable accessibilityRole="button" accessibilityState={{ expanded: searching || open }} onPress={() => setOpen(!open)} style={{ paddingVertical: 12 }}>
+      <Text style={styles.cat}>{searching || open ? '▾' : '▸'} {node.name}</Text>
+    </Pressable>
+    {(searching || open) && <TreeNode node={node} navigation={navigation} searching={searching} />}
+  </View>;
+}
+function TreeNode({ node, navigation, searching }) {
+  return <>
+    {node.items.map((doc) => <Pressable key={`doc-${doc.id}`} style={styles.row} onPress={() => navigation.navigate('DocumentView', { id: doc.id, title: doc.title })}>
+      <IconHeading name="documents" textStyle={styles.doc}>{doc.title}</IconHeading>
+      <Text style={styles.date}>{[doc.document_number, doc.publication_year, doc.updated_at].filter(Boolean).join(' · ')}</Text>
+    </Pressable>)}
+    {node.children.map((child) => <FolderNode key={child.id} node={child} navigation={navigation} searching={searching} />)}
+  </>;
+}
 
 export default function DocumentsScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const filtered = useMemo(() => categories.map((category) => ({ ...category, items: category.items.filter((doc) => matchesDocument(doc, search)) })).filter((category) => category.items.length), [categories, search]);
 
   const load = async () => {
     setError('');
@@ -47,23 +70,15 @@ export default function DocumentsScreen({ navigation }) {
     <FlatList
       style={styles.list}
       contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-      data={categories}
+      data={filtered}
       keyExtractor={(item) => item.name}
       refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
+      ListHeaderComponent={<View><TextInput accessibilityLabel="Поиск документов" value={search} onChangeText={setSearch} placeholder="Название, номер, год или папка" placeholderTextColor="#9ca3af" style={{ color: '#fff', padding: 14, backgroundColor: '#151b24', borderRadius: 12, marginBottom: 16 }} />{error ? <Text style={styles.muted}>{error}</Text> : null}</View>}
       ListEmptyComponent={<Text style={styles.muted}>{error || 'Документов нет'}</Text>}
       renderItem={({ item }) => (
         <View style={styles.card}>
           <Text style={styles.cat}>{item.name}</Text>
-          {item.items.map((doc) => (
-            <Pressable
-              key={doc.id}
-              style={styles.row}
-              onPress={() => navigation.navigate('DocumentView', { id: doc.id, title: doc.title })}
-            >
-              <IconHeading name="documents" textStyle={styles.doc}>{doc.title}</IconHeading>
-              <Text style={styles.date}>{doc.updated_at}</Text>
-            </Pressable>
-          ))}
+          <TreeNode node={documentTree(item.items)} navigation={navigation} searching={Boolean(search.trim())} />
         </View>
       )}
     />

@@ -32,7 +32,7 @@ class DocumentController extends Controller
         ];
 
         // Получаем документы
-        $query = Document::with('quiz.questions');
+        $query = Document::with('quiz.questions', 'folder.parent.parent.parent.parent.parent');
 
         // КРИТИЧЕСКИ ВАЖНО: Если это не админ, фильтруем документы по его роли
         $query = $user->constrainByAllowedRoles($query);
@@ -46,6 +46,9 @@ class DocumentController extends Controller
             return [
                 'id' => $document->id,
                 'title' => $document->title,
+                'folder_path' => $document->folder?->path() ?? [],
+                'document_number' => $document->document_number,
+                'publication_year' => $document->publication_year,
                 'category_key' => $rawCategory,
                 'category_name' => $categoryName,
                 'updatedAt' => $document->updated_at?->format('d.m.Y'),

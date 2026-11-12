@@ -411,6 +411,8 @@
 //         </section>
 //     );
 // }
+import CatalogTree from './CatalogTree';
+import { matchesDocument } from '../../../mobile/src/documents/catalog.mjs';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -465,7 +467,7 @@ export default function SecureDocumentViewer({
             .map(category => ({
                 ...category,
                 items: category.items.filter(doc =>
-                    doc.title.toLowerCase().includes(search.toLowerCase())
+                    matchesDocument(doc, search)
                 ),
             }))
             .filter(category => category.items.length > 0);
@@ -937,39 +939,8 @@ export default function SecureDocumentViewer({
                                                 className="bg-black/10 p-2 space-y-2"
                                             >
 
-                                                {category.items.map(doc => {
-
-                                                    const active = selectedDocument?.id === doc.id;
-
-                                                    return (
-                                                        <button
-                                                            key={doc.id}
-                                                            onClick={() => handleDocumentClick(doc)}
-                                                            className={`w-full rounded-xl p-3 text-left transition ${
-                                                                active
-                                                                    ? 'bg-orange-400/10 border border-orange-400/30'
-                                                                    : 'hover:bg-white/5'
-                                                            }`}
-                                                        >
-
-                                                            <div className="flex items-start gap-3">
-
-                                                                <FileText className="h-4 w-4 mt-0.5" />
-
-                                                                <div className="flex-1 min-w-0">
-                                                                    <span className="block truncate text-sm">
-                                                                        {doc.title}
-                                                                    </span>
-                                                                </div>
-
-                                                                <Eye className="h-4 w-4" />
-
-                                                            </div>
-
-                                                        </button>
-                                                    );
-
-                                                })}
+                                                <CatalogTree documents={category.items} selectedId={selectedDocument?.id}
+                                                    onSelect={handleDocumentClick} searching={Boolean(search.trim())} />
 
                                             </motion.div>
                                         )}

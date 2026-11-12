@@ -3,13 +3,22 @@
 namespace App\Filament\Resources\DocumentResource\Pages;
 
 use App\Filament\Resources\DocumentResource;
+use App\Services\DocumentPublishing;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
 class EditDocument extends EditRecord
 {
+    use Concerns\ValidatesDocumentPublishing;
+
     protected static string $resource = DocumentResource::class;
+
+    protected function handleRecordUpdate(Model $record, array $data): Model
+    {
+        return $this->withDocumentErrors(fn () => app(DocumentPublishing::class)->save($data, $record));
+    }
 
     protected function mutateFormDataBeforeFill(array $data): array
     {

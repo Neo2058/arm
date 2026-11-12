@@ -488,3 +488,11 @@ ATZ mobile API and Android 1.0.14/code15 were published on production on 31 Octo
 - Shared InstructionSignatures service for web /rosisi and Sanctum /api/mobile/instructions. Active categories and Document allowed_roles apply, including existing super_admin access. Explicit confirmed is required. Quiz remains recommended, not a server prerequisite.
 - One signature per user/document; retries preserve the first signed_at and emit instruction_signed once, after commit, IDs only. No new events/schema. For a new document edition needing a new acknowledgement create a new document ID; this is not versioned signature history.
 - Mobile pending confirmation stored before send in private instruction-signatures scope; manual retry, preserve on reauth, clear/epoch-block on logout. Reuse protected DocumentView/QuizPlay, no MinIO URL. See docs/mobile/INSTRUCTION_SIGNATURES.md.
+
+## Каталог документов — этап подпапок (12.11.2026, ещё не опубликован)
+
+`document_folders` — подпапки существующей `Document.category`, до 6 уровней. Родитель/категория папки после создания фиксированы, документы можно перемещать между папками своей категории. Доступ по-прежнему только по `allowed_roles`; путь выдаётся лишь вместе с разрешённым документом. Каталог API сохраняет плоский `categories[].items` для старых APK; `folder_path` — добавочное поле, а не новый источник прав.
+
+Сохранение документов в Filament проходит через `DocumentPublishing`: проверка SHA-256 и PostgreSQL advisory lock публикации, уникальные имена новых объектов. Disk/visibility/preview proxy MinIO сохраняются. Не заменять файл существующего document_id и не удалять карточку до этапа редакций/вывода: подписи пока имеют каскадные FK старой схемы. Никакой автоматической очистки по возрасту; файл хранится до явного вывода из действия и проверки возможности удаления. Индексация `documents:index-hashes --apply` только читает объекты и пишет хеши в PostgreSQL. Непрочитанный оригинал блокирует публикацию, а не пропускает проверку. Существующие дубли не объединяются и не удаляются автоматически.
+
+Владелец согласовал `document_folder.saved` и `document.catalog_saved`: ID ресурса и имена изменённых полей, без значений/названий/путей. События через `DocumentCatalogAudit` после commit. План: `docs/roadmap/DOCUMENT_CATALOG_PLAN.md`.

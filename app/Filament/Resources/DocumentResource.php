@@ -5,16 +5,24 @@ namespace App\Filament\Resources;
 use App\Enums\UserRole;
 use App\Filament\Resources\DocumentResource\Pages;
 use App\Models\Document;
+use App\Models\DocumentFolder;
+use App\Services\DocumentPublishing;
 use Filament\Forms\Components\BaseFileUpload;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Validation\ValidationException;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class DocumentResource extends Resource
 {
@@ -34,20 +42,40 @@ class DocumentResource extends Resource
             ->schema([
                 TextInput::make('title')
                     ->label('Название документа')
+                    ->live(onBlur: true)
                     ->required(),
 
                 Select::make('category')
                     ->label('Категория')
-                    ->options([
-                        'manual' => 'Инструкции',
-                        'order' => 'П по Депо',
-                        'orderForMetro' => 'П по М',
-                        'instruction' => 'И по Депо',
-                        'instForMetro' => 'И по М',
-                        'technical' => 'Конспекты',
-                        'student' => 'Конспект ТУ',
-                        'remember' => 'Памятки',
-                    ]),
+                    ->options(DocumentFolder::CATEGORIES)->live()
+                    ->afterStateUpdated(fn (Set $set) => $set('document_folder_id', null)),
+
+                Select::make('document_folder_id')->label('Подраздел')->nullable()->searchable()
+                    ->options(fn (Get $get) => DocumentFolder::where('category', $get('category') ?: 'other')->orderBy('name')->get()
+                        ->mapWithKeys(fn ($folder) => [$folder->id => implode(' / ', array_column($folder->path(), 'name'))])->all()),
+                TextInput::make('document_number')->label('Номер документа')->maxLength(255)->live(onBlur: true),
+                TextInput::make('publication_year')->label('Год издания')->integer()->minValue(1900)->maxValue(2200),
+
+                Placeholder::make('possible_duplicates')->label('Похожие документы')
+                    ->content(function (Get $get, ?Document $record) {
+                        $title = trim((string) $get('title'));
+                        $number = trim((string) $get('document_number'));
+                        if (mb_strlen($title) < 3 && $number === '') {
+                            return 'Введите название или номер перед загрузкой файла.';
+                        }
+                        $matches = Document::when($record, fn ($q) => $q->whereKeyNot($record->id))
+                            ->where(function ($q) use ($title, $number) {
+                                if (mb_strlen($title) >= 3) {
+                                    $q->whereRaw('LOWER(title) LIKE ?', ['%'.mb_strtolower($title).'%']);
+                                }
+                                if ($number !== '') {
+                                    $q->orWhere('document_number', $number);
+                                }
+                            })->limit(5)->get();
+
+                        return $matches->isEmpty() ? 'Похожих карточек не найдено. Файл дополнительно проверяется по SHA-256.'
+                            : 'Проверьте существующие карточки: '.$matches->map(fn ($doc) => '№'.$doc->id.' '.$doc->title.' '.($doc->publication_year ?? ''))->implode('; ');
+                    }),
 
                 FileUpload::make('file_path')
                     ->label('Файл (PDF, DOCX)')
@@ -56,7 +84,24 @@ class DocumentResource extends Resource
                     ->visibility('private') // Файлы недоступны по прямой ссылке (безопасность)
                     ->acceptedFileTypes(['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
                     ->required()
-                    ->preserveFilenames() // Сохранять оригинальное имя файла
+                    // New objects get Filament's unique name; never overwrite an older original.
+                    ->disabled(fn (?Document $record) => $record !== null)
+                    ->rules([fn (?Document $record) => function (string $attribute, $value, \Closure $fail) use ($record) {
+                        if ($value instanceof TemporaryUploadedFile) {
+                            try {
+                                $hash = hash_file('sha256', $value->getRealPath());
+                                if (! is_string($hash)) {
+                                    $fail('Не удалось прочитать загруженный файл.');
+
+                                    return;
+                                }
+                                app(DocumentPublishing::class)->assertUnique($hash, $record?->id);
+                            } catch (ValidationException $error) {
+                                $fail(collect($error->errors())->flatten()->first());
+                            }
+                        }
+                    }])
+                    ->helperText('Идентичные файлы проверяются по SHA-256. Существующий оригинал не заменяется до внедрения редакций.')
                     ->maxSize(20240) // Ограничение 10МБ
                     // Provide browser-fetchable preview URL via our signed admin proxy (prevents direct MinIO fetch errors / 419 related UI issues)
                     ->getUploadedFileUsing(function (BaseFileUpload $component, $file, string|array|null $storedFileNames): ?array {
@@ -104,6 +149,9 @@ class DocumentResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('title')->label('Название')->searchable(),
                 Tables\Columns\TextColumn::make('category')->label('Категория')->badge(),
+                Tables\Columns\TextColumn::make('folder.name')->label('Подраздел')->searchable(),
+                Tables\Columns\TextColumn::make('document_number')->label('Номер')->searchable(),
+                Tables\Columns\TextColumn::make('publication_year')->label('Год')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('instructionCategory.name')->label('Папка инструктажа')->sortable(),
                 Tables\Columns\TextColumn::make('file_path')
                     ->label('Размер')
@@ -143,6 +191,16 @@ class DocumentResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return false;
     }
 
     public static function getRelations(): array
