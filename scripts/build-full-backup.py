@@ -35,8 +35,9 @@ def text(*args):
 
 
 def git_args(*args):
-    # Per-invocation trust for this audited deploy-owned checkout; no global Git change.
-    return ['git', '-c', 'safe.directory='+str(REPO), '-C', str(REPO), *args]
+    # Read-only backup commands must not refresh/recreate the deploy-owned index as root.
+    # Per-invocation trust for this audited checkout; no global Git change.
+    return ['git', '--no-optional-locks', '-c', 'safe.directory='+str(REPO), '-C', str(REPO), *args]
 
 
 def digest(path):
