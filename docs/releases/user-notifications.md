@@ -1,6 +1,6 @@
 # Оповещения: чат, формуляр, поручения
 
-17.11.2026. Выкладка: миграция `user_notifications` / `push_subscriptions`, PHP и APK 1.1.11 / versionCode 27. Мониторный APK не меняется.
+17.11.2026. **Опубликовано на production.** Серверный checkout `31294e818f58a1b99a55cd1175d7b78356d08557`. APK 1.1.11 / versionCode 27. Мониторный APK не менялся.
 
 ## Что получает сотрудник
 
@@ -33,14 +33,23 @@
 
 ## Выкладка
 
-1. Резервная копия Postgres.
-2. Только миграция `2026_11_17_140000_create_user_notifications.php` административной ролью (`sudo python3 scripts/arm-admin-artisan.py migrate --force --path=...`). Runtime-роль без DDL.
-3. Fast-forward кода, перезапуск `arm-app`. Vite не обязателен: JS колокольчика статический (`public/js/user-notifications.js`, `public/sw-push.js`).
-4. На сервере `php artisan arm:vapid-generate`, строки в `.env`, не коммитить закрытый ключ, `--force-recreate app`.
-5. Собрать и опубликовать APK 1.1.11 / code 27 тем же release-сертификатом. Не понижать versionCode. Мониторный APK не трогать.
-6. Проверить `/up`, гостевой `/notifications` → 302, гостевой `/api/mobile/notifications` → 401, `/api/mobile/me` → `features.notifications`.
+- Коммит `31294e8` в `origin/main`; video/desktop-план не входили.
+- Снимок перед выкладкой: `/home/deploy/backups/notifications-pre-20261117T102553Z/`, pg_dump SHA-256 `ad1d85f92aa12f9a179726455827c4dbb13cb0843148417cfe5cdd2866e416bd`, 1157 TOC.
+- Исходный checkout `ba00ed0` на `deploy/podstroiki-20261109`.
+- Перед переключением кода применена **только** миграция `2026_11_17_140000_create_user_notifications.php` (batch 25). Таблицы `user_notifications` и `push_subscriptions`; runtime-роли выданы SELECT/INSERT/UPDATE/DELETE и USAGE на sequences.
+- Fast-forward `ba00ed0` → `31294e8` без reset/clean. Vite не собирался: JS колокольчика статический. VAPID записан в `.env`, закрытый ключ не коммитился. Перезапущены `arm-app` и `arm-chat-worker`.
+- APK `ru.tch15.arm` 1.1.11 / versionCode 27, **49 105 838 байт**, SHA-256 `67295b3f847269777a90d63a51b28872abb6c307bc50b2075243c9e8bcb36e51`. Прежний release-сертификат. Предыдущий установщик сохранён в `/home/deploy/releases/user-notifications-1.1.11-20261117T103346Z/`.
+
+## Фактические результаты
+
+- `/up` `/login` `/admin/login` — 200. Гостевой `/notifications` — 302 на `/login`. Гостевой `GET /api/mobile/notifications` и `/api/mobile/me` с `Accept: application/json` — 401.
+- Runtime читает новые таблицы, `NOTIFICATIONS_ENABLED=true`, VAPID public задан (87 символов).
+- `arm-app` `QUEUE_CONNECTION=deferred`, `arm-chat-worker` `database`.
+- Публичный `/install/android.json` — 1.1.11 / versionCode 27, размер и SHA совпадают с бинарником. `/install/android` — `application/vnd.android.package-archive`, полное скачивание подтвердило SHA-256, Range — 206, ZIP magic. Мониторный APK не менялся.
 
 Откат без отката миграции: `NOTIFICATIONS_ENABLED=false` и recreate `app`. Колокольчик и API скрываются. Таблицы можно оставить.
+
+Ручная приёмка: войти в веб, открыть колокольчик, свернуть Android 1.1.11 и получить шторку на новое сообщение чата / запись формуляра / поручение.
 
 ## Проверки до выкладки
 
