@@ -44,5 +44,6 @@
         @yield('content')
     </main>
 </div>
+@include('notifications.bell')
 </body>
 </html>

@@ -37,5 +37,6 @@
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <env name="CHAT_ENABLED" value="true"/>
         <env name="CHAT_ENCRYPTION_KEY" value="base64:AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="/>
+        <env name="NOTIFICATIONS_ENABLED" value="true"/>
     </php>
 </phpunit>

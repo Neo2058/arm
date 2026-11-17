@@ -7,6 +7,7 @@ use App\Models\DisciplineAssignment;
 use App\Models\DisciplineCard;
 use App\Models\User;
 use App\Services\ClickHouseService;
+use App\Services\Notifications\UserNotifications;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -229,6 +230,11 @@ class DisciplineService
             DB::table('discipline_notifications')->insert([
                 'user_id' => $id, 'assignment_id' => $assignment->id, 'event' => $event, 'created_at' => now(),
             ]);
+        }
+        try {
+            app(UserNotifications::class)->instructorNotice($ids, $assignment, $event);
+        } catch (\Throwable $e) {
+            report($e);
         }
     }
 }

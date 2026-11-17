@@ -5,6 +5,7 @@
 Новый модуль: [Формуляр — записи, проверка и статистика](mobile/FORMULAR.md), [выпуск Android 1.1.5](releases/formular-mobile-1.1.5.md).
 [Личный табель: удаление записи и автообновление Android 1.1.6](releases/worktime-mobile-1.1.6.md).
 [№ карты депо Лихоборы в личном кабинете](releases/depot-card-likhobory.md).
+[Оповещения чата, формуляра и поручений](releases/user-notifications.md).
 
 ## Быстрый поиск
 
@@ -70,6 +71,7 @@
 | [mobile/JOURNAL_TASKS.md](mobile/JOURNAL_TASKS.md) | Личные задачи журнала — доработка 27 октября 2026 | Инструкция / описание |
 | [mobile/LOGIN_FIX.md](mobile/LOGIN_FIX.md) | Ошибка входа Android: TLS и учётные данные | История исправления |
 | [mobile/README.md](mobile/README.md) | ТЧ-15 — мобильное приложение | Инструкция / описание |
+| [releases/user-notifications.md](releases/user-notifications.md) | Оповещения чата, формуляра и поручений | Инструкция |
 
 ## Безопасность
 
@@ -145,6 +147,7 @@
 | [releases/personnel-reconciliation-2026-11-06.md](releases/personnel-reconciliation-2026-11-06.md) | Сверка картотеки и доступов — 6 ноября 2026 | Исторический отчёт |
 | [releases/podstroiki-mobile-1.1.2.md](releases/podstroiki-mobile-1.1.2.md) | Мобильные подстройки — production 09.11.2026 | Исторический отчёт |
 | [releases/shared-phones-1.0.10.md](releases/shared-phones-1.0.10.md) | Общий справочник телефонов — APK 1.0.10 | Исторический отчёт |
+| [releases/user-notifications.md](releases/user-notifications.md) | Оповещения: чат, формуляр, поручения | Инструкция |
 
 ## Материалы для руководства
 

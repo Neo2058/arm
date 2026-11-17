@@ -139,3 +139,18 @@ export function addChatMember(roomId, userId) {
 export function removeChatMember(roomId, userId) {
   return client.delete(`/chats/${encodeURIComponent(roomId)}/members/${encodeURIComponent(userId)}`);
 }
+
+export async function listNotifications(params = {}) {
+  const { data } = await client.get('/notifications', {
+    params: { unread: params.unread === false ? 0 : 1 },
+  });
+  return data;
+}
+
+export function markNotificationRead(id) {
+  return client.post(`/notifications/${encodeURIComponent(id)}/read`);
+}
+
+export function markNotificationsRead() {
+  return client.post('/notifications/read-all');
+}

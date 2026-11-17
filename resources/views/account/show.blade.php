@@ -36,6 +36,7 @@
 </head>
 <body>
 <main>
+    @include('notifications.bell')
     <nav aria-label="Навигация"><a href="{{ route('mainMenu') }}">← Вернуться в главное меню</a></nav>
     <header>
         <span class="eyebrow">АРМ ТЧ-15 · Личный кабинет</span>

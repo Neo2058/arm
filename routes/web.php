@@ -46,6 +46,7 @@ require __DIR__.'/telegram.php';
 
 Route::middleware(['auth', CheckUserExistence::class, CheckDeviceBinding::class, CheckDynamicBarrier::class])->group(function () {
     require __DIR__.'/account.php';
+    require __DIR__.'/notifications.php';
     require __DIR__.'/documents.php';
     require __DIR__.'/training.php';
     require __DIR__.'/work.php';

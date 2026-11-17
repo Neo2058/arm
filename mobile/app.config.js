@@ -9,7 +9,7 @@ export default {
   expo: {
     name: monitor ? 'ТЧ-15 · Мониторинг' : 'ТЧ-15',
     slug: monitor ? 'arm-monitor' : 'arm-mobile',
-    version: monitor ? '1.0.0' : '1.1.10',
+    version: monitor ? '1.0.0' : '1.1.11',
     orientation: 'portrait',
     icon: monitor ? './assets/monitor/icon.png' : './assets/icon.png',
     userInterfaceStyle: 'automatic',
@@ -22,7 +22,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'ru.tch15.arm',
-      buildNumber: '26',
+      buildNumber: '27',
       infoPlist: {
         NSAppTransportSecurity: isHttp
           ? { NSAllowsLocalNetworking: true, NSAllowsArbitraryLoads: true }
@@ -33,9 +33,16 @@ export default {
     android: {
       package: monitor ? 'ru.tch15.arm.monitor' : 'ru.tch15.arm',
       allowBackup: false,
-      versionCode: monitor ? 1 : 26,
-      permissions: monitor ? [] : ['android.permission.REQUEST_INSTALL_PACKAGES'],
-      blockedPermissions: monitor ? ['android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE', 'android.permission.READ_MEDIA_IMAGES', 'android.permission.READ_MEDIA_VIDEO', 'android.permission.SYSTEM_ALERT_WINDOW', 'android.permission.REQUEST_INSTALL_PACKAGES'] : [],
+      versionCode: monitor ? 1 : 27,
+      permissions: monitor ? [] : [
+        'android.permission.REQUEST_INSTALL_PACKAGES',
+        'android.permission.POST_NOTIFICATIONS',
+        'android.permission.FOREGROUND_SERVICE',
+        'android.permission.FOREGROUND_SERVICE_DATA_SYNC',
+        'android.permission.RECEIVE_BOOT_COMPLETED',
+        'android.permission.WAKE_LOCK',
+      ],
+      blockedPermissions: monitor ? ['android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE', 'android.permission.READ_MEDIA_IMAGES', 'android.permission.READ_MEDIA_VIDEO', 'android.permission.SYSTEM_ALERT_WINDOW', 'android.permission.REQUEST_INSTALL_PACKAGES', 'android.permission.POST_NOTIFICATIONS', 'android.permission.FOREGROUND_SERVICE', 'android.permission.FOREGROUND_SERVICE_DATA_SYNC', 'android.permission.RECEIVE_BOOT_COMPLETED', 'android.permission.WAKE_LOCK'] : [],
       usesCleartextTraffic: isHttp,
       adaptiveIcon: {
         backgroundColor: '#0b1018',
@@ -46,6 +53,7 @@ export default {
     },
     plugins: [
       './plugins/with-release-signing.cjs',
+      './plugins/with-arm-notifications.cjs',
       'expo-secure-store',
       'expo-video',
       ['expo-audio', { microphonePermission: false, recordAudioAndroid: false }],

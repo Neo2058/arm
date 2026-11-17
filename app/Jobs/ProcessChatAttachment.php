@@ -7,6 +7,7 @@ use App\Models\ChatAttachment;
 use App\Models\ChatMessage;
 use App\Services\Antivirus\ClamAvScanner;
 use App\Services\Chat\ChatCrypto;
+use App\Services\Notifications\UserNotifications;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\UploadedFile;
@@ -103,7 +104,8 @@ class ProcessChatAttachment implements ShouldQueue
             }
         }
 
-        DB::transaction(function () use ($message, $object, $originalName, $mime, $size, $crypto) {
+        $becameAvailable = false;
+        DB::transaction(function () use ($message, $object, $originalName, $mime, $size, $crypto, &$becameAvailable) {
             $locked = ChatMessage::query()->whereKey($message->id)->lockForUpdate()->first();
             if ($locked === null || $locked->status !== ChatMessageStatus::QUEUED) {
                 return;
@@ -125,7 +127,19 @@ class ProcessChatAttachment implements ShouldQueue
             }
             $locked->status = ChatMessageStatus::AVAILABLE;
             $locked->save();
+            $becameAvailable = true;
         });
+
+        if ($becameAvailable) {
+            $fresh = ChatMessage::query()->find($this->messageId);
+            if ($fresh instanceof ChatMessage) {
+                try {
+                    app(UserNotifications::class)->chatMessage($fresh);
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
+        }
 
         $this->unlinkPending();
     }

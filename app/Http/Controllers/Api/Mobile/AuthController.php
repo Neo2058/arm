@@ -95,6 +95,7 @@ class AuthController extends Controller
             'column' => $column,
             'features' => [
                 'chat' => filter_var(config('chat.enabled'), FILTER_VALIDATE_BOOLEAN),
+                'notifications' => filter_var(config('notifications.enabled'), FILTER_VALIDATE_BOOLEAN),
             ],
             'can_manage_column_chats' => $user->isInstructor() && $column !== null,
         ];

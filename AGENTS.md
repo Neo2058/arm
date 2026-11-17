@@ -132,7 +132,7 @@
 ### Маршруты
 `routes/web.php` — публичные + группа `auth` + Check-middleware. Домены:
 
-- `routes/account.php`, `documents.php`, `training.php`, `work.php`, `journal.php`, `naryad.php`, `nsi.php`, `uchet.php`, `support.php`
+- `routes/account.php`, `notifications.php`, `documents.php`, `training.php`, `work.php`, `journal.php`, `naryad.php`, `nsi.php`, `uchet.php`, `support.php`
 
 Новые URI клади в соответствующий файл. Имена маршрутов не ломай (на них завязан JS).
 
@@ -502,3 +502,16 @@ ATZ mobile API and Android 1.0.14/code15 were published on production on 31 Octo
 `DocumentRevisions` публикует отдельный document_id и явно выводит прежнюю редакцию с основанием/автором/датой в одной транзакции. Цепочка root_document_id/replaces_document_id, уникальный partial index одной невыведенной редакции на семейство. Никакого физического удаления MinIO. Публичные каталоги/росписи/плееры используют active(), мобильный signed stream повторно проверяет статус; административный веб-архив доступен с сессией. История росписей/результатов сохраняется, Quiz/QuestionReference не переносятся автоматически. Физическая очистка — отдельный следующий этап.
 
 Document в AdminPanelAudit пропускается: единственный согласованный document.catalog_saved идёт из DocumentCatalogAudit после commit без значений. Не возвращать дублирующий admin.document.* с названием. Перед выкладкой обе миграции каталога обязательны; после появления архивных редакций старый код без withdrawn_at проверок нельзя просто возвращать в production. См. docs/modules/DOCUMENT_REVISIONS.md.
+
+## Пользовательские оповещения (17.11.2026)
+
+Inbox в PostgreSQL (`user_notifications`, `push_subscriptions`). Источники: новое сообщение чата, новая запись в формуляр, решение по формуляру, поручение инструктору. Тела чата, записи формуляра и комментарии в title не попадают. Новых событий ClickHouse нет.
+
+- `NOTIFICATIONS_ENABLED` (по умолчанию true) прячет веб-колокольчик, API и `features.notifications`. `NOTIFICATIONS_POLL_SECONDS` по умолчанию 30.
+- Чат по-прежнему опрашивается 15 с только на открытом экране. Фон Android — локальный foreground-сервис модуля `arm-notification-poller` (пакет `ru.tch15.arm`), не FCM и не Telegram. Мониторный APK сервис не получает: plugin `with-arm-notifications.cjs` снимает его при `EXPO_PUBLIC_MONITOR_APP=1`.
+- Веб: колокольчик на рабочих раскладках, страница `/notifications`, пустой Web Push (VAPID). Ключи: `php artisan arm:vapid-generate`. `VAPID_PRIVATE_KEY` не коммитить. Пустые ключи оставляют веб только с опросом открытой вкладки.
+- Хуки: `ChatService::sendText` после создания, `ProcessChatAttachment` после AVAILABLE, `FormularService::mutate` и `DisciplineService::notify` в той же транзакции, что исходная запись (try/catch, отказ оповещения не откатывает источник). Непрочитанные chat_message сливаются по комнате.
+- Маршруты: `routes/notifications.php` в web-группе auth+device+barrier; Sanctum `GET/POST /api/mobile/notifications*`. CSRF для веба сохраняется.
+- Клиент Android 1.1.11 / versionCode 27. Установленные 1.1.10 не показывают шторку в свёрнутом состоянии, пока не установлен новый APK. PHP-inbox и веб-колокольчик работают без новой сборки.
+- Тесты: `UserNotificationTest`, `ChatApiTest` (`features.notifications`), `WebRoutesSplitTest`, `mobile/tests/notification-poller.test.cjs`.
+- Документ выпуска: `docs/releases/user-notifications.md`.

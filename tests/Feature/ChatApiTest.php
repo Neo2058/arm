@@ -92,6 +92,7 @@ class ChatApiTest extends TestCase
             ->getJson('/api/mobile/me')
             ->assertOk()
             ->assertJsonPath('user.features.chat', true)
+            ->assertJsonPath('user.features.notifications', true)
             ->assertJsonPath('user.column', '15')
             ->assertJsonPath('user.can_manage_column_chats', true);
 
@@ -114,6 +115,7 @@ class ChatApiTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('user.features.chat', true)
+            ->assertJsonPath('user.features.notifications', true)
             ->assertJsonPath('user.column', '15')
             ->assertJsonPath('user.can_manage_column_chats', true);
 

@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\FormularTask;
 use App\Models\User;
 use App\Models\UserFormularLog;
+use App\Services\Notifications\UserNotifications;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -147,6 +148,11 @@ class FormularService
             $log->save();
             $result = ['log' => $this->payload($log)];
             DB::table('formular_operations')->insert(['user_id' => $user->id, 'operation_id' => $operation, 'fingerprint' => $fingerprint, 'result' => json_encode($result, JSON_THROW_ON_ERROR), 'created_at' => now()]);
+            try {
+                app(UserNotifications::class)->formular($action, $log, $user);
+            } catch (\Throwable $e) {
+                report($e);
+            }
             DB::afterCommit(function () use ($action, $log, $user) {
                 try {
                     ClickHouseService::log($action === 'submit' ? 'formular_logged' : 'formular.review_'.$action, $action === 'submit' ? $log->formular_task_id : $log->id,

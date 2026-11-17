@@ -15,6 +15,7 @@ use App\Models\ChatRoom;
 use App\Models\ColumnDeputy;
 use App\Models\User;
 use App\Services\FileProxyService;
+use App\Services\Notifications\UserNotifications;
 use DateTimeInterface;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\UploadedFile;
@@ -307,7 +308,7 @@ class ChatService
     {
         $fingerprint = $this->fingerprint(ChatMessageType::TEXT->value, $body);
 
-        return Cache::lock('chat-send:'.$user->id.':'.$clientId, 30)->block(10, function () use ($user, $room, $clientId, $body, $fingerprint) {
+        $result = Cache::lock('chat-send:'.$user->id.':'.$clientId, 30)->block(10, function () use ($user, $room, $clientId, $body, $fingerprint) {
             return DB::transaction(function () use ($user, $room, $clientId, $body, $fingerprint) {
                 $this->authz->assertMobileRoom($user, $room->fresh());
 
@@ -339,6 +340,11 @@ class ChatService
                 return ['message' => $message, 'created' => true];
             });
         });
+        if ($result['created'] ?? false) {
+            $this->notifyChat($result['message']);
+        }
+
+        return $result;
     }
 
     /**
@@ -454,6 +460,21 @@ class ChatService
                 'last_read_message_id' => $messageId,
                 'last_read_at' => now(),
             ]);
+
+        try {
+            app(UserNotifications::class)->markChatRoomRead($user, $room);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    private function notifyChat(ChatMessage $message): void
+    {
+        try {
+            app(UserNotifications::class)->chatMessage($message);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     /**

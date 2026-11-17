@@ -27,6 +27,7 @@ const paths = {
   journal: 'M5 3h15v18H5z M2 7h6 M2 12h6 M2 17h6 M11 8h5 M11 12h5',
   close: 'M6 6l12 12 M18 6 6 18',
   chat: 'M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-4 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+  bell: 'M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5 M9 17a3 3 0 0 0 6 0',
 };
 
 export const TAB_ICONS = { ChatTab: 'chat', DocsTab: 'documents', QuizTab: 'quiz', NaryadTab: 'train', TrainTab: 'training', ProfileTab: 'profile', DisciplineTab: 'tasks' };

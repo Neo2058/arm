@@ -3,8 +3,8 @@ import { clearInstructionsData } from './src/instructions/storage';
 import FormularScreen from './src/screens/FormularScreen';
 import { clearFormularData } from './src/formular/storage';
 import TrainingRequestsScreen from './src/screens/TrainingRequestsScreen';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, AppState, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -15,6 +15,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import JournalScreen, { JournalTasksScreen, JournalCrewScreen } from './src/screens/JournalScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import NotificationsScreen from './src/screens/NotificationsScreen';
 import WorkTimeScreen from './src/screens/WorkTimeScreen';
 import { clearWorkTimeData } from './src/worktime/storage';
 import { clearPodstroikiData } from './src/podstroiki/storage';
@@ -41,10 +42,12 @@ import ChatThreadScreen from './src/screens/ChatThreadScreen';
 import ChatMembersScreen from './src/screens/ChatMembersScreen';
 import ChatPdfScreen from './src/screens/ChatPdfScreen';
 import * as SecureStore from 'expo-secure-store';
-import { API_URL, listChatMessages, logout, markChatRead, me, sendChatAttachment, sendChatText, syncChats } from './src/api';
+import { API_URL, listChatMessages, listNotifications, logout, markChatRead, me, sendChatAttachment, sendChatText, syncChats } from './src/api';
 import { DisciplineProvider, clearDisciplineData } from './src/discipline/context';
 import AppIcon, { IconLabel, TAB_ICONS } from './src/components/AppIcon';
 import { attachChatSession, clearChatData, createChatPoller, getChatPoller, stopMobileChat } from './src/chatPoller';
+import { createNotificationPoller } from './src/notificationPoller';
+import { requestNotifyPermission, setNativeForeground, startNativePoller, stopNativePoller } from './src/nativePush';
 import { createFileStorage, createOutbox } from './src/chatOutbox';
 
 const Stack = createNativeStackNavigator();
@@ -160,7 +163,8 @@ function DisciplineStack() {
 
 function ProfileStack({ user, onLogout, onReauthenticate, onProfileSaved }) {
   return <Stack.Navigator screenOptions={{ headerTintColor: '#fb923c', headerStyle: { backgroundColor: '#0b1018' } }}>
-    <Stack.Screen name="ProfileHome" options={{ title: 'Профиль' }}>{({ navigation }) => <ProfileScreen user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} onProfileSaved={onProfileSaved} onOpenInstructions={() => navigation.getParent()?.navigate('DocsTab', { screen: 'InstructionSignatures', initial: false })} onOpenFormular={() => navigation.navigate('Formular')} onOpenWorkTime={() => navigation.navigate('PersonalWorkTime')} onOpenPodstroiki={() => navigation.navigate('Podstroiki')} />}</Stack.Screen>
+    <Stack.Screen name="ProfileHome" options={({ navigation }) => ({ title: 'Профиль', headerRight: () => <Pressable accessibilityRole="button" accessibilityLabel="Уведомления" hitSlop={10} onPress={() => navigation.navigate('Notifications')} style={{ padding: 10 }}><AppIcon name="bell" /></Pressable> })}>{({ navigation }) => <ProfileScreen user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} onProfileSaved={onProfileSaved} onOpenNotifications={() => navigation.navigate('Notifications')} onOpenInstructions={() => navigation.getParent()?.navigate('DocsTab', { screen: 'InstructionSignatures', initial: false })} onOpenFormular={() => navigation.navigate('Formular')} onOpenWorkTime={() => navigation.navigate('PersonalWorkTime')} onOpenPodstroiki={() => navigation.navigate('Podstroiki')} />}</Stack.Screen>
+    <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Уведомления' }} />
     {['driver', 'instructor', 'super_admin'].includes(user.role) && <Stack.Screen name="Formular" options={{ title: 'Формуляр' }}>{() => <FormularScreen user={user} />}</Stack.Screen>}
     <Stack.Screen name="PersonalWorkTime" options={{ title: 'Личный табель' }}>{() => <WorkTimeScreen userId={user.id} />}</Stack.Screen>
     {canSubmitPodstroiki(user) && <Stack.Screen name="Podstroiki" options={{ title: 'Подстройки' }}>{() => <PodstroikiScreen user={user} />}</Stack.Screen>}
@@ -180,7 +184,9 @@ function ChatStack() {
 
 function MainTabs({ user, onLogout, onReauthenticate, onProfileSaved }) {
   const chatOn = user.features?.chat === true;
+  const notifyOn = user.features?.notifications === true;
   const [unread, setUnread] = useState(0);
+  const [notifyUnread, setNotifyUnread] = useState(0);
 
   useEffect(() => {
     if (!chatOn) {
@@ -257,6 +263,48 @@ function MainTabs({ user, onLogout, onReauthenticate, onProfileSaved }) {
     };
   }, [chatOn, user.id]);
 
+  useEffect(() => {
+    if (!notifyOn) {
+      stopNativePoller();
+      setNotifyUnread(0);
+      return undefined;
+    }
+    let cancelled = false;
+    let sub;
+    let beat;
+    const poller = createNotificationPoller({
+      featuresOn: true,
+      fetchInbox: () => listNotifications({ unread: true }),
+      onChange: (state) => setNotifyUnread(state.unread),
+    });
+    (async () => {
+      const token = await readStore('token');
+      if (cancelled) {
+        poller.stop();
+        return;
+      }
+      await requestNotifyPermission();
+      if (token) await startNativePoller(token, API_URL);
+      if (cancelled) {
+        poller.stop();
+        return;
+      }
+      const pulse = (state) => {
+        poller.setAppState(state);
+        setNativeForeground(state === 'active');
+      };
+      sub = AppState.addEventListener('change', pulse);
+      pulse(AppState.currentState);
+      beat = setInterval(() => setNativeForeground(AppState.currentState === 'active'), 10000);
+    })();
+    return () => {
+      cancelled = true;
+      sub?.remove();
+      if (beat) clearInterval(beat);
+      poller.stop();
+    };
+  }, [notifyOn, user.id]);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -289,7 +337,11 @@ function MainTabs({ user, onLogout, onReauthenticate, onProfileSaved }) {
       <Tab.Screen name="TrainTab" component={TrainingStack} options={{ title: 'Обучение' }} />
       <Tab.Screen
         name="ProfileTab"
-        options={{ title: 'Профиль' }}
+        options={{
+          title: 'Профиль',
+          tabBarBadge: notifyUnread > 0 ? notifyUnread : undefined,
+          tabBarBadgeStyle: { backgroundColor: '#ea580c', color: '#fff' },
+        }}
       >
         {() => (
           <ProfileStack key={user.id} user={user} onLogout={onLogout} onReauthenticate={onReauthenticate} onProfileSaved={onProfileSaved} />
@@ -303,6 +355,7 @@ export default function App() {
   const [reauth, setReauth] = useState(false);
   const [boot, setBoot] = useState(true);
   const [user, setUser] = useState(null);
+  const navigationRef = useRef(null);
 
   useEffect(() => {
     let alive = true;
@@ -333,6 +386,17 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!user || reauth) return undefined;
+    const openFromUrl = (url) => {
+      if (!url || String(url).indexOf('notifications') === -1) return;
+      navigationRef.current?.navigate('ProfileTab', { screen: 'Notifications' });
+    };
+    const sub = Linking.addEventListener('url', (event) => openFromUrl(event?.url));
+    Linking.getInitialURL().then(openFromUrl).catch(() => {});
+    return () => sub.remove();
+  }, [user, reauth]);
+
   if (boot) {
     return (
       <View style={styles.boot}>
@@ -343,7 +407,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer ref={navigationRef} theme={navTheme}>
       <StatusBar style="light" />
       {user && !reauth ? (
         <View style={{ flex: 1 }}>
@@ -357,6 +421,7 @@ export default function App() {
           onReauthenticate={() => setReauth(true)}
           onLogout={async () => {
             try {
+              await stopNativePoller();
               await clearInstructionsData(user.id);
               await clearFormularData(user.id);
               await clearWorkTimeData(user.id);

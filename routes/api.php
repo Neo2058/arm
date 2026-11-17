@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Mobile\FormularController;
 use App\Http\Controllers\Api\Mobile\InstructionController;
 use App\Http\Controllers\Api\Mobile\JournalController;
 use App\Http\Controllers\Api\Mobile\NaryadController;
+use App\Http\Controllers\Api\Mobile\NotificationController;
 use App\Http\Controllers\Api\Mobile\PhoneController;
 use App\Http\Controllers\Api\Mobile\PodstroikaApiController;
 use App\Http\Controllers\Api\Mobile\ProfileController;
@@ -51,6 +52,10 @@ Route::prefix('mobile')->group(function () {
         Route::get('/account/profile', [ProfileController::class, 'show']);
         Route::patch('/account/profile', [ProfileController::class, 'update'])->middleware('throttle:20,1');
         Route::get('/me', [AuthController::class, 'me']);
+        Route::get('/notifications', [NotificationController::class, 'index'])->middleware('throttle:60,1');
+        Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->middleware('throttle:20,1');
+        Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])->whereNumber('notification')->middleware('throttle:60,1');
+        Route::post('/push-subscription', [NotificationController::class, 'subscribe'])->middleware('throttle:20,1');
         Route::prefix('worktime')->group(function () {
             require __DIR__.'/personal-worktime.php';
         });

@@ -110,5 +110,6 @@
             };
         });
     </script>
+    @include('notifications.bell')
 </body>
 </html>
