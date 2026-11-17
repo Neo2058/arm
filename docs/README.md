@@ -4,6 +4,7 @@
 
 Новый модуль: [Формуляр — записи, проверка и статистика](mobile/FORMULAR.md), [выпуск Android 1.1.5](releases/formular-mobile-1.1.5.md).
 [Личный табель: удаление записи и автообновление Android 1.1.6](releases/worktime-mobile-1.1.6.md).
+[№ карты депо Лихоборы в личном кабинете](releases/depot-card-likhobory.md).
 
 ## Быстрый поиск
 
