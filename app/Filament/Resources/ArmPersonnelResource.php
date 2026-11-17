@@ -81,6 +81,8 @@ class ArmPersonnelResource extends Resource
             Forms\Components\TextInput::make('premium_flag')->label('Отметка премии')->maxLength(4),
             Forms\Components\TextInput::make('main_tab_number')->label('Основной табельный')->maxLength(8),
             Forms\Components\TextInput::make('depo_code')->label('Депо')->maxLength(8),
+            Forms\Components\TextInput::make('depot_card_number')->label('№ карты депо Лихоборы')->maxLength(32)
+                ->afterStateHydrated(fn ($component, $record) => $component->state($record?->user?->profile?->depot_card_number)),
             Forms\Components\Repeater::make('early_windows')->label('Ранние заступления')->maxItems(3)->schema([
                 Forms\Components\TextInput::make('time')->label('Время, ЧЧ.ММ')->maxLength(5),
                 Forms\Components\TextInput::make('reason')->label('Основание')->maxLength(8),

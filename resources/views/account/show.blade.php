@@ -78,6 +78,7 @@
                     'Должность' => $profile?->position,
                     'Колонна' => $profile?->column,
                     'Табельный номер' => $profile?->tab_number,
+                    '№ карты депо Лихоборы' => $profile?->depot_card_number,
                 ] as $label => $value)
                     <div><dt>{{ $label }}</dt><dd>{{ filled($value) ? $value : 'Не указано' }}</dd></div>
                 @endforeach

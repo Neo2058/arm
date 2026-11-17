@@ -19,6 +19,7 @@ class SelfProfile
             'birth_date' => ['Дата рождения', 'date'],
             'driverRoot' => ['Номер удостоверения', 'text', 255],
             'dateRoot' => ['Дата выдачи удостоверения', 'date'],
+            'depot_card_number' => ['№ карты депо Лихоборы', 'text', 32],
             'additional_notes' => ['Примечания', 'text', 500],
         ];
         if ($user->personnel()->exists()) {
@@ -56,6 +57,7 @@ class SelfProfile
             'birth_date' => 'sometimes|nullable|date|before_or_equal:today',
             'driverRoot' => 'sometimes|nullable|string|max:255',
             'dateRoot' => 'sometimes|nullable|date',
+            'depot_card_number' => 'sometimes|nullable|string|max:32',
             'additional_notes' => 'sometimes|nullable|string|max:500',
         ];
         foreach (['role', 'is_active', 'column', 'instructor', 'email', 'tab_number', 'user_id', 'fired_on', 'source_data', 'password'] as $key) {
@@ -79,7 +81,7 @@ class SelfProfile
             $key = $field['key'];
             $value = match ($key) {
                 'full_name' => $user->name,
-                'birth_date', 'dateRoot', 'driverRoot', 'additional_notes' => $user->profile?->$key,
+                'birth_date', 'dateRoot', 'driverRoot', 'depot_card_number', 'additional_notes' => $user->profile?->$key,
                 'phone_primary' => $user->personnel?->phone_primary ?? $user->profile?->phoneNumber,
                 default => $user->personnel?->$key,
             };
@@ -99,7 +101,11 @@ class SelfProfile
         abort_unless($actor->fresh()?->is_active, 403);
         $data = validator($input, $this->rules($actor))->validate();
         DB::transaction(function () use ($actor, $data) {
-            $profileFields = Arr::only($data, ['birth_date', 'dateRoot', 'driverRoot', 'additional_notes']);
+            $profileFields = Arr::only($data, ['birth_date', 'dateRoot', 'driverRoot', 'depot_card_number', 'additional_notes']);
+            if (array_key_exists('depot_card_number', $profileFields)) {
+                $card = trim((string) ($profileFields['depot_card_number'] ?? ''));
+                $profileFields['depot_card_number'] = $card === '' ? null : $card;
+            }
             $personFields = Arr::except($data, array_keys($profileFields));
             if ($actor->personnel()->exists() && $personFields !== []) {
                 $this->directory->updateOwn($actor, $personFields);

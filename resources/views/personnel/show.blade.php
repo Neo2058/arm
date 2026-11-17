@@ -15,6 +15,7 @@
             @foreach(['full_name' => ['ФИО', 255], 'position_code' => ['Должность', 8], 'class_code' => ['Класс', 4], 'phone_primary' => ['Телефон', 16], 'phone_secondary' => ['Дополнительный телефон', 16], 'brigade_code' => ['Бригада', 8], 'shop_code' => ['Цех', 8], 'roster_number' => ['Номер в списке', 8], 'category_code' => ['Категория', 4], 'premium_flag' => ['Отметка премии', 4], 'main_tab_number' => ['Основной табельный', 8], 'depo_code' => ['Депо', 8]] as $field => [$label, $length])
                 <label>{{ $label }}<input name="{{ $field }}" maxlength="{{ $length }}" value="{{ old($field, $person->$field) }}" @required($field === 'full_name') class="block w-full border rounded-xl p-2 text-gray-900"></label>
             @endforeach
+            <label>№ карты депо Лихоборы<input name="depot_card_number" maxlength="32" value="{{ old('depot_card_number', $person->user?->profile?->depot_card_number) }}" class="block w-full border rounded-xl p-2 text-gray-900"></label>
             @if($canAssignColumn)
                 <label>Колонна<input name="column" maxlength="32" value="{{ old('column', $person->user?->profile?->column) }}" class="block w-full border rounded-xl p-2 text-gray-900"></label>
             @endif

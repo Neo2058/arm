@@ -111,6 +111,7 @@ class PersonnelDirectoryTest extends TestCase
             'brigadier_from' => '2020-01-01', 'brigadier_to' => '2025-01-01',
             'shop_code' => '03а', 'roster_number' => '25', 'category_code' => '1',
             'premium_flag' => '+', 'main_tab_number' => '1234', 'depo_code' => 'ТЧ15',
+            'depot_card_number' => ' LH-9 ',
         ])->assertRedirect();
         $person->refresh();
         $this->assertSame([['time' => '07.15', 'reason' => 'ДП']], $person->early_windows);
@@ -119,8 +120,10 @@ class PersonnelDirectoryTest extends TestCase
         $this->assertSame('2001-01-01', $person->seniority_on->toDateString());
         $this->assertSame(3, $person->assistant_seniority_years);
         $this->assertSame('03а', $person->shop_code);
+        $this->assertSame('LH-9', $person->user->profile->fresh()->depot_card_number);
         $this->assertSame('+', $person->source_data['OTBOR']);
-        $this->get('/personnel/'.$person->id)->assertOk()->assertSee('07.15')->assertSee('22.00')->assertSee('OTBOR');
+        $this->get('/personnel/'.$person->id)->assertOk()->assertSee('07.15')->assertSee('22.00')->assertSee('OTBOR')
+            ->assertSee('№ карты депо Лихоборы', false);
         $this->patchJson('/personnel/'.$person->id, ['source_data' => ['OTBOR' => '-']])->assertUnprocessable();
         $this->patchJson('/personnel/'.$person->id, ['early_windows' => [['time' => '25.99']]])->assertUnprocessable();
     }

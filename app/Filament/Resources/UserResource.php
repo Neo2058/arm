@@ -2,18 +2,18 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\UserRole;
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
 use Filament\Forms;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Hash;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\DatePicker;
-use App\Enums\UserRole;
 
 class UserResource extends Resource
 {
@@ -95,11 +95,19 @@ class UserResource extends Resource
                                     ->tel(),
                             ]),
 
-                        Grid::make(3)
+                        Grid::make(2)
                             ->schema([
 
                                 Forms\Components\TextInput::make('driverRoot')
                                     ->label('№ Удостоверения'),
+
+                                Forms\Components\TextInput::make('depot_card_number')
+                                    ->label('№ карты депо Лихоборы')
+                                    ->maxLength(32),
+                            ]),
+
+                        Grid::make(2)
+                            ->schema([
 
                                 DatePicker::make('dateRoot')
                                     ->label('Дата выдачи прав'),
@@ -181,6 +189,7 @@ class UserResource extends Resource
 
             ]);
     }
+
     public static function getRelations(): array
     {
         return [

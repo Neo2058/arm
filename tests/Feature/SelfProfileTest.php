@@ -9,6 +9,7 @@ use App\Models\ArmPersonnel;
 use App\Models\User;
 use App\Services\ClickHouseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -37,10 +38,12 @@ class SelfProfileTest extends TestCase
     public function test_web_employee_edits_own_fields_and_changes_are_shared_with_directory(): void
     {
         $user = $this->employee();
-        $this->actingAs($user)->get('/account')->assertOk()->assertSee('Сохранить профиль');
+        $this->actingAs($user)->get('/account')->assertOk()->assertSee('Сохранить профиль')
+            ->assertSee('№ карты депо Лихоборы', false);
         $this->patch('/account', ['full_name' => 'Новое полное имя сотрудника длиннее сорока символов',
             'phone_primary' => '+79991234567', 'phone_secondary' => '123-45-67', 'class_code' => '2',
-            'birth_date' => '1990-01-01', 'driverRoot' => 'ABC123', 'seniority_on' => '2001-01-01',
+            'birth_date' => '1990-01-01', 'driverRoot' => 'ABC123', 'depot_card_number' => '  LH-20418  ',
+            'seniority_on' => '2001-01-01',
             'med_from' => '2026-01-01', 'med_to' => '2026-12-31',
             'early_windows' => [['time' => '07:15', 'reason' => 'ДП']],
         ])->assertRedirect(route('account.show'));
@@ -50,6 +53,7 @@ class SelfProfileTest extends TestCase
         $this->assertSame('+79991234567', $user->profile->phoneNumber);
         $this->assertSame('2', $user->profile->normative_class);
         $this->assertSame('ABC123', $user->profile->driverRoot);
+        $this->assertSame('LH-20418', $user->profile->depot_card_number);
         $this->assertSame('9', $user->profile->column);
         $this->assertSame('OLD', $user->personnel->source_data['FIO']);
         $this->assertSame([['time' => '07.15', 'reason' => 'ДП']], $user->personnel->early_windows);
@@ -61,18 +65,22 @@ class SelfProfileTest extends TestCase
         $user = $this->employee();
         $token = $user->createToken('mobile')->plainTextToken;
         $this->withToken($token)->getJson('/api/mobile/account/profile')->assertOk()
-            ->assertHeader('Cache-Control', 'no-store, private')->assertJsonPath('readonly.Колонна', '9');
+            ->assertHeader('Cache-Control', 'no-store, private')->assertJsonPath('readonly.Колонна', '9')
+            ->assertJsonFragment(['key' => 'depot_card_number', 'label' => '№ карты депо Лихоборы']);
         $this->withToken($token)->patchJson('/api/mobile/account/profile', [
             'phone_primary' => '555-55-55', 'assistant_seniority_years' => 4,
+            'depot_card_number' => '8821',
             'late_windows' => [['time' => '22.00', 'reason' => '+']],
-        ])->assertOk()->assertJsonPath('values.phone_primary', '555-55-55')->assertJsonPath('values.assistant_seniority_years', 4);
+        ])->assertOk()->assertJsonPath('values.phone_primary', '555-55-55')
+            ->assertJsonPath('values.assistant_seniority_years', 4)
+            ->assertJsonPath('values.depot_card_number', '8821');
         $this->assertSame('555-55-55', $user->profile->fresh()->phoneNumber);
         $this->assertSame([['time' => '22.00', 'reason' => '+']], $user->personnel->fresh()->late_windows);
     }
 
     public function test_privilege_identity_and_other_account_changes_are_rejected_even_for_admin_self_service(): void
     {
-        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+        $this->withoutMiddleware(ThrottleRequests::class);
         $user = $this->employee();
         foreach ([UserRole::DRIVER, UserRole::ADMIN] as $role) {
             $user->update(['role' => $role]);
@@ -116,10 +124,12 @@ class SelfProfileTest extends TestCase
     public function test_user_without_personnel_card_can_edit_basic_profile_without_creating_card(): void
     {
         $user = User::factory()->create(['role' => UserRole::ADMIN]);
-        $this->actingAs($user)->patch('/account', ['full_name' => 'Admin Name', 'phone_primary' => '123', 'birth_date' => '1980-01-01'])->assertRedirect();
+        $this->actingAs($user)->patch('/account', ['full_name' => 'Admin Name', 'phone_primary' => '123', 'birth_date' => '1980-01-01', 'depot_card_number' => '77'])->assertRedirect();
         $this->assertSame('Admin Name', $user->fresh()->name);
         $this->assertSame('123', $user->profile()->first()->phoneNumber);
+        $this->assertSame('77', $user->profile()->first()->depot_card_number);
         $this->assertDatabaseCount('arm_personnel', 0);
         $this->patchJson('/account', ['med_from' => '2026-01-01'])->assertUnprocessable();
+        $this->patchJson('/account', ['depot_card_number' => str_repeat('9', 33)])->assertUnprocessable();
     }
 }

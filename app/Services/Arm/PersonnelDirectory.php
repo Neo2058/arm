@@ -64,6 +64,7 @@ class PersonnelDirectory
             'premium_flag' => 'sometimes|nullable|string|max:4',
             'main_tab_number' => 'sometimes|nullable|string|max:8',
             'depo_code' => 'sometimes|nullable|string|max:8',
+            'depot_card_number' => 'sometimes|nullable|string|max:32',
             'early_windows' => 'sometimes|array|max:3',
             'late_windows' => 'sometimes|array|max:3',
             'early_windows.*' => 'array:time,reason',
@@ -115,6 +116,11 @@ class PersonnelDirectory
                 $column = trim((string) $data['column']);
                 $profile->column = $column === '' ? null : $column;
                 unset($data['column']);
+            }
+            if (array_key_exists('depot_card_number', $data)) {
+                $card = trim((string) $data['depot_card_number']);
+                $profile->depot_card_number = $card === '' ? null : $card;
+                unset($data['depot_card_number']);
             }
             foreach (['early_windows', 'late_windows'] as $field) {
                 if (array_key_exists($field, $data)) {
