@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Services\ClickHouseService;
 use App\Services\TelegramAccountLinker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
@@ -76,6 +75,19 @@ class MobileTelegramAccountTest extends TestCase
         for ($i = 0; $i < 4; $i++) {
             $this->postJson('/api/mobile/account/telegram')->assertOk();
         }
-        $this->postJson('/api/mobile/account/telegram')->assertTooManyRequests();
+        $this->postJson('/api/mobile/account/telegram')->assertTooManyRequests()
+            ->assertJsonFragment(['message' => 'Слишком много попыток привязки Telegram. Подождите 10 мин. и повторите.']);
+    }
+
+    public function test_inbox_and_chat_polling_do_not_consume_telegram_link_quota(): void
+    {
+        config(['chat.enabled' => true, 'chat.pilot_column' => null]);
+        $user = User::factory()->create();
+        $this->withToken($user->createToken('mobile')->plainTextToken);
+        for ($i = 0; $i < 8; $i++) {
+            $this->getJson('/api/mobile/notifications')->assertOk();
+            $this->getJson('/api/mobile/chats/sync')->assertOk();
+        }
+        $this->postJson('/api/mobile/account/telegram')->assertOk()->assertJsonPath('expires_in', 600);
     }
 }

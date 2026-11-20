@@ -5,6 +5,7 @@
     <section class="max-w-lg w-full rounded-3xl border border-white/10 bg-white/5 p-8 space-y-6">
         <h1 class="text-2xl font-bold">Telegram для получения ключа</h1>
         @if(session('success')) <p role="status">{{ session('success') }}</p> @endif
+        @if(session('error')) <p role="alert">{{ session('error') }}</p> @endif
         @if($account)
             <p>Telegram привязан (ID {{ $account->telegram_user_id }}). Отправьте боту /key в личном чате.</p>
             <form method="POST" action="{{ route('telegram.link.destroy') }}">

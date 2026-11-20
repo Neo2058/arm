@@ -18,8 +18,8 @@ Route::get('/account', [AccountController::class, 'show'])->name('account.show')
 Route::patch('/account', [AccountController::class, 'update'])->name('account.update')->middleware('throttle:20,1');
 
 Route::get('/account/telegram', [TelegramAccountController::class, 'show'])->name('telegram.link.show');
-Route::post('/account/telegram', [TelegramAccountController::class, 'issue'])->name('telegram.link.issue')->middleware('throttle:5,10');
-Route::delete('/account/telegram', [TelegramAccountController::class, 'destroy'])->name('telegram.link.destroy')->middleware('throttle:5,10');
+Route::post('/account/telegram', [TelegramAccountController::class, 'issue'])->name('telegram.link.issue')->middleware('throttle:telegram-link');
+Route::delete('/account/telegram', [TelegramAccountController::class, 'destroy'])->name('telegram.link.destroy')->middleware('throttle:telegram-link');
 
 Route::get('/barrier', [BarrierController::class, 'show'])->name('barrier.show');
 Route::post('/api/barrier/verify', [BarrierController::class, 'verify'])->name('barrier.verify')->middleware('throttle:barrier');

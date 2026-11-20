@@ -114,7 +114,8 @@
 - Telegram: `MonthlyAccessKey` — единый месячный ключ для барьера и бота. Не дублировать алгоритм.
 - `TelegramAccountLinker` — одноразовая привязка активного пользователя к Telegram ID (Postgres); страница `/account/telegram` доступна после auth до device/barrier.
 - Мобильный профиль: `/api/mobile/account/telegram` (GET/POST/DELETE), Sanctum + active user;
-  POST выдаёт личную ссылку через тот же TelegramAccountLinker, без web-сессии, no-store и throttle.
+  POST выдаёт личную ссылку через тот же TelegramAccountLinker, без web-сессии, no-store;
+  выпуск/отвязка — именованный лимитер `telegram-link` (5 / 10 мин на пользователя), отдельно от опроса inbox/чата.
 - `TelegramPasswordReset` — `/reset` только в личном чате ранее привязанного активного пользователя.
   Хеш одноразового токена в Postgres, срок 10 минут, выпуск не чаще раза в минуту; ссылка содержит fragment,
   новый пароль вводится на `/password/reset` (CSRF). `APP_URL` должен быть HTTPS. При сбросе удаляются

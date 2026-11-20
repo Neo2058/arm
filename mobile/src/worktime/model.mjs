@@ -20,9 +20,16 @@ export const localTime = value => (value || '').replace('T', ' ').slice(0, 16);
 export function currentMonth() {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Moscow', year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7);
 }
+export const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 export function monthDays(month) {
   const [year, m] = month.split('-').map(Number);
   return Array.from({ length: new Date(Date.UTC(year, m, 0)).getUTCDate() }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`);
+}
+export function weekdayIndex(date) {
+  return (new Date(`${date}T12:00:00Z`).getUTCDay() + 6) % 7;
+}
+export function monthWeekStart(month) {
+  return weekdayIndex(`${month}-01`);
 }
 export function moveMonth(month, offset) {
   const [y, m] = month.split('-').map(Number), date = new Date(Date.UTC(y, m - 1 + offset, 1));

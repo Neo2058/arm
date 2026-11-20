@@ -35,6 +35,17 @@
                     Нажмите кнопку, откройте скачанный файл и подтвердите установку, если телефон спросит разрешение.
                 </p>
                 @if($androidReady)
+                    @if($androidRelease && $androidRelease['version'])
+                        <p class="text-sm font-medium mb-3">Версия {{ $androidRelease['version'] }} ({{ $androidRelease['version_code'] }})</p>
+                    @endif
+                    @if($androidRelease && $androidRelease['changes'])
+                        <p class="text-sm font-medium mb-1">Что изменилось</p>
+                        <ul class="text-sm text-[#706f6c] dark:text-[#A1A09A] mb-4 list-disc pl-5 space-y-1">
+                            @foreach($androidRelease['changes'] as $change)
+                                <li>{{ $change }}</li>
+                            @endforeach
+                        </ul>
+                    @endif
                     <a href="{{ route('install.android') }}"
                        class="block w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl text-center leading-[48px]">
                         Скачать для Android

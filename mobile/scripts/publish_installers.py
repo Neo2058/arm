@@ -13,9 +13,17 @@ import sys
 import tempfile
 import zipfile
 
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "ru.tch15.arm"
 CERTIFICATE = "2d0cdbf6e20385dfab263e4b09cc0729fbbb6fa80074866913df8bd8c9e3c99f"
+PINNED_PUBLIC_KEY = "3059301306072a8648ce3d020106082a8648ce3d03010703420004ba84876f20b70a1e138dcd3eade2a51f6a9a188b5056e3cc39a5e0503fb2602f42da6da823b7533a9fe20b2ed6fb64725ade829cac49975836dfa19e4f402848"
+METADATA_KEY = Path(os.environ.get("TCH15_UPDATE_METADATA_KEY") or (Path.home() / ".tch15-arm/update-metadata.pem"))
+NOTES = ROOT / "mobile/android-release-notes.json"
+MAX_CHANGES = 8
+MAX_CHANGE_LEN = 160
 
 
 def run(*args):
@@ -62,6 +70,83 @@ def inspect_apk(path):
             "certificate_sha256": CERTIFICATE, "sha256": digest(path)}
 
 
+def sanitize_changes(raw):
+    if not isinstance(raw, list):
+        return []
+    out = []
+    for item in raw:
+        if not isinstance(item, str):
+            continue
+        text = "".join(" " if ord(ch) < 32 or ch == "\u007f" else ch for ch in item)
+        text = " ".join(text.split())
+        if not text:
+            continue
+        out.append(text[:MAX_CHANGE_LEN])
+        if len(out) >= MAX_CHANGES:
+            break
+    return out
+
+
+def canonical_payload(metadata):
+    changes = sanitize_changes(metadata.get("changes"))
+    digest = str(metadata.get("sha256") or "").strip().lower()
+    cert = str(metadata.get("certificate_sha256") or "").strip().lower()
+    version = str(metadata.get("version") or "")
+    try:
+        code = int(metadata.get("version_code") or 0)
+        size = int(metadata.get("size") or 0)
+    except (TypeError, ValueError):
+        return ""
+    if metadata.get("package") != PACKAGE or not version or code < 1 or size < 1 or len(digest) != 64 or cert != CERTIFICATE or not changes:
+        return ""
+    payload = {
+        "certificate_sha256": cert,
+        "changes": changes,
+        "package": PACKAGE,
+        "sha256": digest,
+        "size": size,
+        "url": "/install/android",
+        "version": version,
+        "version_code": code,
+    }
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+
+
+def public_key_hex(key):
+    return key.public_key().public_bytes(
+        serialization.Encoding.DER,
+        serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).hex()
+
+
+def sign_message(message, key_path, pinned_public_key=PINNED_PUBLIC_KEY):
+    if not message:
+        raise ValueError("Release metadata is incomplete")
+    path = Path(key_path)
+    if not path.is_file():
+        raise ValueError("Metadata signing key is required at " + str(path))
+    try:
+        key = serialization.load_pem_private_key(path.read_bytes(), password=None)
+    except (OSError, ValueError) as error:
+        raise ValueError("Metadata signing key is unreadable: " + str(error)) from error
+    if public_key_hex(key) != pinned_public_key:
+        raise ValueError("Metadata private key does not match the pinned public key")
+    return key.sign(message.encode("utf-8"), ec.ECDSA(hashes.SHA256())).hex()
+
+
+def load_changes(version_code, notes_path=NOTES):
+    try:
+        data = json.loads(notes_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise ValueError("Release notes are unreadable: " + str(error)) from error
+    if not isinstance(data, dict):
+        raise ValueError("Release notes must be a JSON object keyed by versionCode")
+    changes = sanitize_changes(data.get(str(int(version_code))))
+    if not changes:
+        raise ValueError("Release notes are required for versionCode " + str(int(version_code)))
+    return changes
+
+
 def check_upgrade(candidate, previous):
     if candidate["version_code"] < previous["version_code"]:
         raise ValueError("APK downgrade is forbidden")
@@ -93,7 +178,7 @@ def stage(source, directory):
         raise
 
 
-def write_latest(destination, metadata, suffix):
+def write_latest(destination, metadata, suffix, key_path=METADATA_KEY, pinned_public_key=PINNED_PUBLIC_KEY):
     if suffix != ".apk":
         return
     payload = {
@@ -103,8 +188,10 @@ def write_latest(destination, metadata, suffix):
         "sha256": metadata["sha256"],
         "size": int(metadata["size"]),
         "url": "/install/android",
-        "published_at": metadata.get("published_at"),
+        "certificate_sha256": CERTIFICATE,
+        "changes": list(metadata.get("changes") or []),
     }
+    payload["signature"] = sign_message(canonical_payload(payload), key_path, pinned_public_key)
     descriptor, name = tempfile.mkstemp(prefix=".android-latest-", dir=destination)
     staged = Path(name)
     try:
@@ -119,7 +206,7 @@ def write_latest(destination, metadata, suffix):
         staged.unlink(missing_ok=True)
 
 
-def publish(source, destination):
+def publish(source, destination, notes_path=NOTES, metadata_key_path=METADATA_KEY, pinned_public_key=PINNED_PUBLIC_KEY):
     suffix = source.suffix.lower()
     if suffix not in (".apk", ".ipa") or not source.is_file():
         raise ValueError("Expected an existing .apk or .ipa file")
@@ -137,12 +224,23 @@ def publish(source, destination):
         staged = stage(source, destination)
         inspect = inspect_apk if suffix == ".apk" else inspect_ipa
         metadata = inspect(staged)
+        if suffix == ".apk":
+            metadata["changes"] = load_changes(metadata["version_code"], notes_path)
+            metadata["size"] = staged.stat().st_size
+            metadata["certificate_sha256"] = CERTIFICATE
+            sign_message(canonical_payload({**metadata, "url": "/install/android"}), metadata_key_path, pinned_public_key)
         if target.exists():
             previous = inspect(target)
             if suffix == ".apk":
                 check_upgrade(metadata, previous)
             if metadata["sha256"] == previous["sha256"]:
-                write_latest(destination, {**previous, "size": target.stat().st_size, "published_at": previous.get("published_at") or datetime.now(timezone.utc).isoformat()}, suffix)
+                write_latest(destination, {
+                    **previous,
+                    "size": target.stat().st_size,
+                    "published_at": previous.get("published_at") or datetime.now(timezone.utc).isoformat(),
+                    "changes": metadata.get("changes") or load_changes(previous["version_code"], notes_path),
+                    "certificate_sha256": CERTIFICATE,
+                }, suffix, key_path=metadata_key_path, pinned_public_key=pinned_public_key)
                 print("Already published: " + target.name)
                 return
             backups = destination.parent.parent / "installer-backups"
@@ -180,7 +278,7 @@ def publish(source, destination):
         os.replace(staged, target)
         if digest(target) != metadata["sha256"]:
             raise ValueError("Post-publication hash mismatch")
-        write_latest(destination, metadata, suffix)
+        write_latest(destination, metadata, suffix, key_path=metadata_key_path, pinned_public_key=pinned_public_key)
         print("Published: " + target.name + " SHA256=" + metadata["sha256"])
         if suffix == ".ipa":
             print("IPA structure checked; Apple signature NOT verified")
@@ -194,10 +292,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("files", nargs="+", type=Path)
     parser.add_argument("--destination", type=Path, default=ROOT / "public/downloads")
+    parser.add_argument("--notes", type=Path, default=NOTES)
+    parser.add_argument("--metadata-key", type=Path, default=METADATA_KEY)
     args = parser.parse_args()
     try:
         for source in args.files:
-            publish(source, args.destination.resolve())
+            publish(source, args.destination.resolve(), notes_path=args.notes, metadata_key_path=args.metadata_key)
     except (ValueError, OSError) as error:
         print("Publication refused: " + str(error), file=sys.stderr)
         return 1

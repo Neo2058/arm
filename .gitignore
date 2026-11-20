@@ -30,3 +30,4 @@ Thumbs.db
 /installer-backups/
 /public/downloads/release-*.json
 /public/downloads/android-latest.json
+update-metadata.pem

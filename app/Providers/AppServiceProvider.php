@@ -43,5 +43,21 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(30)->by('barrier-ip:'.$request->ip()),
             Limit::perHour(10)->by('barrier-user:'.$request->user()->id),
         ]);
+
+        // Laravel `throttle:N,M` keys authenticated users by id only, so inbox/chat polls
+        // would share a bucket with Telegram link issue (5 / 10 minutes) and return 429.
+        RateLimiter::for('telegram-link', function (Request $request) {
+            return Limit::perMinutes(10, 5)
+                ->by((string) ($request->user()?->id ?: $request->ip()))
+                ->response(function (Request $request, array $headers) {
+                    $minutes = max(1, (int) ceil(((int) ($headers['Retry-After'] ?? 60)) / 60));
+                    $message = "Слишком много попыток привязки Telegram. Подождите {$minutes} мин. и повторите.";
+                    if ($request->expectsJson()) {
+                        return response()->json(['message' => $message], 429, $headers);
+                    }
+
+                    return redirect()->route('telegram.link.show')->with('error', $message);
+                });
+        });
     }
 }

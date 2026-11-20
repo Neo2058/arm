@@ -120,7 +120,7 @@ class ArmNotificationService : Service() {
       instanceFollowRedirects = false
       setRequestProperty("Accept", "application/json")
       setRequestProperty("Authorization", "Bearer $token")
-      setRequestProperty("X-TCH15-Client", "ru.tch15.arm/1.1.11-notify")
+      setRequestProperty("X-TCH15-Client", "ru.tch15.arm/1.1.12-notify")
     }
     return try {
       val code = conn.responseCode

@@ -51,7 +51,7 @@ export default function ProfileScreen({ user, onLogout, onReauthenticate, onProf
       await Linking.openURL(pendingLink.current.url);
     } catch (e) {
       if (request?.controller.signal.aborted) return;
-      setError(e.response?.status === 409 ? 'Telegram уже привязан. Обновите статус.' : e.response?.status === 429 ? 'Слишком много запросов. Повторите позже.' : 'Не удалось открыть привязку. Проверьте Telegram и интернет, затем повторите.');
+      setError(e.response?.status === 409 ? 'Telegram уже привязан. Обновите статус.' : e.response?.status === 429 ? (e.response?.data?.message || 'Слишком много попыток привязки Telegram. Подождите несколько минут и повторите.') : 'Не удалось открыть привязку. Проверьте Telegram и интернет, затем повторите.');
     } finally {
       actionBusy.current = false;
       if (!request?.controller.signal.aborted) setBusy(false);

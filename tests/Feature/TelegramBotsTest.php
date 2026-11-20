@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\CheckDeviceBinding;
+use App\Http\Middleware\CheckDynamicBarrier;
 use App\Http\Middleware\VerifyCsrfToken;
 use App\Jobs\SendTelegramNotification;
-use App\Models\User;
 use App\Models\Document;
+use App\Models\User;
 use App\Services\ClickHouseService;
 use App\Services\MonthlyAccessKey;
 use App\Services\TelegramAccountLinker;
@@ -13,12 +15,14 @@ use App\Services\TelegramBotApi;
 use App\Services\TelegramService;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class TelegramBotsTest extends TestCase
@@ -76,7 +80,10 @@ class TelegramBotsTest extends TestCase
     {
         $this->app->bind(VerifyCsrfToken::class, fn ($app) => new class($app, $app->make(Encrypter::class)) extends VerifyCsrfToken
         {
-            protected function runningUnitTests() { return false; }
+            protected function runningUnitTests()
+            {
+                return false;
+            }
         });
         $response = $this->webhook($this->update())->assertOk()->assertJsonPath('method', 'sendMessage');
         $this->assertStringContainsString('Войдите на сайт', (string) $response->json('text'));
@@ -165,6 +172,18 @@ class TelegramBotsTest extends TestCase
         $this->get('/documents')->assertRedirect(route('device.register.form'));
     }
 
+    public function test_web_link_issue_throttle_is_independent_of_other_routes(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        for ($i = 0; $i < 5; $i++) {
+            $this->post('/account/telegram')->assertRedirect(route('telegram.link.show'))->assertSessionHas('telegram_link_url');
+        }
+        $this->post('/account/telegram')->assertRedirect(route('telegram.link.show'))
+            ->assertSessionHas('error');
+        $this->get('/account/telegram')->assertOk()->assertSee('привязки Telegram', false);
+    }
+
     public function test_unlink_revokes_access_immediately(): void
     {
         $user = User::factory()->create();
@@ -194,7 +213,7 @@ class TelegramBotsTest extends TestCase
 
     public function test_webhook_reply_does_not_call_telegram_api(): void
     {
-        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::swap(new Factory);
         Http::fake(['*' => Http::response(['ok' => false], 500)]);
         $this->webhook($this->update())->assertOk()->assertJsonPath('method', 'sendMessage');
         Http::assertNothingSent();
@@ -236,7 +255,7 @@ class TelegramBotsTest extends TestCase
         Storage::fake('s3');
         Storage::disk('s3')->put('test.pdf', '%PDF-1.4 test');
         $document = Document::create(['title' => 'Инструкция', 'file_path' => 'test.pdf', 'category' => 'manual']);
-        $this->withoutMiddleware([\App\Http\Middleware\CheckDeviceBinding::class, \App\Http\Middleware\CheckDynamicBarrier::class]);
+        $this->withoutMiddleware([CheckDeviceBinding::class, CheckDynamicBarrier::class]);
         $this->actingAs(User::factory()->create())->get('/documents/'.$document->id.'/download')->assertForbidden();
         Queue::assertPushed(SendTelegramNotification::class, fn ($job) => str_contains($job->message, 'Нарушение регламента использования документов'));
     }
@@ -272,15 +291,15 @@ class TelegramBotsTest extends TestCase
 
     public function test_manage_installs_secret_protected_webhook(): void
     {
-        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::swap(new Factory);
         Http::fake([
             '*/getMe' => Http::response(['ok' => true, 'result' => ['id' => 1, 'username' => 'arm_key_bot']]),
             '*/setWebhook' => Http::response(['ok' => true, 'result' => true]),
             '*/getWebhookInfo' => Http::response(['ok' => true, 'result' => ['url' => 'https://arm.example/telegram/webhook']]),
         ]);
         config(['services.telegram.key_webhook_secret' => str_repeat('x', 48)]);
-        \Illuminate\Support\Facades\URL::forceRootUrl('https://arm.example');
-        \Illuminate\Support\Facades\URL::forceScheme('https');
+        URL::forceRootUrl('https://arm.example');
+        URL::forceScheme('https');
         $this->artisan('telegram:manage', ['bot' => 'key', '--webhook' => true])->assertExitCode(0);
         Http::assertSent(fn ($r) => str_ends_with($r->url(), '/setWebhook') && $r['secret_token'] === str_repeat('x', 48)
             && $r['allowed_updates'] === ['message']);
@@ -288,7 +307,7 @@ class TelegramBotsTest extends TestCase
 
     public function test_message_formatting_failure_retries_as_plain_text(): void
     {
-        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::swap(new Factory);
         Http::fakeSequence()->push(['ok' => false, 'description' => "can't parse entities"], 400)->push(['ok' => true]);
         app(TelegramBotApi::class)->message('notifications', '1', 'name_with_bad_*', 'Markdown');
         Http::assertSentCount(2);

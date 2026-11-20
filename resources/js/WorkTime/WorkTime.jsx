@@ -3,7 +3,7 @@ import axios from 'axios';
 import { CalendarDays, Clock3, ChevronLeft, ChevronRight, Plus, Settings2 } from 'lucide-react';
 import LegacyCalendar from '../WorkCalendar/WorkCalendar';
 import { createUseWorkTime } from '../../../mobile/src/worktime/controller.mjs';
-import { ABSENCES, KINDS, RATE_FIELDS, WARNINGS, PARTIAL, dateOccupied, localTime, minutes, money, monthDays, moveMonth } from '../../../mobile/src/worktime/model.mjs';
+import { ABSENCES, KINDS, RATE_FIELDS, WARNINGS, PARTIAL, WEEKDAYS, dateOccupied, localTime, minutes, money, monthDays, monthWeekStart, moveMonth } from '../../../mobile/src/worktime/model.mjs';
 import { browserStorage } from './storage';
 import './worktime.css';
 
@@ -68,7 +68,7 @@ function Editor({ ctl }) {
 }
 function Tabular({ ctl }) {
     const s = ctl.summary, disabled = ctl.busy || !ctl.ready || !!ctl.entry?.draft;
-    const days = monthDays(ctl.month), first = (new Date(`${ctl.month}-01T12:00:00Z`).getUTCDay() + 6) % 7;
+    const days = monthDays(ctl.month), first = monthWeekStart(ctl.month);
     return <>
         <div className="wt-actions"><button aria-label="Предыдущий месяц" disabled={ctl.busy} onClick={() => ctl.setMonth(moveMonth(ctl.month, -1))}><ChevronLeft size={18} /></button><h2>{heading(ctl.month)}</h2><button aria-label="Следующий месяц" disabled={ctl.busy} onClick={() => ctl.setMonth(moveMonth(ctl.month, 1))}><ChevronRight size={18} /></button><button disabled={ctl.busy} onClick={ctl.reload}>Обновить</button></div>
         <div className="wt-actions"><button className="wt-primary" disabled={disabled} onClick={() => ctl.openShift()}><Plus size={18} />Добавить смену</button><button disabled={disabled} onClick={ctl.openAbsence}>Больничный / отпуск / учёба</button><button disabled={disabled} onClick={ctl.openSettings}><Settings2 size={18} />Параметры месяца</button></div>
@@ -81,7 +81,7 @@ function Tabular({ ctl }) {
             <section className="wt-card"><h3>Начисления по видам работы</h3>{Object.entries(s.by_kind_totals).map(([key, v]) => <p key={key}><strong>{KINDS[key]}: {minutes(v.paid_minutes)}</strong><br />Тариф {money(v.base_kopecks)} · вечер {money(v.evening_kopecks)} · ночь {money(v.night_kopecks)}</p>)}</section>
             {s.warnings.map(code => <p className="wt-note" key={code}>{WARNINGS[code] || 'Требуется проверка данных месяца.'}</p>)}
             {!!s.excluded_deviations_count && <p className="wt-note">Отклонения старого календаря ({s.excluded_deviations_count}) в новый итог не включены.</p>}
-            <div className="wt-calendar">{['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(d => <span key={d}>{d}</span>)}{Array.from({ length: first }, (_, i) => <span key={`gap${i}`} />)}{days.map(date => {
+            <div className="wt-calendar">{WEEKDAYS.map(d => <span key={d}>{d}</span>)}{Array.from({ length: first }, (_, i) => <span key={`gap${i}`} />)}{days.map(date => {
                 const shifts = s.shifts.filter(v => v.shift_date === date), absence = (s.absences || []).find(a => a.shift_date <= date && a.absence_end >= date), rest = !absence && !shifts.length && ctl.settings?.settings.rest_dates.includes(date);
                 return <div className={`wt-day${rest ? ' wt-rest' : ''}`} key={date}><button disabled={disabled || !!absence} aria-label={rest ? `Выходной ${date}` : `Добавить смену ${date}`} onClick={() => rest ? ctl.openSettings() : ctl.openDate(date)}>{Number(date.slice(-2))}{rest ? ' · В' : ''}</button>{!!absence && <button className="wt-shift" disabled={disabled} onClick={() => ctl.openShift(absence.id)}>{absence.label}</button>}{shifts.map(shift => <button className="wt-shift" key={shift.id} disabled={disabled} onClick={() => ctl.openShift(shift.id)}>{localTime(shift.started_at).slice(11)}–{localTime(shift.ended_at).slice(11)}<small>{minutes(shift.result.paid_minutes)}</small></button>)}</div>;
             })}</div>

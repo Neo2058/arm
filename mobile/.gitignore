@@ -39,6 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+/modules/arm-notification-poller/android/build/
 
 # Reviewed local installer artifacts
 /artifacts/

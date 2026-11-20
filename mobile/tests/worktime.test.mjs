@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { absenceDraft, createEditor, dateOccupied, deleteRequest, requestFor, settingsDraft, shiftDraft, monthDays, moveMonth } from '../src/worktime/model.mjs';
+import fs from 'node:fs';
+import { absenceDraft, createEditor, dateOccupied, deleteRequest, requestFor, settingsDraft, shiftDraft, monthDays, monthWeekStart, moveMonth, weekdayIndex, WEEKDAYS } from '../src/worktime/model.mjs';
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const config = (revision = 0) => ({ month: '2026-10', revision, settings: { line_rate_kopecks: 57348, reserve_rate_kopecks: 55300, surface_rate_kopecks: 51204, evening_percent: 20, night_percent: 40, rest_dates: [] } });
@@ -99,6 +100,12 @@ test('local midnight, segment boundaries and paid breaks are sent unchanged', ()
   assert.equal(op.data.break_duration, 60); assert.equal(op.data.ended_at, '2026-11-01 06:00');
   assert.equal(op.data.segments[0].kind, 'reserve');
   assert.equal(monthDays('2028-02').length, 29); assert.equal(moveMonth('2026-12', 1), '2027-01');
+  assert.deepEqual(WEEKDAYS, ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']);
+  assert.equal(monthWeekStart('2026-11'), 6);
+  assert.equal(monthWeekStart('2026-10'), 3);
+  assert.equal(monthWeekStart('2026-06'), 0);
+  assert.equal(weekdayIndex('2026-11-01'), 6);
+  assert.equal(weekdayIndex('2026-11-02'), 0);
   draft.values.started_at = '2026-10-31T22:00Z'; assert.throws(() => requestFor(draft));
 });
 test('stopping the editor before a queued retry prevents a new send', async () => {
@@ -146,4 +153,22 @@ test('dateOccupied covers overnight work and absences, not a midnight ending', (
   assert.equal(dateOccupied(summary, '2026-10-23'), false);
   const draft = shiftDraft({ id: 4, revision: 1, started_at: '2026-10-27 08:00', ended_at: '2026-10-27 16:00' });
   assert.deepEqual(deleteRequest(draft).data, { expected_revision: 1 });
+});
+test('mobile calendar shows weekday headers and Monday-aligned offset', () => {
+  const src = fs.readFileSync(new URL('../src/screens/WorkTimeScreen.js', import.meta.url), 'utf8');
+  assert.match(src, /WEEKDAYS/);
+  assert.match(src, /monthWeekStart/);
+  assert.match(src, /weekdayIndex/);
+  assert.match(src, /function MonthGrid/);
+  assert.match(src, /s\.weekday/);
+  assert.match(src, /s\.daySlot/);
+  assert.match(src, /rest \? s\.rest : selected && s\.selected/);
+  assert.match(src, /backgroundColor: '#14532d'/);
+  const web = fs.readFileSync(new URL('../../resources/js/WorkTime/WorkTime.jsx', import.meta.url), 'utf8');
+  assert.match(web, /WEEKDAYS\.map/);
+  assert.match(web, /monthWeekStart\(ctl\.month\)/);
+  assert.doesNotMatch(web, /\['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'\]/);
+  const css = fs.readFileSync(new URL('../../resources/js/WorkTime/worktime.css', import.meta.url), 'utf8');
+  assert.match(css, /\.wt-rest \{ background: #14532d;/);
+  assert.match(css, /\.wt-days button\[aria-pressed=true\] \{ background: #14532d;/);
 });

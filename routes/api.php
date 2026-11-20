@@ -52,18 +52,18 @@ Route::prefix('mobile')->group(function () {
         Route::get('/account/profile', [ProfileController::class, 'show']);
         Route::patch('/account/profile', [ProfileController::class, 'update'])->middleware('throttle:20,1');
         Route::get('/me', [AuthController::class, 'me']);
-        Route::get('/notifications', [NotificationController::class, 'index'])->middleware('throttle:60,1');
-        Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->middleware('throttle:20,1');
-        Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])->whereNumber('notification')->middleware('throttle:60,1');
-        Route::post('/push-subscription', [NotificationController::class, 'subscribe'])->middleware('throttle:20,1');
+        Route::get('/notifications', [NotificationController::class, 'index'])->middleware('throttle:60,1,notify-inbox');
+        Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->middleware('throttle:20,1,notify-read-all');
+        Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])->whereNumber('notification')->middleware('throttle:60,1,notify-read');
+        Route::post('/push-subscription', [NotificationController::class, 'subscribe'])->middleware('throttle:20,1,push-sub');
         Route::prefix('worktime')->group(function () {
             require __DIR__.'/personal-worktime.php';
         });
         Route::post('/logout', [AuthController::class, 'logout']);
 
         Route::get('/account/telegram', [TelegramAccountController::class, 'show']);
-        Route::post('/account/telegram', [TelegramAccountController::class, 'issue'])->middleware('throttle:5,10');
-        Route::delete('/account/telegram', [TelegramAccountController::class, 'destroy'])->middleware('throttle:5,10');
+        Route::post('/account/telegram', [TelegramAccountController::class, 'issue'])->middleware('throttle:telegram-link');
+        Route::delete('/account/telegram', [TelegramAccountController::class, 'destroy'])->middleware('throttle:telegram-link');
 
         Route::get('/documents', [DocumentController::class, 'index']);
         Route::get('/documents/{document}', [DocumentController::class, 'show']);
@@ -111,7 +111,7 @@ Route::prefix('mobile')->group(function () {
         Route::post('/discipline/{assignment}/submit', [DisciplineController::class, 'submit'])->whereNumber('assignment')->middleware('throttle:20,1');
 
         Route::get('/chats/sync', [ChatController::class, 'sync'])
-            ->middleware('throttle:60,1');
+            ->middleware('throttle:60,1,chats-sync');
         Route::get('/chats/{room}', [ChatController::class, 'show']);
         Route::get('/chats/{room}/messages', [ChatController::class, 'messages']);
         Route::post('/chats/{room}/messages', [ChatController::class, 'store'])
@@ -134,10 +134,10 @@ Route::prefix('mobile')->group(function () {
 // Separate read-only token boundary; a monitor token cannot use the main mobile API.
 Route::prefix('monitor')->group(function () {
     Route::post('/login', [MonitorController::class, 'login'])->middleware('throttle:login');
-    Route::middleware(['auth:sanctum', EnsureMonitorAccess::class, 'throttle:60,1'])->group(function () {
+    Route::middleware(['auth:sanctum', EnsureMonitorAccess::class, 'throttle:60,1,monitor'])->group(function () {
         Route::get('/snapshot', [MonitorController::class, 'snapshot']);
         Route::post('/logout', [MonitorController::class, 'logout']);
-        Route::get('/installer', [MonitorController::class, 'installer'])->name('monitor.installer')->middleware('throttle:5,10');
-        Route::get('/installer-info', [MonitorController::class, 'installerInfo'])->name('monitor.installer-info')->middleware('throttle:10,10');
+        Route::get('/installer', [MonitorController::class, 'installer'])->name('monitor.installer')->middleware('throttle:5,10,monitor-installer');
+        Route::get('/installer-info', [MonitorController::class, 'installerInfo'])->name('monitor.installer-info')->middleware('throttle:10,10,monitor-installer-info');
     });
 });

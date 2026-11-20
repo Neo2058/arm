@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import * as Crypto from 'expo-crypto';
 import { API_URL, client } from '../api';
 import { createUseWorkTime } from '../worktime/controller.mjs';
-import { ABSENCES, KINDS, RATE_FIELDS, WARNINGS, PARTIAL, dateOccupied, localTime, minutes, money, monthDays, moveMonth } from '../worktime/model.mjs';
+import { ABSENCES, KINDS, RATE_FIELDS, WARNINGS, PARTIAL, WEEKDAYS, dateOccupied, localTime, minutes, money, monthDays, monthWeekStart, moveMonth, weekdayIndex } from '../worktime/model.mjs';
 import { workTimeStorage } from '../worktime/storage';
 
 const useWorkTime = createUseWorkTime(React);
@@ -13,6 +13,21 @@ function Button({ children, onPress, disabled, selected }) {
 }
 function Field({ label, value, onChange, disabled, numeric, maxLength }) {
   return <View style={s.field}><Text style={s.meta}>{label}</Text><TextInput accessibilityLabel={label} style={s.input} value={value} editable={!disabled} onChangeText={onChange} autoCapitalize="none" autoCorrect={false} keyboardType={numeric ? 'decimal-pad' : 'default'} maxLength={maxLength} /></View>;
+}
+function MonthGrid({ month, children }) {
+  return <View style={s.days}>
+    {WEEKDAYS.map(name => <View key={name} style={s.daySlot}><Text style={s.weekday}>{name}</Text></View>)}
+    {Array.from({ length: monthWeekStart(month) }, (_, i) => <View key={`gap-${i}`} style={s.daySlot} />)}
+    {children}
+  </View>;
+}
+function DayCell({ date, label, mark, selected, rest, disabled, onPress }) {
+  return <View style={s.daySlot}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${label}, ${WEEKDAYS[weekdayIndex(date)]}`} accessibilityState={{ disabled: !!disabled, selected: !!(selected || rest) }} disabled={disabled} onPress={onPress} style={[s.day, rest ? s.rest : selected && s.selected, disabled && s.disabled]}>
+      <Text style={s.buttonText}>{Number(date.slice(-2))}</Text>
+      {mark ? <Text style={s.calendarMark}>{mark}</Text> : null}
+    </Pressable>
+  </View>;
 }
 function Editor({ ctl }) {
   const { entry, busy } = ctl, draft = entry.draft;
@@ -31,7 +46,7 @@ function Editor({ ctl }) {
       <Text style={s.meta}>Ставки действуют с выбранного месяца до следующего изменения. Сохранённые смены сохраняют прежние ставки.</Text>
       {RATE_FIELDS.map(([key, label]) => field(key, label, true))}
       <Text style={s.heading}>Подтверждённые выходные</Text><Text style={s.meta}>На день может быть либо смена, либо выходной, либо больничный/отпуск/учёба. Пустой день сам по себе выходным не считается.</Text>
-      <View style={s.days}>{monthDays(draft.target.month).map(date => { const selected = values.rest_dates.includes(date), blocked = dateOccupied(ctl.summary, date) && !selected; return <Pressable accessibilityRole="button" accessibilityLabel={`Выходной ${date}`} accessibilityState={{ selected, disabled: disabled || blocked }} disabled={disabled || blocked} key={date} style={[s.day, selected && s.selected]} onPress={() => edit({ rest_dates: selected ? values.rest_dates.filter(d => d !== date) : [...values.rest_dates, date] })}><Text style={s.buttonText}>{Number(date.slice(-2))}</Text></Pressable>; })}</View>
+      <MonthGrid month={draft.target.month}>{monthDays(draft.target.month).map(date => { const selected = values.rest_dates.includes(date), blocked = dateOccupied(ctl.summary, date) && !selected; return <DayCell key={date} date={date} label={`Выходной ${date}`} rest={selected} disabled={disabled || blocked} onPress={() => edit({ rest_dates: selected ? values.rest_dates.filter(d => d !== date) : [...values.rest_dates, date] })} />; })}</MonthGrid>
     </> : <>
       <Text style={s.meta}>Время московское: ГГГГ-ММ-ДД ЧЧ:ММ. После полуночи укажите следующую дату. Все перерывы оплачиваются.</Text>
       {field('started_at', 'Начало · дата и время')}{field('ended_at', 'Окончание · дата и время')}
@@ -91,7 +106,7 @@ export default function WorkTimeScreen({ userId }) {
       {data.warnings.map(code => <Text style={s.note} key={code}>{WARNINGS[code] || 'Требуется проверка данных месяца.'}</Text>)}
       {!!data.excluded_deviations_count && <Text style={s.note}>Отклонения старого календаря ({data.excluded_deviations_count}) в новый итог не включены.</Text>}
       <Text style={s.heading}>Календарь</Text><Text style={s.meta}>На день — либо смена, либо выходной, либо больничный/отпуск/учёба. Нажмите запись, чтобы изменить или удалить. В — подтверждённый выходной.</Text>
-      <View style={s.days}>{monthDays(ctl.month).map(date => { const dayShifts = data.shifts.filter(shift => shift.shift_date === date), absence = (data.absences || []).find(a => a.shift_date <= date && a.absence_end >= date), rest = !absence && !dayShifts.length && ctl.settings?.settings.rest_dates.includes(date); return <Pressable key={date} accessibilityRole="button" accessibilityLabel={absence ? `${ABSENCES[absence.absence_kind]} ${date}` : rest ? `Выходной ${date}` : dayShifts.length ? `Смена ${date}` : `Добавить смену ${date}`} disabled={disabled} style={[s.day, (dayShifts.length > 0 || rest || absence) && s.selected, disabled && s.disabled]} onPress={() => absence ? ctl.openShift(absence.id) : rest ? ctl.openSettings() : dayShifts.length ? ctl.openShift(dayShifts[0].id) : ctl.openDate(date)}><Text style={s.buttonText}>{Number(date.slice(-2))}</Text><Text style={s.calendarMark}>{absence ? ABSENCES[absence.absence_kind]?.slice(0, 1) : dayShifts.length ? `${dayShifts.length} см.` : rest ? 'В' : '·'}</Text></Pressable>; })}</View>
+      <MonthGrid month={ctl.month}>{monthDays(ctl.month).map(date => { const dayShifts = data.shifts.filter(shift => shift.shift_date === date), absence = (data.absences || []).find(a => a.shift_date <= date && a.absence_end >= date), rest = !absence && !dayShifts.length && ctl.settings?.settings.rest_dates.includes(date); return <DayCell key={date} date={date} label={absence ? `${ABSENCES[absence.absence_kind]} ${date}` : rest ? `Выходной ${date}` : dayShifts.length ? `Смена ${date}` : `Добавить смену ${date}`} mark={absence ? ABSENCES[absence.absence_kind]?.slice(0, 1) : dayShifts.length ? `${dayShifts.length} см.` : rest ? 'В' : '·'} selected={dayShifts.length > 0 || !!absence} rest={rest} disabled={disabled} onPress={() => absence ? ctl.openShift(absence.id) : rest ? ctl.openSettings() : dayShifts.length ? ctl.openShift(dayShifts[0].id) : ctl.openDate(date)} />; })}</MonthGrid>
       <Text style={s.heading}>Больничные, отпуск и учёба</Text>{!(data.absences || []).length && <Text style={s.meta}>Периодов в этом месяце нет.</Text>}{(data.absences || []).map(a => <Button key={a.id} disabled={disabled} onPress={() => ctl.openShift(a.id)}>{a.label}: {a.shift_date} — {a.absence_end} включительно. {a.days_in_month} дн. в месяце · оплата не рассчитана</Button>)}
       <Text style={s.heading}>Смены месяца</Text>{!data.shifts.length && <Text style={s.meta}>Новых записей пока нет.</Text>}
       {data.shifts.map(shift => <Pressable accessibilityRole="button" disabled={disabled} style={[s.card, disabled && s.disabled]} key={shift.id} onPress={() => ctl.openShift(shift.id)}><Text style={s.text}>{localTime(shift.started_at)} — {localTime(shift.ended_at)}</Text><Text style={s.heading}>{minutes(shift.result.paid_minutes)} · {money(shift.result.subtotal_kopecks)}</Text><Text style={s.meta}>Код {shift.shift_code || '—'} · вечер {minutes(shift.result.evening_minutes)} · ночь {minutes(shift.result.night_minutes)}</Text><Text style={s.meta}>Нажмите, чтобы изменить или удалить</Text></Pressable>)}
@@ -105,6 +120,6 @@ const s = StyleSheet.create({
   text: { color: '#e5edf8', fontSize: 15, lineHeight: 23 }, meta: { color: '#b0bfd2', fontSize: 14, lineHeight: 21 }, note: { color: '#fbd496', backgroundColor: '#33291b', padding: 14, borderRadius: 12, lineHeight: 21 },
   error: { color: '#fda4af', lineHeight: 23 }, success: { color: '#86efac' }, card: { backgroundColor: '#142031', borderWidth: 1, borderColor: '#38485f', borderRadius: 18, padding: 16, gap: 12 },
   part: { borderTopWidth: 1, borderTopColor: '#415069', paddingTop: 12, gap: 8 }, field: { gap: 5 }, input: { color: '#fff', borderWidth: 1, borderColor: '#61718b', borderRadius: 9, padding: 12, backgroundColor: '#0b1320', minHeight: 48 },
-  button: { minHeight: 48, borderRadius: 10, padding: 12, backgroundColor: '#29384d', alignItems: 'center', justifyContent: 'center' }, buttonText: { color: '#fff', fontWeight: '600', textAlign: 'center' }, selected: { backgroundColor: '#9a3412', borderColor: '#fb923c', borderWidth: 1 }, danger: { backgroundColor: '#4c1d24', borderWidth: 1, borderColor: '#fda4af' }, disabled: { opacity: 0.5 },
-  month: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, days: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 }, calendarMark: { color: '#cbd5e1', fontSize: 10 }, day: { width: '12%', minHeight: 44, borderRadius: 8, backgroundColor: '#29384d', alignItems: 'center', justifyContent: 'center' },
+  button: { minHeight: 48, borderRadius: 10, padding: 12, backgroundColor: '#29384d', alignItems: 'center', justifyContent: 'center' }, buttonText: { color: '#fff', fontWeight: '600', textAlign: 'center' }, selected: { backgroundColor: '#9a3412', borderColor: '#fb923c', borderWidth: 1 }, rest: { backgroundColor: '#14532d', borderColor: '#4ade80', borderWidth: 1 }, danger: { backgroundColor: '#4c1d24', borderWidth: 1, borderColor: '#fda4af' }, disabled: { opacity: 0.5 },
+  month: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, days: { flexDirection: 'row', flexWrap: 'wrap', width: '100%' }, weekday: { color: '#b0bfd2', fontSize: 12, fontWeight: '700', textAlign: 'center', paddingVertical: 6 }, daySlot: { width: '14.28%', flexGrow: 0, flexShrink: 0, padding: 3 }, calendarMark: { color: '#cbd5e1', fontSize: 10 }, day: { minHeight: 44, borderRadius: 8, backgroundColor: '#29384d', alignItems: 'center', justifyContent: 'center', paddingVertical: 4 },
 });
